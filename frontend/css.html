@@ -1,0 +1,161 @@
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f2f2f7;
+    padding: 16px;
+    color: #333;
+  }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px; /* Un poco más de aire */
+    max-width: 420px;
+    margin: 20px auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  }
+  h2 { text-align: center; margin-bottom: 20px; color: #1c1c1e; }
+  label { font-weight: 600; margin-top: 16px; display: block; font-size: 0.9rem; color: #666; }
+  
+  select, input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 1px solid #d1d1d6;
+    font-size: 16px;
+    background-color: #fff;
+    box-sizing: border-box; /* Importante para que el padding no rompa el ancho */
+  }
+
+  button {
+    width: 100%;
+    padding: 16px;
+    margin-top: 24px;
+    border-radius: 12px;
+    border: none;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  button:active { transform: scale(0.98); }
+
+  .entrada { background: #34c759; color: white; }
+  .salida { background: #ff3b30; color: white; }
+  
+  #estado { 
+    margin-top: 20px; 
+    text-align: center; 
+    font-weight: 500; 
+    min-height: 24px; /* Reserva espacio para que no salte */
+    font-size: 0.9rem;
+  }
+  .error { color: #ff3b30; }
+  .success { color: #34c759; }
+
+
+  /* Estilos del Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 350px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  }
+  .modal-content h3 { margin-top: 0; }
+
+
+  /* Navegación */
+  .nav-bar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .nav-btn {
+    background: #e5e5ea;
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    width: auto; /* Sobreescribe el width:100% global */
+    margin-top: 0;
+  }
+  .nav-btn.active {
+    background: #007aff;
+    color: white;
+  }
+
+  /* Grid de Ubicaciones */
+  .grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+  }
+
+  /* Tarjeta de Ubicación individual */
+  .ubicacion-card {
+    border: 1px solid #d1d1d6;
+    border-radius: 12px;
+    padding: 15px;
+    background: #f9f9f9;
+    transition: all 0.2s;
+  }
+  .ubicacion-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .ubicacion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+  }
+  .badge {
+    background: #34c759;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+  }
+  .badge.empty { background: #8e8e93; }
+
+  /* Tabla mini dentro de la tarjeta */
+  .mini-tabla {
+    width: 100%;
+    font-size: 0.85rem;
+    border-collapse: collapse;
+  }
+  .mini-tabla td {
+    padding: 4px 0;
+    border-bottom: 1px dashed #eee;
+  }
+  .actions-row {
+    margin-top: 10px;
+    display: flex;
+    gap: 5px;
+  }
+  .btn-icon {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    margin-top: 0;
+    width: auto;
+  }
+</style>
+

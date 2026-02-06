@@ -1,0 +1,12 @@
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Apps Script / Clasp
+.clasp.json
+
+# Variables sensibles
+.env
+
+# Dependencias futuras
+node_modules/

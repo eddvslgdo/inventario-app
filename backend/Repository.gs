@@ -1,0 +1,318 @@
+// --- CONFIGURACIÓN ---
+const ID_HOJA = '1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E'; // <--- TU ID
+
+const SHEETS = {
+  PRODUCTOS: 'CAT_PRODUCTOS',
+  PRESENTACIONES: 'CAT_PRESENTACIONES',
+  UBICACIONES: 'CAT_UBICACIONES',
+  INVENTARIO: 'INVENTARIO',
+  ENTRADAS: 'REGISTROS_ENTRADA',
+  SALIDAS: 'REGISTROS_SALIDA'
+};
+
+function getDb() {
+  return SpreadsheetApp.openById(ID_HOJA);
+}
+
+// --- LECTURA GENÉRICA ---
+function getDataFromSheet_(sheetName) {
+  const ss = getDb();
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+  
+  const range = sheet.getDataRange();
+  if (range.isBlank()) return []; 
+  
+  const data = range.getValues();
+  const headers = data.shift();
+  
+  if (data.length === 0) return [];
+  
+  return data.map(row => {
+    let obj = {};
+    headers.forEach((header, index) => {
+      const key = header.toString().trim(); 
+      if(key) obj[key] = row[index];
+    });
+    return obj;
+  });
+}
+
+// --- GETTERS (CATÁLOGOS) ---
+function getListaProductos() {
+  return getDataFromSheet_(SHEETS.PRODUCTOS)
+    .filter(i => i.activo == true) 
+    .map(i => ({ id: i.producto_id, nombre: i.nombre }));
+}
+
+function getListaPresentaciones() {
+  // AHORA ENVIAMOS EL VOLUMEN NOMINAL
+  return getDataFromSheet_(SHEETS.PRESENTACIONES)
+    .filter(i => i.activo == true)
+    .map(i => ({ 
+      id: i.presentacion_id, 
+      nombre: i.descripcion,
+      volumen: Number(i.volumen_nominal_L) // <--- ESTO ES NUEVO
+    }));
+}
+
+function getListaUbicaciones() {
+  return getDataFromSheet_(SHEETS.UBICACIONES)
+    .filter(i => i.activo == true)
+    .map(i => ({ id: i.ubicacion_id, nombre: i.nombre }));
+}
+
+// --- CREACIÓN ---
+function crearProductoNuevo(datos) {
+  const sheet = getDb().getSheetByName(SHEETS.PRODUCTOS);
+  const nuevoId = Utilities.getUuid();
+  sheet.appendRow([nuevoId, datos.nombre, datos.descripcion || '', datos.unidad, true]);
+  return { id: nuevoId, nombre: datos.nombre };
+}
+
+function crearPresentacionNueva(datos) {
+  const sheet = getDb().getSheetByName(SHEETS.PRESENTACIONES);
+  const nuevoId = Utilities.getUuid();
+  // Asumimos 0 si no se especifica, luego podrás editarlo en Sheets si quieres
+  sheet.appendRow([nuevoId, datos.descripcion, 0, true]);
+  return { id: nuevoId, nombre: datos.descripcion, volumen: 0 };
+}
+
+function crearUbicacionNueva(nombre) {
+  const sheet = getDb().getSheetByName(SHEETS.UBICACIONES);
+  const nuevoId = Utilities.getUuid();
+  sheet.appendRow([nuevoId, nombre, true]);
+  return { id: nuevoId, nombre: nombre };
+}
+
+// --- ESCRITURA ---
+function guardarLogEntrada(record) {
+  getDb().getSheetByName(SHEETS.ENTRADAS).appendRow([
+    new Date(), record.producto_id, record.presentacion_id, 
+    record.ubicacion_destino, record.volumen_L, record.lote, 
+    record.proveedor, record.comentario
+  ]);
+}
+
+function actualizarInventarioEntrada(datos) {
+  const sheet = getDb().getSheetByName(SHEETS.INVENTARIO);
+  const data = sheet.getDataRange().getValues();
+  let fila = -1;
+  
+  // LOGICA NUEVA: Buscamos coincidencia en Prod + Pres + Ubic + LOTE
+  // Si el Lote cambia, se crea una fila nueva.
+  for (let i = 1; i < data.length; i++) {
+    const mismoProd = data[i][0] == datos.producto_id;
+    const mismaPres = data[i][1] == datos.presentacion_id;
+    const mismaUbic = data[i][2] == datos.ubicacion_id;
+    const mismoLote = String(data[i][6]).trim() == String(datos.lote).trim(); // Comparamos Lotes
+
+    if (mismoProd && mismaPres && mismaUbic && mismoLote) {
+      fila = i + 1; break;
+    }
+  }
+
+  if (fila > 0) {
+    // Si existe el lote en esa ubicación, sumamos
+    const cell = sheet.getRange(fila, 4); 
+    cell.setValue(Number(cell.getValue()) + Number(datos.volumen_L));
+  } else {
+    // Si es lote nuevo, fila nueva
+    sheet.appendRow([
+      datos.producto_id, datos.presentacion_id, datos.ubicacion_id, 
+      Number(datos.volumen_L), datos.fecha_caducidad, 
+      datos.fecha_elaboracion, datos.lote, new Date()
+    ]);
+  }
+}
+
+// --- SALIDAS ---
+function getInventarioDisponible(prod, pres, ubic) {
+  const data = getDb().getSheetByName(SHEETS.INVENTARIO).getDataRange().getValues();
+  let lotes = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] == prod && data[i][1] == pres && data[i][2] == ubic) {
+      lotes.push({
+        fila: i + 1, volumen: Number(data[i][3]),
+        caducidad: data[i][4], fecha_ingreso: data[i][7], lote: data[i][6]
+      });
+    }
+  }
+  return lotes;
+}
+
+function actualizarVolumenFila(fila, vol) {
+  getDb().getSheetByName(SHEETS.INVENTARIO).getRange(fila, 4).setValue(vol);
+}
+
+function borrarFilaInventario(fila) {
+  getDb().getSheetByName(SHEETS.INVENTARIO).deleteRow(fila);
+}
+
+function guardarLogSalida(record) {
+  getDb().getSheetByName(SHEETS.SALIDAS).appendRow([
+    new Date(), record.producto_id, record.presentacion_id, 
+    record.ubicacion_origen, record.volumen_L, record.lote, 
+    record.destino, record.comentario
+  ]);
+}
+
+// --- DASHBOARD (MAPA) ---
+// --- EN backend/Repository.gs ---
+
+function getReporteUbicaciones() {
+  const ubicaciones = getDataFromSheet_(SHEETS.UBICACIONES).filter(u => u.activo == true);
+  if (ubicaciones.length === 0) return [];
+
+  const inventario = getDataFromSheet_(SHEETS.INVENTARIO);
+  
+  // MAPAS
+  const mapProd = {};
+  getDataFromSheet_(SHEETS.PRODUCTOS).forEach(p => mapProd[p.producto_id] = p.nombre);
+
+  // OJO: Aquí guardamos el objeto completo de presentación para sacar el volumen nominal
+  const mapPres = {};
+  getDataFromSheet_(SHEETS.PRESENTACIONES).forEach(p => {
+    mapPres[p.presentacion_id] = {
+      nombre: p.descripcion,
+      volumen: Number(p.volumen_nominal_L || 0) // <--- IMPORTANTE
+    };
+  });
+
+  return ubicaciones.map(u => {
+    const items = inventario
+      .filter(i => i.ubicacion_id == u.ubicacion_id)
+      .map(i => {
+        let caducidad = i.fecha_caducidad;
+        if (caducidad instanceof Date) caducidad = caducidad.toLocaleDateString();
+        
+        const nombreProd = mapProd[i.producto_id] || 'Desc. Borrado';
+        const infoPres = mapPres[i.presentacion_id] || { nombre: '', volumen: 0 };
+        const nombreCompleto = infoPres.nombre ? `${nombreProd} (${infoPres.nombre})` : nombreProd;
+
+        return {
+          producto: nombreProd,
+          presentacion: infoPres.nombre,
+          nombre_completo: nombreCompleto,
+          
+          // DATOS OCULTOS PARA LÓGICA
+          raw_producto_id: i.producto_id,
+          raw_presentacion_id: i.presentacion_id,
+          volumen_nominal: infoPres.volumen, // <--- NECESARIO PARA CALCULAR PIEZAS
+          
+          volumen: Number(i.volumen_actual_L || 0),
+          lote: i.lote_referencia || 'S/L',
+          caducidad: caducidad,
+          proveedor: i.proveedor || ''
+        };
+      });
+      
+    return {
+      id: u.ubicacion_id, 
+      nombre: u.nombre, 
+      items: items,
+      totalVolumen: items.reduce((s, i) => s + i.volumen, 0)
+    };
+  });
+}
+
+function editarUbicacion(id, nombre) {
+  const sheet = getDb().getSheetByName(SHEETS.UBICACIONES);
+  const data = sheet.getDataRange().getValues();
+  for(let i=1; i<data.length; i++) {
+    if(data[i][0] == id) { sheet.getRange(i+1, 2).setValue(nombre); return true; }
+  }
+}
+
+function eliminarUbicacion(id) {
+  const inv = getDb().getSheetByName(SHEETS.INVENTARIO).getDataRange().getValues();
+  for(let i=1; i<inv.length; i++) {
+    if(inv[i][2] == id && inv[i][3] > 0) throw new Error("La ubicación tiene stock");
+  }
+  const sheet = getDb().getSheetByName(SHEETS.UBICACIONES);
+  const data = sheet.getDataRange().getValues();
+  for(let i=1; i<data.length; i++) {
+    if(data[i][0] == id) { sheet.getRange(i+1, 3).setValue(false); return true; }
+  }
+}
+
+// --- FUNCIÓN DE REUBICACIÓN Y BORRADO ---
+function reubicarYEliminar(idOrigen, idDestino) {
+  const ss = getDb();
+  
+  // 1. MOVER EL INVENTARIO
+  const sheetInv = ss.getSheetByName(SHEETS.INVENTARIO);
+  const dataInv = sheetInv.getDataRange().getValues();
+  
+  // Recorremos buscando filas que tengan la ubicación de origen (columna C -> índice 2)
+  for (let i = 1; i < dataInv.length; i++) {
+    if (String(dataInv[i][2]) === String(idOrigen)) {
+      // Escribimos el ID del destino en la columna 3 (índice 2+1 en notación R1C1)
+      sheetInv.getRange(i + 1, 3).setValue(idDestino);
+    }
+  }
+
+  // 2. DESACTIVAR LA UBICACIÓN ORIGINAL
+  const sheetUbi = ss.getSheetByName(SHEETS.UBICACIONES);
+  const dataUbi = sheetUbi.getDataRange().getValues();
+  
+  for (let i = 1; i < dataUbi.length; i++) {
+    if (String(dataUbi[i][0]) === String(idOrigen)) {
+      // Columna C es "activo" (índice 2) -> Ponemos false
+      sheetUbi.getRange(i + 1, 3).setValue(false);
+      return true;
+    }
+  }
+}
+
+
+// --- REPORTE POR PRODUCTOS (VISTA DE COMPRAS) ---
+function getReportePorProductos() {
+  const inventario = getDataFromSheet_(SHEETS.INVENTARIO);
+  if (inventario.length === 0) return [];
+
+  // Mapas de ayuda
+  const mapProd = {};
+  getDataFromSheet_(SHEETS.PRODUCTOS).forEach(p => mapProd[p.producto_id] = { nombre: p.nombre, unidad: p.unidad });
+
+  const mapPres = {};
+  getDataFromSheet_(SHEETS.PRESENTACIONES).forEach(p => mapPres[p.presentacion_id] = p.descripcion);
+
+  const mapUbic = {};
+  getDataFromSheet_(SHEETS.UBICACIONES).forEach(u => mapUbic[u.ubicacion_id] = u.nombre);
+
+  // Agrupamiento
+  const reporte = {};
+
+  inventario.forEach(item => {
+    const pId = item.producto_id;
+    
+    // Si es la primera vez que vemos este producto, lo inicializamos
+    if (!reporte[pId]) {
+      const infoProd = mapProd[pId] || { nombre: 'Desconocido', unidad: '?' };
+      reporte[pId] = {
+        id: pId,
+        nombre: infoProd.nombre,
+        unidad: infoProd.unidad,
+        totalVolumen: 0,
+        lotes: [] // Aquí guardaremos el detalle
+      };
+    }
+
+    // Sumamos al total global
+    const vol = Number(item.volumen_actual_L || 0);
+    reporte[pId].totalVolumen += vol;
+
+    // Agregamos el detalle del lote
+    reporte[pId].lotes.push({
+      lote: item.lote_referencia,
+      presentacion: mapPres[item.presentacion_id] || 'Granel',
+      ubicacion: mapUbic[item.ubicacion_id] || 'Perdido',
+      caducidad: item.fecha_caducidad instanceof Date ? item.fecha_caducidad.toLocaleDateString() : item.fecha_caducidad,
+      volumen: vol
+    });
+  });
+
+  // Convertimos el objeto a array y ordenamos por nombre
+  return Object.values(reporte).sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
