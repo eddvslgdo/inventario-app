@@ -1,31 +1,69 @@
-function mostrarToast(mensaje, tipo = "info") {
+// --- UTILIDADES DE INTERFAZ (UI) ---
+
+function mostrarToast(mensaje, tipo) {
+  if (!tipo) tipo = "info";
+  
   const toast = document.getElementById("toast-container");
   if (!toast) return alert(mensaje);
+  
   toast.className = "show " + tipo;
   toast.innerText = mensaje;
-  setTimeout(() => {
+  
+  setTimeout(function() {
     toast.className = toast.className.replace("show", "");
-    setTimeout(() => {
+    setTimeout(function() {
       toast.className = "";
     }, 500);
   }, 3000);
 }
 
 function mostrarError(err) {
-  mostrarToast("Error: " + err.message, "error");
+  console.error(err);
+  var msg = (err && err.message) ? err.message : err;
+  mostrarToast("Error: " + msg, "error");
 }
 
 function abrirModalGenerico(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = "flex";
 }
+
 function cerrarModalGenerico(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = "none";
 }
+
 function abrirModal() {
   abrirModalGenerico("modalProducto");
 }
+
 function cerrarModal() {
   cerrarModalGenerico("modalProducto");
+}
+
+// --- CALCULADORA GLOBAL ---
+function calcTotalGenerico(idPres, idCant) {
+  const sel = document.getElementById(idPres);
+  const inp = document.getElementById(idCant);
+  
+  if (!sel || !inp) return 0;
+  
+  // CORRECCIÓN: Usamos "=== -1" en lugar de "< 0" para evitar el error de símbolo
+  if (sel.selectedIndex === -1) return 0;
+  
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt) return 0;
+  
+  let dataVol = opt.getAttribute("data-volumen");
+  let volUnitario = parseFloat(dataVol);
+  
+  if (isNaN(volUnitario)) volUnitario = 0;
+  
+  let cantidad = parseFloat(inp.value);
+  if (isNaN(cantidad)) cantidad = 0;
+
+  console.log("Calculando: " + cantidad + " * " + volUnitario);
+
+  const total = (cantidad * volUnitario);
+  return parseFloat(total.toFixed(2));
 }

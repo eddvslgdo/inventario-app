@@ -1,24 +1,50 @@
 <script>
-(function () {
-  console.log("🚀 Cargando módulos con nombres de servidor...");
-
-  // Usamos el nombre EXACTO que aparece en la barra lateral izquierda
   <?!= include('frontend/js/state.js.html'); ?>
+</script>
+
+<script>
   <?!= include('frontend/js/api.js.html'); ?>
+</script>
+
+<script>
   <?!= include('frontend/js/ui.js.html'); ?>
+</script>
+
+<script>
   <?!= include('frontend/js/core.js.html'); ?>
+</script>
+
+<script>
   <?!= include('frontend/js/entradas.js.html'); ?>
+</script>
+
+<script>
   <?!= include('frontend/js/salidas.js.html'); ?>
+</script>
+
+<script>
   <?!= include('frontend/js/ubicaciones.js.html'); ?>
+</script>
+
+<script>
   <?!= include('frontend/js/productos.js.html'); ?>
+</script>
+
+<script>
   <?!= include('frontend/js/pedidos.js.html'); ?>
+</script>
+
+
+<script>
   <?!= include('frontend/js/main.js.html'); ?>
 
-  window.addEventListener('load', () => {
-    console.log('✅ JS cargado correctamente');
+  // Listener de arranque
+  window.addEventListener('load', function() {
+    console.log("✅ Sistema de Inventario Iniciado");
     if (typeof initApp === 'function') {
       initApp();
+    } else {
+      console.error("❌ Error: initApp no encontrado");
     }
   });
-})();
 </script>
