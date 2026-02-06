@@ -1,0 +1,73 @@
+const api = {
+
+  obtenerCatalogos(success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerCatalogos();
+  },
+
+  obtenerListaClientes(success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerListaClientes();
+  },
+
+  registrarEntradaUnica(item, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .registrarEntradaUnica(item);
+  },
+
+  registrarEntradaMasiva(items, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .registrarEntradaMasiva(items);
+  },
+
+  obtenerSugerenciaFIFO(prodId, cola, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerSugerenciaFIFO();
+  },
+
+  procesarPedidoCompleto(datos, items, guardarCliente, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .procesarPedidoCompleto(datos, items, guardarCliente);
+  },
+
+  obtenerDatosUbicaciones(success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerDatosUbicaciones();
+  },
+
+  obtenerDatosProductos(success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerDatosProductos();
+  },
+
+  obtenerHistorialPedidos(success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerHistorialPedidos();
+  },
+
+  obtenerDetallePedidoCompleto(idPedido, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerDetallePedidoCompleto(idPedido);
+  }
+
+};

@@ -53,7 +53,7 @@
   // ==========================================
   function recargarSelectores() {
     // Carga inventarios
-    google.script.run.withSuccessHandler(llenarSelects).obtenerCatalogos();
+    api.obtenerCatalogos(llenarSelects);
     // Carga clientes
     google.script.run.withSuccessHandler(c => { LISTA_CLIENTES = c; llenarSelectClientes(); }).obtenerListaClientes();
   }
