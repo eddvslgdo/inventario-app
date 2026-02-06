@@ -32,21 +32,9 @@
     if (vistaId === 'vista-pedidos') cargarDashboardPedidos();
   }
 
-  function mostrarToast(mensaje, tipo = 'info') {
-    const toast = document.getElementById("toast-container");
-    if(!toast) return alert(mensaje);
-    toast.className = "show " + tipo;
-    toast.innerText = mensaje;
-    setTimeout(() => { 
-        toast.className = toast.className.replace("show", ""); 
-        setTimeout(() => { toast.className = ""; }, 500);
-    }, 3000);
-  }
 
-  function mostrarError(err) {
-     console.error(err);
-     mostrarToast("Error: " + err.message, "error");
-  }
+
+
 
   // ==========================================
   // 3. CATALOGOS Y SELECTORES
@@ -123,81 +111,6 @@
   function getTextoSelect(id) {
     const s = document.getElementById(id);
     return s.options.length > 0 && s.selectedIndex >= 0 ? s.options[s.selectedIndex].text : '';
-  }
-
-  // ==========================================
-  // 4. LÓGICA DE ENTRADAS
-  // ==========================================
-  function calcularTotalEntrada() {
-    const total = calcTotalGenerico('presentacion', 'cantidad');
-    document.getElementById('infoTotal').innerText = total + " L";
-    return total;
-  }
-
-  function guardarEntradaDirecta() {
-    const item = construirObjetoEntrada();
-    if(!item) return;
-    const btn = event.target; const txt = btn.innerText;
-    btn.disabled = true; btn.innerText = "Guardando...";
-    google.script.run.withSuccessHandler(() => {
-         mostrarToast("Entrada Directa Guardada ⚡", "success");
-         limpiarFormularioEntrada();
-         recargarSelectores();
-         btn.disabled = false; btn.innerText = txt;
-      }).withFailureHandler(err => {
-         mostrarError(err); btn.disabled = false; btn.innerText = txt;
-      }).registrarEntradaUnica(item);
-  }
-
-  function agregarColaEntrada() {
-    const item = construirObjetoEntrada();
-    if(!item) return;
-    COLA_ENTRADAS.push(item);
-    renderizarColaEntrada();
-    document.getElementById('cantidad').value = '';
-    document.getElementById('lote').value = '';
-    document.getElementById('infoTotal').innerText = '0 L';
-    document.getElementById('lote').focus();
-    mostrarToast("Agregado a la lista", "success");
-  }
-
-  function construirObjetoEntrada() {
-    const vol = calcularTotalEntrada();
-    if(vol <= 0) { mostrarToast("Cantidad inválida", "error"); return null; }
-    const lote = document.getElementById('lote').value.trim();
-    if(!lote) { mostrarToast("Falta Lote", "error"); document.getElementById('lote').focus(); return null; }
-    let fc = new Date(); fc.setFullYear(fc.getFullYear() + 2);
-    let fab = document.getElementById('elaboracion').value || new Date().toISOString().split('T')[0];
-    return {
-       producto_id: document.getElementById('producto').value,
-       nombre_producto: getTextoSelect('producto'),
-       presentacion_id: document.getElementById('presentacion').value,
-       nombre_presentacion: getTextoSelect('presentacion'),
-       ubicacion_id: document.getElementById('ubicacion').value,
-       volumen_L: vol, piezas: document.getElementById('cantidad').value,
-       lote: lote, proveedor: document.getElementById('proveedor').value.trim(),
-       fecha_elaboracion: fab, fecha_caducidad: fc.toISOString().split('T')[0]
-    };
-  }
-
-  function limpiarFormularioEntrada() {
-    document.getElementById('cantidad').value=''; document.getElementById('lote').value=''; 
-    document.getElementById('infoTotal').innerText='0 L'; document.getElementById('proveedor').value='';
-    document.getElementById('elaboracion').value='';
-    document.getElementById('producto').value = ''; 
-    document.getElementById('presentacion').value = '';
-    document.getElementById('ubicacion').value = '';
-  }
-
-  function procesarEntradas() {
-    if(COLA_ENTRADAS.length === 0) return;
-    TIPO_ACCION_MASIVA = 'ENTRADA';
-    document.getElementById('lblCantMasiva').innerText = COLA_ENTRADAS.length + " partidas (Entrada)";
-    abrirModalGenerico('modalConfirmarMasivo');
-  }
-
-  function renderizarColaEntrada() {
-    renderColaGenerica(COLA_ENTRADAS, 'area-cola-entradas', 'tablaColaEntradaBody', 'contadorColaEnt', 'ent');
   }
 
   // ==========================================
@@ -598,10 +511,6 @@
   }
 
   // --- MODALES (COMPLETOS CON LÓGICA) ---
-  function abrirModalGenerico(id){ const el=document.getElementById(id); if(el) el.style.display='flex'; }
-  function cerrarModalGenerico(id){ const el=document.getElementById(id); if(el) el.style.display='none'; }
-  function abrirModal(){ abrirModalGenerico('modalProducto'); }
-  function cerrarModal(){ cerrarModalGenerico('modalProducto'); }
   
   function guardarProducto(){ const d={nombre:document.getElementById('nuevoNombre').value,descripcion:document.getElementById('nuevaDescripcion').value,unidad:document.getElementById('nuevaUnidad').value}; if(!d.nombre)return mostrarToast("Falta nombre","error"); google.script.run.withSuccessHandler(()=>{recargarSelectores();cerrarModal();mostrarToast("Guardado","success")}).registrarNuevoProducto(d); }
   function guardarPresentacion(){ const v=document.getElementById('nuevaPresDesc').value; if(!v)return mostrarToast("Falta dato","error"); google.script.run.withSuccessHandler(()=>{recargarSelectores();cerrarModalGenerico('modalPresentacion');mostrarToast("Guardado","success")}).registrarNuevaPresentacion(v); }
