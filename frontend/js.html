@@ -1,118 +1,12 @@
-<?!= include('frontend/js/state'); ?>
-<?!= include('frontend/js/api'); ?>
-<?!= include('frontend/js/ui'); ?>
-<?!= include('frontend/js/entradas'); ?>
-<?!= include('frontend/js/salidas'); ?>
-<?!= include('frontend/js/ubicaciones'); ?>
-<?!= include('frontend/js/productos'); ?>
-<?!= include('frontend/js/pedidos'); ?>
-<?!= include('frontend/js/main'); ?>
-
-
 <script>
-  
-  // ==========================================
-  // 1. VARIABLES GLOBALES
-  // ==========================================
-  // ==========================================
-  // 2. INICIALIZACIÓN
-  // ==========================================
-  window.onload = function() {
-    recargarSelectores();
-  };
-
-  function cambiarVista(vistaId) {
-    document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
-    const vista = document.getElementById(vistaId);
-    if(vista) vista.style.display = 'block';
-    
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      if(btn.getAttribute('onclick').includes(vistaId)) btn.classList.add('active');
-    });
-    
-    if (vistaId === 'vista-ubicaciones') cargarDashboardUbicaciones();
-    if (vistaId === 'vista-productos') cargarDashboardProductos(); 
-    if (vistaId === 'vista-salidas') recargarSelectores();
-    if (vistaId === 'vista-pedidos') cargarDashboardPedidos();
-  }
-
-  // ==========================================
-  // 3. CATALOGOS Y SELECTORES
-  // ==========================================
-  function recargarSelectores() {
-    // Carga inventarios
-    api.obtenerCatalogos(llenarSelects);
-    // Carga clientes
-    google.script.run.withSuccessHandler(c => { LISTA_CLIENTES = c; llenarSelectClientes(); }).obtenerListaClientes();
-  }
-
-  function llenarSelects(data) {
-    poblarSelect('producto', data.productos);
-    poblarSelect('ubicacion', data.ubicaciones);
-    setupPresentacion('presentacion', data.presentaciones, calcularTotalEntrada);
-
-    poblarSelect('sal_producto', data.productos);
-    poblarSelect('sal_ubicacion', data.ubicaciones);
-    setupPresentacion('sal_presentacion', data.presentaciones, calcularTotalSalida);
-    
-    if(document.getElementById('selTransfNuevoProd')) poblarSelect('selTransfNuevoProd', data.productos);
-    if(document.getElementById('selTransfNuevaPres')) setupPresentacion('selTransfNuevaPres', data.presentaciones, null);
-
-    const selProdSalida = document.getElementById('sal_producto');
-    if(selProdSalida) {
-        const nuevoSel = selProdSalida.cloneNode(true); 
-        selProdSalida.parentNode.replaceChild(nuevoSel, selProdSalida);
-        nuevoSel.addEventListener('change', aplicarFIFO);
-    }
-  }
-
-  function llenarSelectClientes() {
-    const sel = document.getElementById('log_cliente_select');
-    if(!sel) return;
-    sel.innerHTML = '<option value="">-- Nuevo / Manual --</option>';
-    LISTA_CLIENTES.forEach(c => {
-       const opt = document.createElement('option');
-       opt.value = c.id;
-       opt.text = c.nombre; 
-       sel.appendChild(opt);
-    });
-  }
-
-  function poblarSelect(id, lista) {
-    const select = document.getElementById(id);
-    if(!select) return;
-    select.innerHTML = '<option value="">Selecciona...</option>';
-    lista.forEach(item => {
-      const option = document.createElement('option');
-      option.value = item.id;
-      option.text = item.nombre;
-      select.appendChild(option);
-    });
-  }
-
-  function setupPresentacion(idSelect, lista, funcionCalculo) {
-    const select = document.getElementById(idSelect);
-    if(!select) return;
-    const newSelect = select.cloneNode(false);
-    select.parentNode.replaceChild(newSelect, select);
-    newSelect.id = idSelect; 
-    newSelect.className = 'input-modern';
-    newSelect.innerHTML = '<option value="">Selecciona...</option>';
-    if(funcionCalculo) newSelect.addEventListener('change', funcionCalculo);
-    lista.forEach(item => {
-      const option = document.createElement('option');
-      option.value = item.id;
-      option.text = item.nombre;
-      option.setAttribute('data-volumen', item.volumen || 0); 
-      newSelect.appendChild(option);
-    });
-  }
-
-  function getTextoSelect(id) {
-    const s = document.getElementById(id);
-    return s.options.length > 0 && s.selectedIndex >= 0 ? s.options[s.selectedIndex].text : '';
-  }
-
+  <?!= include('frontend/js/state'); ?>
+  <?!= include('frontend/js/api'); ?>
+  <?!= include('frontend/js/ui'); ?>
+  <?!= include('frontend/js/core'); ?>
+  <?!= include('frontend/js/entradas'); ?>
+  <?!= include('frontend/js/salidas'); ?>
+  <?!= include('frontend/js/ubicaciones'); ?>
+  <?!= include('frontend/js/productos'); ?>
+  <?!= include('frontend/js/pedidos'); ?>
+  <?!= include('frontend/js/main'); ?>
 </script>
