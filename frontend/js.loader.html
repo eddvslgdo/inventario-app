@@ -1,0 +1,24 @@
+<script>
+(function () {
+  console.log("🚀 Cargando módulos con nombres de servidor...");
+
+  // Usamos el nombre EXACTO que aparece en la barra lateral izquierda
+  <?!= include('frontend/js/state.js.html'); ?>
+  <?!= include('frontend/js/api.js.html'); ?>
+  <?!= include('frontend/js/ui.js.html'); ?>
+  <?!= include('frontend/js/core.js.html'); ?>
+  <?!= include('frontend/js/entradas.js.html'); ?>
+  <?!= include('frontend/js/salidas.js.html'); ?>
+  <?!= include('frontend/js/ubicaciones.js.html'); ?>
+  <?!= include('frontend/js/productos.js.html'); ?>
+  <?!= include('frontend/js/pedidos.js.html'); ?>
+  <?!= include('frontend/js/main.js.html'); ?>
+
+  window.addEventListener('load', () => {
+    console.log('✅ JS cargado correctamente');
+    if (typeof initApp === 'function') {
+      initApp();
+    }
+  });
+})();
+</script>

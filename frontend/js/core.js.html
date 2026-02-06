@@ -1,24 +1,22 @@
-function cambiarVista(vistaId) {
-  document
-    .querySelectorAll(".vista")
-    .forEach((v) => (v.style.display = "none"));
-  document
-    .querySelectorAll(".nav-btn")
-    .forEach((b) => b.classList.remove("active"));
+window.cambiarVista = function (vistaId) {
+  document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
   const vista = document.getElementById(vistaId);
-  if (vista) vista.style.display = "block";
+  if (vista) vista.style.display = 'block';
 
-  document.querySelectorAll(".nav-btn").forEach((btn) => {
-    if (btn.getAttribute("onclick").includes(vistaId))
-      btn.classList.add("active");
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    if (btn.getAttribute('onclick')?.includes(vistaId)) {
+      btn.classList.add('active');
+    }
   });
 
-  if (vistaId === "vista-ubicaciones") cargarDashboardUbicaciones();
-  if (vistaId === "vista-productos") cargarDashboardProductos();
-  if (vistaId === "vista-salidas") recargarSelectores();
-  if (vistaId === "vista-pedidos") cargarDashboardPedidos();
-}
+  if (vistaId === 'vista-ubicaciones') cargarDashboardUbicaciones();
+  if (vistaId === 'vista-productos') cargarDashboardProductos();
+  if (vistaId === 'vista-salidas') recargarSelectores();
+  if (vistaId === 'vista-pedidos') cargarDashboardPedidos();
+};
+
 
 // ==========================================
 // 3. CATALOGOS Y SELECTORES
