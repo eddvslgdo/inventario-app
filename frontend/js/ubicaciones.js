@@ -9,6 +9,7 @@ function cargarDashboardUbicaciones() {
     })
     .obtenerDatosUbicaciones();
 }
+
 function renderizarUbicaciones(lista) {
   const grid = document.getElementById("grid-ubicaciones");
   const activas = lista.filter((u) => u.totalVolumen > 0.001);
@@ -91,4 +92,30 @@ function borrarUbicacion(id) {
         })
         .borrarUbicacion(id);
   }
+}
+
+function confirmarReubicacion() {
+  google.script.run
+    .withSuccessHandler(() => {
+      mostrarToast("Hecho", "success");
+      cerrarModalGenerico("modalReubicacion");
+      cargarDashboardUbicaciones();
+    })
+    .procesarReubicacion(
+      ID_UBICACION_A_BORRAR,
+      document.getElementById("selectDestinoReubicacion").value,
+    );
+}
+
+function guardarEdicionUbicacion() {
+  google.script.run
+    .withSuccessHandler(() => {
+      mostrarToast("Editado", "success");
+      cerrarModalGenerico("modalEditarUbicacion");
+      cargarDashboardUbicaciones();
+    })
+    .actualizarNombreUbicacion(
+      ID_UBICACION_A_EDITAR,
+      document.getElementById("inputEditarNombre").value,
+    );
 }
