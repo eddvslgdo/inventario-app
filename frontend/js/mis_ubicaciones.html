@@ -1,0 +1,225 @@
+// ==========================================
+// CÓDIGO FINAL DE UBICACIONES
+// ==========================================
+
+var CACHE_UBICACIONES = [];
+var TEMP_ACCION = null;
+
+// --- 1. CARGA INICIAL ---
+function cargarDashboardUbicaciones() {
+  console.log("Iniciando carga de ubicaciones...");
+  var grid = document.getElementById("grid-ubicaciones");
+  var loader = document.getElementById("loading-ubicaciones");
+  
+  if(!grid) { console.error("No existe el grid"); return; }
+  if(loader) loader.style.display = "block";
+  grid.innerHTML = "";
+
+  google.script.run
+    .withSuccessHandler(function(ubicaciones) {
+       console.log("Ubicaciones recibidas:", ubicaciones);
+       CACHE_UBICACIONES = ubicaciones;
+       if(loader) loader.style.display = "none";
+       renderizarGridUbicaciones(ubicaciones);
+    })
+    .withFailureHandler(function(err){
+       console.error("Error servidor:", err);
+       if(loader) loader.style.display = "none";
+       grid.innerHTML = '<div style="color:red">Error: ' + err + '</div>';
+    })
+    .obtenerDatosUbicaciones();
+}
+
+function renderizarGridUbicaciones(lista) {
+  var grid = document.getElementById("grid-ubicaciones");
+  grid.innerHTML = "";
+
+  if (!lista || lista.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#888;">No hay ubicaciones registradas.</div>';
+    return;
+  }
+
+  for (var i = 0; i < lista.length; i++) {
+    var u = lista[i];
+    var card = document.createElement("div");
+    card.className = "card-ubicacion";
+    card.style.cssText = "background:white; padding:15px; border-radius:12px; border:1px solid #ddd; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.05);";
+    
+    // Closure para clic
+    (function(id) {
+        card.onclick = function() { verDetalleUbicacion(id); };
+    })(u.id);
+
+    var html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">';
+    html += '<strong style="font-size:1.1rem; color:#333;">' + u.nombre + '</strong>';
+    html += '<span style="background:#e3f2fd; color:#007aff; padding:2px 8px; border-radius:10px; font-size:0.8rem; font-weight:bold;">' + Number(u.totalVolumen).toFixed(2) + ' L</span>';
+    html += '</div>';
+
+    if(u.items && u.items.length > 0) {
+       html += '<ul style="margin:0; padding-left:20px; font-size:0.85rem; color:#666;">';
+       for(var j=0; j<Math.min(u.items.length, 3); j++){
+          html += '<li>' + u.items[j].producto + ': ' + u.items[j].volumen + ' L</li>';
+       }
+       if(u.items.length > 3) html += '<li>... (+ rest)</li>';
+       html += '</ul>';
+    } else {
+       html += '<div style="font-size:0.8rem; color:#999; font-style:italic;">Vacío</div>';
+    }
+    card.innerHTML = html;
+    grid.appendChild(card);
+  }
+}
+
+// --- 2. GUARDAR NUEVA UBICACIÓN ---
+function guardarUbicacion() {
+  var nombre = document.getElementById("nuevaUbicNombre").value;
+  if(!nombre || nombre.trim() === "") {
+     return Swal.fire("Atención", "Escribe un nombre", "warning");
+  }
+
+  if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalUbicacion');
+  Swal.fire({ title: 'Guardando...', didOpen: function(){ Swal.showLoading(); } });
+
+  google.script.run
+    .withSuccessHandler(function() {
+        document.getElementById("nuevaUbicNombre").value = "";
+        cargarDashboardUbicaciones();
+        Swal.fire("Éxito", "Creada", "success");
+    })
+    .withFailureHandler(function(e){ Swal.fire("Error", e.message, "error"); })
+    .registrarNuevaUbicacion(nombre);
+}
+
+// --- 3. DETALLE Y ACCIONES ---
+function verDetalleUbicacion(idUbic) {
+  var ubic = null;
+  for(var i=0; i<CACHE_UBICACIONES.length; i++) {
+      if(String(CACHE_UBICACIONES[i].id) === String(idUbic)) { ubic = CACHE_UBICACIONES[i]; break; }
+  }
+  if(!ubic) return;
+
+  document.getElementById("tituloDetalle").innerText = "Contenido: " + ubic.nombre;
+  var tbody = document.getElementById("tablaDetalleBody");
+  tbody.innerHTML = "";
+
+  if(!ubic.items || ubic.items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#999;">Vacío</td></tr>';
+  } else {
+    for(var k=0; k<ubic.items.length; k++){
+       var item = ubic.items[k];
+       var tr = document.createElement("tr");
+       tr.style.borderBottom = "1px solid #eee";
+       
+       var row = '<td style="padding:10px;"><b>' + item.producto + '</b><br><small>' + item.presentacion + '</small></td>';
+       row += '<td style="padding:10px; color:#d63031; font-family:monospace;">' + item.lote + '</td>';
+       row += '<td style="padding:10px;">' + (item.caducidad||'--') + '</td>';
+       row += '<td style="padding:10px; text-align:right;"><b>' + item.volumen + ' L</b></td>';
+       row += '<td style="padding:10px; text-align:center;">';
+       row += '<button class="btn-action btn-move" onclick="abrirTransferencia(\'' + item.raw_producto_id + '\', \'' + item.producto + '\', \'' + item.lote + '\', ' + item.volumen + ', \'' + ubic.id + '\', \'' + item.raw_presentacion_id + '\')">🔄</button> ';
+       row += '<button class="btn-action btn-transf" onclick="abrirTransformacion(\'' + item.raw_producto_id + '\', \'' + item.producto + '\', \'' + item.lote + '\', ' + item.volumen + ', \'' + ubic.id + '\', \'' + item.raw_presentacion_id + '\')">🛠️</button>';
+       row += '</td>';
+       tr.innerHTML = row;
+       tbody.appendChild(tr);
+    }
+  }
+  abrirModalGenerico("modalDetalleUbicacion");
+}
+
+// --- TRANSFERENCIA Y TRANSFORMACIÓN (Funciones Auxiliares) ---
+function abrirTransferencia(pId, pNom, lote, stock, uId, presId) {
+  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId };
+  document.getElementById("txtProductoTransf").innerText = pNom;
+  document.getElementById("txtLoteTransf").innerText = "Lote: " + lote;
+  document.getElementById("cantTransferir").value = "";
+  document.getElementById("lblRestante").innerText = stock + " L";
+  document.getElementById("lblEquivalencia").innerText = "0 L";
+  abrirModalGenerico("modalTransferencia");
+}
+
+function calcularSimulacionTransferencia() {
+  if(!TEMP_ACCION) return;
+  var pzas = parseFloat(document.getElementById("cantTransferir").value) || 0;
+  var volUnit = 0;
+  var sel = document.getElementById("presentacion");
+  if(sel){ for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value==TEMP_ACCION.presId){ volUnit=parseFloat(sel.options[i].getAttribute("data-volumen"))||0; break;}}}
+  
+  var lts = pzas * volUnit;
+  document.getElementById("lblEquivalencia").innerText = lts.toFixed(2) + " L";
+  var resto = TEMP_ACCION.stock - lts;
+  document.getElementById("lblRestante").innerText = resto.toFixed(2) + " L";
+}
+
+function confirmarTransferencia() {
+  if(!TEMP_ACCION) return;
+  var pzas = parseFloat(document.getElementById("cantTransferir").value);
+  var dest = document.getElementById("selDestinoTransf").value;
+  if(!pzas||pzas<=0) return Swal.fire("Error","Cantidad mal","error");
+  if(!dest) return Swal.fire("Error","Elige destino","error");
+  
+  // Calcular litros
+  var volUnit = 0;
+  var sel = document.getElementById("presentacion");
+  if(sel){ for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value==TEMP_ACCION.presId){ volUnit=parseFloat(sel.options[i].getAttribute("data-volumen"))||0; break;}}}
+  var lts = pzas * volUnit;
+  
+  if(lts > TEMP_ACCION.stock + 0.001) return Swal.fire("Error","Stock insuficiente","error");
+
+  cerrarModalGenerico("modalTransferencia");
+  Swal.fire({title:'Procesando...', didOpen: function(){Swal.showLoading()}});
+  
+  google.script.run.withSuccessHandler(function(){
+      cargarDashboardUbicaciones();
+      cerrarModalGenerico("modalDetalleUbicacion");
+      Swal.fire("Listo","Transferido","success");
+  }).withFailureHandler(function(e){Swal.fire("Error",e.message,"error")})
+  .transferirProducto(TEMP_ACCION.ubicId, dest, TEMP_ACCION.prodId, TEMP_ACCION.presId, TEMP_ACCION.lote, lts);
+}
+
+function abrirTransformacion(pId, pNom, lote, stock, uId, presId) {
+  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId };
+  document.getElementById("lblTransfOrigen").innerText = pNom;
+  document.getElementById("lblTransfLote").innerText = lote;
+  document.getElementById("cantTransfPiezas").value = "";
+  document.getElementById("lblTransfLitros").innerText = "0 L";
+  abrirModalGenerico("modalTransformacion");
+}
+
+function calcTransf() {
+  var pzas = parseFloat(document.getElementById("cantTransfPiezas").value) || 0;
+  var volUnit = 0;
+  var sel = document.getElementById("presentacion");
+  if(sel){ for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value==TEMP_ACCION.presId){ volUnit=parseFloat(sel.options[i].getAttribute("data-volumen"))||0; break;}}}
+  var lts = pzas * volUnit;
+  document.getElementById("lblTransfLitros").innerText = lts.toFixed(2) + " L";
+}
+
+function confirmarTransformacion() {
+  var pzas = parseFloat(document.getElementById("cantTransfPiezas").value);
+  var nProd = document.getElementById("selTransfNuevoProd").value;
+  var nPres = document.getElementById("selTransfNuevaPres").value;
+  var nLote = document.getElementById("inputTransfNuevoLote").value;
+  
+  if(!pzas||pzas<=0) return Swal.fire("Error","Cantidad mal","error");
+  
+  var volUnit = 0;
+  var sel = document.getElementById("presentacion");
+  if(sel){ for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value==TEMP_ACCION.presId){ volUnit=parseFloat(sel.options[i].getAttribute("data-volumen"))||0; break;}}}
+  var lts = pzas * volUnit;
+  if(lts > TEMP_ACCION.stock + 0.001) return Swal.fire("Error","Stock insuficiente","error");
+
+  var datos = { origenId:TEMP_ACCION.ubicId, productoIdOrigen:TEMP_ACCION.prodId, loteOrigen:TEMP_ACCION.lote, cantidadLitros:lts, nuevoProductoId:nProd, nuevaPresentacionId:nPres, nuevoLote:nLote };
+  
+  cerrarModalGenerico("modalTransformacion");
+  Swal.fire({title:'Procesando...', didOpen: function(){Swal.showLoading()}});
+  
+  google.script.run.withSuccessHandler(function(){
+      cargarDashboardUbicaciones();
+      cerrarModalGenerico("modalDetalleUbicacion");
+      Swal.fire("Listo","Transformado","success");
+  }).realizarTransformacion(datos);
+}
+
+function abrirModalDesdeTransf() {
+   cerrarModalGenerico('modalTransformacion');
+   abrirModalGenerico('modalProducto');
+}

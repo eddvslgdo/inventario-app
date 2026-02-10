@@ -1,5 +1,5 @@
 // --- CONFIGURACIÓN ---
-const ID_HOJA = '1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E'; // <--- TU ID
+var ID_HOJA = '1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E'; // <--- TU ID
 
 const SHEETS = {
   PRODUCTOS: 'CAT_PRODUCTOS',

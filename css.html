@@ -157,5 +157,87 @@
     margin-top: 0;
     width: auto;
   }
+
+  /* --- NUEVOS ESTILOS PARA MODAL DE CHECKOUT --- */
+
+/* Encabezado moderno con gradiente */
+.modal-header-checkout {
+    background: linear-gradient(135deg, #333 0%, #555 100%);
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #007aff;
+}
+.modal-header-checkout h3 {
+    margin: 0; color: white; font-size: 1.4rem; display: flex; align-items: center; gap: 10px;
+}
+
+/* Contenedor principal en Grid (2 columnas) */
+.checkout-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+    gap: 25px; /* Espacio entre columnas */
+    padding: 25px;
+    background-color: #f8f9fa;
+}
+
+/* Secciones (Cliente y Paquetería) */
+.checkout-section {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid #eef1f6;
+}
+
+/* Títulos de sección */
+.checkout-title {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+.title-blue { color: #007aff; border-color: #007aff; }
+.title-red { color: #d63031; border-color: #d63031; }
+
+/* Ajustes para inputs en el grid */
+.checkout-section .form-group { margin-bottom: 12px; }
+.checkout-section label { font-size: 0.85rem; color: #666; }
+.input-compact { font-size: 0.95rem; padding: 8px 12px; height: 40px; }
+
+/* Checkbox de guardar */
+.save-client-box {
+    background: #e3f2fd;
+    padding: 10px 15px;
+    border-radius: 8px;
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 15px;
+    border: 1px solid #bbdefb;
+}
+
+/* Pie del modal */
+.modal-footer-checkout {
+    padding: 20px;
+    background: white;
+    border-top: 1px solid #eee;
+    text-align: right;
+}
+.btn-finish-order {
+    background: linear-gradient(to right, #2ecc71, #27ae60);
+    color: white; border: none; font-size: 1.2rem;
+    padding: 12px 30px; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+/* Responsive: En celulares se vuelve 1 sola columna */
+@media only screen and (max-width: 768px) {
+    .checkout-grid { grid-template-columns: 1fr; gap: 15px; padding: 15px; }
+    .modal-content { max-width: 95% !important; }
+}
 </style>
 

@@ -1,3 +1,5 @@
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
   <?!= include('frontend/js/state.js.html'); ?>
 </script>
@@ -18,13 +20,9 @@
   <?!= include('frontend/js/entradas.js.html'); ?>
 </script>
 
-<script>
-  <?!= include('frontend/js/salidas.js.html'); ?>
-</script>
+<script><?!= include('frontend/js/salidas.js.html'); ?></script>
+  
 
-<script>
-  <?!= include('frontend/js/ubicaciones.js.html'); ?>
-</script>
 
 <script>
   <?!= include('frontend/js/productos.js.html'); ?>
@@ -37,6 +35,7 @@
 
 <script>
   <?!= include('frontend/js/main.js.html'); ?>
+  
 
   // Listener de arranque
   window.addEventListener('load', function() {
@@ -47,4 +46,473 @@
       console.error("❌ Error: initApp no encontrado");
     }
   });
+</script>
+
+
+<style>
+/* Diseño de Rejilla Responsiva */
+#grid-ubicaciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 10px 0;
+}
+
+/* Tarjeta de Ubicación */
+.card-ubicacion {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  border: 1px solid #e1e4e8;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-ubicacion:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+  border-color: #007aff;
+}
+
+/* Cabecera de la Tarjeta */
+.card-header-ubic {
+  background: #f8f9fa;
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+/* Botones de Acción (Editar/Borrar) */
+.card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon-small {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #666;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.btn-icon-small:hover { background: #007aff; color: white; border-color: #007aff; }
+.btn-icon-small.delete:hover { background: #d63031; color: white; border-color: #d63031; }
+
+/* Cuerpo de la Tarjeta */
+.card-body-ubic {
+  padding: 15px;
+  flex: 1;
+  cursor: pointer; /* Solo el cuerpo es clicable para ver detalle */
+}
+
+.ubic-badge {
+  background: #e3f2fd; 
+  color: #007aff; 
+  padding: 4px 10px; 
+  border-radius: 20px; 
+  font-size: 0.85rem; 
+  font-weight: bold;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+.item-list li { margin-bottom: 4px; border-bottom: 1px dashed #f0f0f0; padding-bottom: 2px; }
+</style>
+
+<script>
+var CACHE_UBICACIONES = [];
+var TEMP_ACCION = null;
+
+// --- 1. CARGA INICIAL ---
+function cargarDashboardUbicaciones() {
+  var grid = document.getElementById("grid-ubicaciones");
+  var loader = document.getElementById("loading-ubicaciones");
+  if(!grid) return;
+  
+  if(loader) loader.style.display = "block";
+  grid.innerHTML = "";
+
+  google.script.run
+    .withSuccessHandler(function(ubicaciones) {
+       CACHE_UBICACIONES = ubicaciones;
+       if(loader) loader.style.display = "none";
+       renderizarGridUbicaciones(ubicaciones);
+    })
+    .withFailureHandler(function(e){
+       if(loader) loader.style.display = "none";
+       if(typeof Swal !== 'undefined') Swal.fire("Error", "Error al cargar: " + e.message, "error");
+    })
+    .obtenerDatosUbicaciones();
+}
+
+function renderizarGridUbicaciones(lista) {
+  var grid = document.getElementById("grid-ubicaciones");
+  grid.innerHTML = "";
+
+  if (!lista || lista.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#888; padding:40px; background:#fff; border-radius:12px;">🏢 No hay ubicaciones creadas. Usa el botón naranja.</div>';
+    return;
+  }
+
+  for (var i = 0; i < lista.length; i++) {
+    var u = lista[i];
+    var card = document.createElement("div");
+    card.className = "card-ubicacion";
+    
+    // --- CABECERA (Nombre + Botones Editar/Borrar) ---
+    var headerHtml = `
+      <div class="card-header-ubic">
+        <h4 class="card-title">${u.nombre}</h4>
+        <div class="card-actions">
+           <button class="btn-icon-small" onclick="editarUbicacion('${u.id}', '${u.nombre}')" title="Editar Nombre">✏️</button>
+           <button class="btn-icon-small delete" onclick="eliminarUbicacion('${u.id}', ${u.items.length})" title="Eliminar Ubicación">🗑️</button>
+        </div>
+      </div>
+    `;
+
+    // --- CUERPO (Clicable para ver detalle) ---
+    // Usamos un div separado para el onclick, así los botones de arriba no abren el detalle
+    var bodyHtml = `
+      <div class="card-body-ubic" onclick="verDetalleUbicacion('${u.id}')">
+         <div class="ubic-badge">${Number(u.totalVolumen).toFixed(2)} L</div>
+    `;
+
+    if(u.items && u.items.length > 0) {
+       bodyHtml += `<ul class="item-list">`;
+       for(var j=0; j<Math.min(u.items.length, 3); j++){
+          bodyHtml += `<li><b>${u.items[j].producto}</b>: ${u.items[j].volumen} L</li>`;
+       }
+       if(u.items.length > 3) bodyHtml += `<li style="color:#007aff; font-size:0.8rem;">+ ${u.items.length - 3} productos más...</li>`;
+       bodyHtml += `</ul>`;
+    } else {
+       bodyHtml += `<div style="font-size:0.8rem; color:#999; font-style:italic; margin-top:5px;">(Vacío)</div>`;
+    }
+    bodyHtml += `</div>`; // Cierra card-body-ubic
+
+    card.innerHTML = headerHtml + bodyHtml;
+    grid.appendChild(card);
+  }
+}
+
+// --- 2. GESTIÓN (CREAR, EDITAR, BORRAR) ---
+
+function guardarUbicacion() {
+  var nombre = document.getElementById("nuevaUbicNombre").value;
+  if(!nombre || nombre.trim() === "") return Swal.fire("Atención", "Escribe un nombre", "warning");
+  
+  if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalUbicacion');
+  Swal.fire({ title: 'Creando...', didOpen: function(){ Swal.showLoading(); } });
+
+  google.script.run.withSuccessHandler(function() {
+      document.getElementById("nuevaUbicNombre").value = "";
+      cargarDashboardUbicaciones();
+      Swal.fire("Éxito", "Ubicación creada", "success");
+  }).registrarNuevaUbicacion(nombre);
+}
+
+function editarUbicacion(id, nombreActual) {
+  // Usamos SweetAlert para pedir el nuevo nombre
+  Swal.fire({
+    title: 'Renombrar Ubicación',
+    input: 'text',
+    inputValue: nombreActual,
+    showCancelButton: true,
+    confirmButtonText: 'Guardar',
+    confirmButtonColor: '#007aff'
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+       Swal.fire({ title: 'Actualizando...', didOpen: function(){ Swal.showLoading(); } });
+       google.script.run.withSuccessHandler(function(){
+          cargarDashboardUbicaciones();
+          Swal.fire("Listo", "Nombre actualizado", "success");
+       }).actualizarNombreUbicacion(id, result.value);
+    }
+  });
+}
+
+function eliminarUbicacion(id, cantidadItems) {
+  if (cantidadItems > 0) {
+    return Swal.fire("No se puede borrar", "Esta ubicación tiene productos. Muévelos o sácalos primero.", "error");
+  }
+  
+  Swal.fire({
+    title: '¿Eliminar ubicación?',
+    text: "Esta acción no se puede deshacer.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d63031',
+    confirmButtonText: 'Sí, eliminar'
+  }).then((result) => {
+    if (result.isConfirmed) {
+       Swal.fire({ title: 'Borrando...', didOpen: function(){ Swal.showLoading(); } });
+       google.script.run.withSuccessHandler(function(){
+          cargarDashboardUbicaciones();
+          Swal.fire("Eliminado", "La ubicación ha sido borrada.", "success");
+       }).borrarUbicacion(id);
+    }
+  });
+}
+
+// --- 3. DETALLE Y VALIDACIÓN DE MOVIMIENTOS ---
+
+function verDetalleUbicacion(idUbic) {
+  var ubic = null;
+  for(var i=0; i<CACHE_UBICACIONES.length; i++) {
+      if(String(CACHE_UBICACIONES[i].id) === String(idUbic)) { ubic = CACHE_UBICACIONES[i]; break; }
+  }
+  if(!ubic) return;
+
+  var tit = document.getElementById("tituloDetalle");
+  if(tit) tit.innerText = "📍 " + ubic.nombre;
+  
+  var tbody = document.getElementById("tablaDetalleBody");
+  if(tbody) {
+      tbody.innerHTML = "";
+      if(!ubic.items || ubic.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">Esta ubicación está vacía.<br><small>Usa "Entradas" para agregar stock aquí.</small></td></tr>';
+      } else {
+        for(var k=0; k<ubic.items.length; k++){
+           var item = ubic.items[k];
+           var tr = document.createElement("tr");
+           tr.style.borderBottom = "1px solid #eee";
+           
+           // Aseguramos que volumen_nominal exista
+           var volUnit = item.volumen_nominal || 0; 
+
+           var row = '<td style="padding:12px;"><b>' + item.producto + '</b><br><small style="color:#666;">' + item.presentacion + '</small></td>';
+           row += '<td style="padding:12px; color:#d63031; font-family:monospace; font-size:0.9rem;">' + item.lote + '</td>';
+           row += '<td style="padding:12px; font-size:0.9rem;">' + (item.caducidad||'--') + '</td>';
+           row += '<td style="padding:12px; text-align:right;"><b>' + item.volumen + ' L</b></td>';
+           row += '<td style="padding:12px; text-align:center;">';
+           
+           // Botones de acción en tabla
+           row += `<div style="display:flex; gap:5px; justify-content:center;">`;
+           row += `<button class="btn-action btn-move" title="Transferir" onclick="abrirTransferencia('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit})">🔄</button>`;
+           row += `<button class="btn-action btn-transf" title="Transformar" onclick="abrirTransformacion('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit})">🛠️</button>`;
+           row += `</div></td>`;
+           
+           tr.innerHTML = row;
+           tbody.appendChild(tr);
+        }
+      }
+  }
+  if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalDetalleUbicacion");
+}
+
+// --- 4. TRANSFERENCIA INTELIGENTE (MAX BUTTON) ---
+
+function abrirTransferencia(pId, pNom, lote, stock, uId, presId, volUnit) {
+  // Guardamos volUnit. Si viene 0 o null, intentamos buscarlo, si no, alertamos.
+  volUnit = Number(volUnit);
+  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit };
+  
+  document.getElementById("txtProductoTransf").innerText = pNom;
+  document.getElementById("txtLoteTransf").innerText = "Lote: " + lote;
+  document.getElementById("cantTransferir").value = "";
+  
+  // Reseteamos textos
+  document.getElementById("lblRestante").innerText = stock + " L";
+  document.getElementById("lblRestante").style.color = "#333";
+  document.getElementById("lblEquivalencia").innerText = "0 L";
+  
+  // CÁLCULO DEL MÁXIMO
+  // Si no tenemos volumen unitario, no podemos calcular piezas
+  var maxPzas = 0;
+  var textoMax = "(Sin volumen ref)";
+  
+  if (volUnit > 0) {
+      maxPzas = Math.floor(stock / volUnit);
+      textoMax = "(Máx: " + maxPzas + " pzas)";
+  }
+
+  // Insertar/Actualizar el botón de Máximo
+  var label = document.querySelector("#modalTransferencia label");
+  var btnMax = document.getElementById("btnMaxTransf");
+  if (!btnMax) {
+      // Creamos el botón si no existe
+      label.insertAdjacentHTML('beforeend', ` <span id="btnMaxTransf" style="color:#007aff; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`);
+      btnMax = document.getElementById("btnMaxTransf"); // Recargar referencia
+  }
+  
+  // Configurar el botón
+  if(btnMax) {
+      btnMax.innerText = textoMax;
+      btnMax.onclick = function() {
+          if (volUnit <= 0) { Swal.fire("Error", "No se detectó el volumen por pieza de este producto.", "error"); return; }
+          document.getElementById("cantTransferir").value = maxPzas;
+          calcularSimulacionTransferencia(); // Recalcular visuales
+      };
+  }
+
+  // Llenar Select Destino
+  var selDest = document.getElementById("selDestinoTransf");
+  if(selDest) {
+      selDest.innerHTML = '<option value="">Selecciona destino...</option>';
+      for(var i=0; i<CACHE_UBICACIONES.length; i++) {
+          var u = CACHE_UBICACIONES[i];
+          if(String(u.id) !== String(uId)) {
+              var opt = document.createElement("option");
+              opt.value = u.id; opt.text = u.nombre; selDest.appendChild(opt);
+          }
+      }
+  }
+  
+  if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalTransferencia");
+}
+
+function calcularSimulacionTransferencia() {
+  if(!TEMP_ACCION) return;
+  var pzas = parseFloat(document.getElementById("cantTransferir").value) || 0;
+  
+  var lts = pzas * TEMP_ACCION.volUnit;
+  
+  document.getElementById("lblEquivalencia").innerText = lts.toFixed(2) + " L";
+  
+  var resto = TEMP_ACCION.stock - lts;
+  var elRest = document.getElementById("lblRestante");
+  
+  if(elRest) {
+      elRest.innerText = resto.toFixed(2) + " L";
+      // Validación visual: Rojo si te pasas
+      if (resto < -0.001) {
+          elRest.style.color = "#d63031"; 
+          elRest.innerText += " (Insuficiente)";
+      } else {
+          elRest.style.color = "#27ae60";
+      }
+  }
+}
+
+function confirmarTransferencia() {
+  if(!TEMP_ACCION) return;
+  var pzas = parseFloat(document.getElementById("cantTransferir").value);
+  var dest = document.getElementById("selDestinoTransf").value;
+  
+  if(!pzas || pzas<=0) return Swal.fire("Error","Cantidad incorrecta","error");
+  if(!dest) return Swal.fire("Error","Elige destino","error");
+  
+  var lts = pzas * TEMP_ACCION.volUnit;
+  if(lts > TEMP_ACCION.stock + 0.001) return Swal.fire("Stock Insuficiente", "Solo tienes " + TEMP_ACCION.stock + "L disponibles.", "error");
+
+  if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico("modalTransferencia");
+  Swal.fire({title:'Moviendo...', didOpen: function(){Swal.showLoading()}});
+  
+  google.script.run.withSuccessHandler(function(){
+      cargarDashboardUbicaciones();
+      if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico("modalDetalleUbicacion");
+      Swal.fire("Listo","Transferencia exitosa","success");
+  }).withFailureHandler(function(e){Swal.fire("Error",e.message,"error")})
+  .transferirProducto(TEMP_ACCION.ubicId, dest, TEMP_ACCION.prodId, TEMP_ACCION.presId, TEMP_ACCION.lote, lts);
+}
+
+// --- 5. TRANSFORMACIÓN (También actualizada) ---
+
+function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit) {
+  volUnit = Number(volUnit);
+  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit };
+  
+  document.getElementById("lblTransfOrigen").innerText = pNom;
+  document.getElementById("lblTransfLote").innerText = lote;
+  document.getElementById("cantTransfPiezas").value = "";
+  document.getElementById("lblTransfLitros").innerText = "0 L";
+  
+  // Botón Máximo Transformación
+  var label = document.querySelector("#modalTransformacion label");
+  var btnMax2 = document.getElementById("btnMaxTransf2");
+  
+  // Calculamos máximo
+  var maxPzas = (volUnit > 0) ? Math.floor(stock / volUnit) : 0;
+  
+  if (!btnMax2) {
+      // Truco para insertar después del label "A tomar (Piezas):"
+      if(label) label.insertAdjacentHTML('beforeend', ` <span id="btnMaxTransf2" style="color:#9b59b6; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`);
+      btnMax2 = document.getElementById("btnMaxTransf2");
+  }
+  
+  if(btnMax2) {
+      btnMax2.innerText = "(Máx: " + maxPzas + ")";
+      btnMax2.onclick = function() {
+          if (volUnit <= 0) return;
+          document.getElementById("cantTransfPiezas").value = maxPzas;
+          calcTransf();
+      };
+  }
+
+  if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalTransformacion");
+}
+
+function calcTransf() {
+  var pzas = parseFloat(document.getElementById("cantTransfPiezas").value) || 0;
+  var lts = pzas * TEMP_ACCION.volUnit;
+  
+  var elLit = document.getElementById("lblTransfLitros"); 
+  if(elLit) {
+      elLit.innerText = lts.toFixed(2) + " L";
+      elLit.style.color = (lts > TEMP_ACCION.stock + 0.001) ? "red" : "#9b59b6";
+  }
+  
+  // Proyección destino
+  var selD = document.getElementById("selTransfNuevaPres");
+  var volD = 0;
+  if(selD && selD.selectedIndex>=0) volD=parseFloat(selD.options[selD.selectedIndex].getAttribute("data-volumen"))||0;
+  var res = 0; if(volD>0) res = Math.floor(lts/volD);
+  var elRes = document.getElementById("lblTransfResultado"); if(elRes) elRes.innerText = res + " Piezas";
+}
+
+function confirmarTransformacion() {
+  var pzas = parseFloat(document.getElementById("cantTransfPiezas").value);
+  var nProd = document.getElementById("selTransfNuevoProd").value;
+  var nPres = document.getElementById("selTransfNuevaPres").value;
+  var nLote = document.getElementById("inputTransfNuevoLote").value;
+  
+  if(!pzas||pzas<=0) return Swal.fire("Error","Cantidad incorrecta","error");
+  if(!nProd || !nPres) return Swal.fire("Error","Faltan datos destino","error");
+  
+  var lts = pzas * TEMP_ACCION.volUnit;
+  if(lts > TEMP_ACCION.stock + 0.001) return Swal.fire("Error","Stock insuficiente","error");
+
+  var datos = { origenId:TEMP_ACCION.ubicId, productoIdOrigen:TEMP_ACCION.prodId, loteOrigen:TEMP_ACCION.lote, cantidadLitros:lts, nuevoProductoId:nProd, nuevaPresentacionId:nPres, nuevoLote:nLote };
+  
+  if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico("modalTransformacion");
+  Swal.fire({title:'Procesando...', didOpen: function(){Swal.showLoading()}});
+  
+  google.script.run.withSuccessHandler(function(){
+      cargarDashboardUbicaciones();
+      if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico("modalDetalleUbicacion");
+      Swal.fire("Listo","Transformación exitosa","success");
+  }).withFailureHandler(function(e){Swal.fire("Error",e.message,"error")})
+  .realizarTransformacion(datos);
+}
+
+function abrirModalDesdeTransf() {
+   if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalTransformacion');
+   if(typeof abrirModalGenerico === 'function') abrirModalGenerico('modalProducto');
+}
 </script>

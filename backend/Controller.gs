@@ -1,6 +1,5 @@
 /**
- * Controller.gs - VERSIÓN FINAL (VOLUMEN CORREGIDO)
- * NO declaramos ID_HOJA aquí, usa la de Repository.gs
+ * Controller.gs - VERSIÓN FINAL CON TODAS LAS FUNCIONES Y CORRECCIÓN DE SALIDAS
  */
 
 // ==========================================
@@ -263,50 +262,123 @@ function registrarSalidaMasiva(lista) {
   }, lista, false);
 }
 
+// =========================================================================
+// FUNCIÓN CORREGIDA Y ROBUSTA PARA PROCESAR PEDIDOS Y SALIDAS
+// =========================================================================
 function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
   const lock = LockService.getScriptLock();
   try {
+    // Esperamos hasta 30 segundos para evitar choques de escritura
     lock.waitLock(30000);
+    
     const idPedido = "PED-" + Math.floor(Date.now() / 1000);
     const fechaHoy = new Date();
 
+    // 1. GUARDAR CLIENTE (Solo si se solicitó)
     if (guardarCliente) {
         const sheetCli = obtenerHojaOCrear('CLIENTES', ['ID', 'NOMBRE', 'EMPRESA', 'DIRECCION', 'TELEFONO', 'EMAIL']);
         let idCli = datosPedido.idCliente;
-        if (!idCli || idCli === 'nuevo') idCli = "CLI-" + Math.floor(Math.random()*10000);
-        sheetCli.appendRow([idCli, datosPedido.nombreCliente, datosPedido.empresa, datosPedido.direccion, datosPedido.telefono, datosPedido.email]);
+        // Si es nuevo o no tiene ID, generamos uno
+        if (!idCli || idCli === 'nuevo' || idCli === '') {
+            idCli = "CLI-" + Math.floor(Math.random()*10000);
+        }
+        sheetCli.appendRow([
+            idCli, 
+            datosPedido.nombreCliente, 
+            datosPedido.empresa, 
+            datosPedido.direccion, 
+            datosPedido.telefono, 
+            datosPedido.email
+        ]);
     }
 
+    // 2. REGISTRAR EL PEDIDO (Cabecera)
     const sheetPed = obtenerHojaOCrear('PEDIDOS', ['ID_PEDIDO', 'FECHA', 'ID_CLIENTE', 'NOMBRE', 'DIRECCION', 'TELEFONO', 'PAQUETERIA', 'GUIA', 'TIPO', 'COSTO', 'ESTATUS', 'F_EST', 'F_REAL', 'LINK']);
-    sheetPed.appendRow([idPedido, fechaHoy, datosPedido.idCliente, datosPedido.nombreCliente, datosPedido.direccion, datosPedido.telefono, datosPedido.paqueteria, datosPedido.guia, datosPedido.tipoEnvio, datosPedido.costoEnvio, 'Pendiente', '', '', '']);
+    sheetPed.appendRow([
+        idPedido, 
+        fechaHoy, 
+        datosPedido.idCliente, 
+        datosPedido.nombreCliente, 
+        datosPedido.direccion, 
+        datosPedido.telefono, 
+        datosPedido.paqueteria, 
+        datosPedido.guia, 
+        datosPedido.tipoEnvio, 
+        datosPedido.costoEnvio, 
+        'Pendiente', // Estatus inicial
+        '', '', ''   // Fechas y link vacíos
+    ]);
 
+    // 3. PROCESAR INVENTARIO Y DETALLE (Salidas)
     const sheetInv = obtenerHojaOCrear('INVENTARIO', []);
     const sheetSal = obtenerHojaOCrear('REGISTROS_SALIDA', ['PROD_ID', 'PROD_NOM', 'PRES_ID', 'PRES_NOM', 'VOL', 'PZAS', 'UBIC', 'LOTE', 'CLIENTE', 'USUARIO', 'FECHA', 'ID_PEDIDO']);
-    if(sheetInv.getLastRow() < 2) throw new Error("Inventario vacío");
+    
+    // Obtenemos todos los datos del inventario de una vez para ser rápidos
     const dataInv = sheetInv.getDataRange().getValues();
-
+    
+    // Recorremos cada producto del carrito
     itemsCarrito.forEach(item => {
-      let encontrado = false;
+      let inventarioActualizado = false;
+      
+      // Limpieza de datos recibidos (Trim y UpperCase para evitar errores tontos)
+      const reqProd = String(item.producto_id).trim();
+      const reqPres = String(item.presentacion_id).trim();
+      const reqUbic = String(item.ubicacion_id).trim();
+      const reqLote = String(item.lote).trim().toUpperCase(); // CLAVE: Lote siempre mayúsculas
+      
+      // Buscamos coincidencia en el inventario
       for (let i = 1; i < dataInv.length; i++) {
-        if (String(dataInv[i][0]).trim() == String(item.producto_id).trim() &&
-            String(dataInv[i][1]).trim() == String(item.presentacion_id).trim() &&
-            String(dataInv[i][2]).trim() == String(item.ubicacion_id).trim() &&
-            String(dataInv[i][6]).trim() == String(item.lote).trim()) {
+        const invProd = String(dataInv[i][0]).trim();
+        const invPres = String(dataInv[i][1]).trim();
+        const invUbic = String(dataInv[i][2]).trim();
+        const invLote = String(dataInv[i][6]).trim().toUpperCase();
+
+        // Si todo coincide, descontamos
+        if (invProd === reqProd && invPres === reqPres && invUbic === reqUbic && invLote === reqLote) {
           
-          const currentStock = Number(dataInv[i][3]);
-          const newStock = currentStock - Number(item.volumen_L);
+          const stockActual = Number(dataInv[i][3]);
+          const cantidadRestar = Number(item.volumen_L);
           
-          if(newStock <= 0.001) sheetInv.deleteRow(i+1);
-          else sheetInv.getRange(i+1, 4).setValue(newStock);
+          const nuevoStock = stockActual - cantidadRestar;
           
-          encontrado = true;
-          break;
+          // Guardamos el nuevo stock en la celda correspondiente (Columna D = índice 4)
+          sheetInv.getRange(i + 1, 4).setValue(nuevoStock);
+          
+          inventarioActualizado = true;
+          break; // Dejamos de buscar este item, pasamos al siguiente
         }
       }
-      sheetSal.appendRow([item.producto_id, item.nombre_producto, item.presentacion_id, item.nombre_presentacion, item.volumen_L, item.piezas, item.ubicacion_id, item.lote, datosPedido.nombreCliente, Session.getActiveUser().getEmail(), fechaHoy, idPedido]);
+
+      // 4. GUARDAR EN REGISTROS_SALIDA (Independientemente de si se descontó o no)
+      // Esto asegura que la venta quede registrada aunque el inventario tenga un error
+      sheetSal.appendRow([
+        item.producto_id, 
+        item.nombre_producto || '---', 
+        item.presentacion_id, 
+        item.nombre_presentacion || '---', 
+        Number(item.volumen_L), 
+        Number(item.piezas), 
+        item.ubicacion_id, 
+        item.lote, 
+        datosPedido.nombreCliente, 
+        Session.getActiveUser().getEmail(), 
+        fechaHoy, 
+        idPedido
+      ]);
+      
+      if (!inventarioActualizado) {
+         console.warn("⚠️ Advertencia: No se encontró stock exacto para descontar el lote " + item.lote + ", pero se registró la salida.");
+      }
     });
+
     return { success: true, idPedido: idPedido };
-  } catch (e) { throw new Error(e.message); } finally { lock.releaseLock(); }
+
+  } catch (e) {
+    // Si algo falla, devolvemos el error al frontend para mostrarlo
+    return { success: false, error: "Error en servidor: " + e.message };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ==========================================
@@ -315,14 +387,22 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
 function obtenerHistorialPedidos() {
   const sheet = obtenerHojaOCrear('PEDIDOS', []);
   if(sheet.getLastRow() < 2) return [];
+  
   const data = sheet.getDataRange().getValues();
   let pedidos = [];
+  
+  // Recorremos de abajo hacia arriba (más recientes primero)
   for(let i=data.length-1; i>=1; i--) {
-    if(data[i][0]) {
+    // IMPORTANTE: Verificamos que data[i][0] (el ID) exista
+    if(data[i][0] && String(data[i][0]).trim() !== "") {
       pedidos.push({
         id: data[i][0],
         fecha: data[i][1] instanceof Date ? data[i][1].toLocaleDateString() : data[i][1],
-        cliente: data[i][3], destino: data[i][4], paqueteria: data[i][6], guia: data[i][7], estatus: data[i][10] || 'Pendiente'
+        cliente: data[i][3], 
+        destino: data[i][4], 
+        paqueteria: data[i][6], 
+        guia: data[i][7], 
+        estatus: data[i][10] || 'Pendiente'
       });
     }
   }
@@ -512,4 +592,9 @@ function borrarUbicacion(id) {
   const s = obtenerHojaOCrear('UBICACIONES', []);
   const d = s.getDataRange().getValues();
   for(let i=1; i<d.length; i++) if(d[i][0]==id) { s.deleteRow(i+1); return true; }
+}
+
+// --- PUENTE PARA EL FRONTEND ---
+function registrarSalidas(lista) {
+  return registrarSalidaMasiva(lista);
 }

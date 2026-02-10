@@ -1,4 +1,5 @@
-// core.js.html - Versión Blindada
+// core.js.html - Versión con Select de Clientes Inteligente
+
 window.cambiarVista = function (vistaId) {
   document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -33,7 +34,6 @@ function llenarSelects(data) {
   poblarSelect("ubicacion", data.ubicaciones);
 
   // --- SEGURIDAD AQUÍ ---
-  // Si calcularTotalEntrada no existe, usamos una función vacía para que no rompa
   var fnEntrada = (typeof calcularTotalEntrada === 'function') ? calcularTotalEntrada : function(){ console.warn("Fn Entrada no cargada"); return 0; };
   setupPresentacion("presentacion", data.presentaciones, fnEntrada);
 
@@ -58,15 +58,29 @@ function llenarSelects(data) {
   }
 }
 
+// --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
 function llenarSelectClientes() {
   const sel = document.getElementById("log_cliente_select");
   if (!sel) return;
+  
+  // Opción por defecto
   sel.innerHTML = '<option value="">-- Nuevo / Manual --</option>';
+  
   if(typeof LISTA_CLIENTES !== 'undefined'){
       LISTA_CLIENTES.forEach((c) => {
         const opt = document.createElement("option");
         opt.value = c.id;
-        opt.text = c.nombre;
+        
+        // LOGICA DE VISUALIZACIÓN: NOMBRE / DIRECCIÓN
+        // Si la dirección es muy larga, la cortamos para que quepa en el select
+        let dirCorta = c.direccion || "Sin dirección";
+        if (dirCorta.length > 40) {
+            dirCorta = dirCorta.substring(0, 40) + "...";
+        }
+        
+        // Así se verá: "Eduardo / Azahares 26..."
+        opt.text = `${c.nombre} / ${dirCorta}`;
+        
         sel.appendChild(opt);
       });
   }

@@ -1,282 +1,349 @@
+
 // ==========================================
-// 5. LÓGICA DE SALIDAS (FIFO + CHECKOUT)
+// LÓGICA DE SALIDAS Y ENVÍOS (CORREGIDO)
 // ==========================================
 
-function calcularTotalSalida() {
-  if (typeof calcTotalGenerico === 'function') {
-      const total = calcTotalGenerico("sal_presentacion", "sal_cantidad");
-      const elTotal = document.getElementById("sal_infoTotal");
-      if (elTotal) elTotal.innerText = total + " L";
-      return total;
-  }
-  return 0;
-}
+// Aseguramos variables globales
+var ITEMS_PENDIENTES_ENVIO = ITEMS_PENDIENTES_ENVIO || [];
 
-function aplicarFIFO() {
-  const selectProd = document.getElementById("sal_producto");
-  const prodId = selectProd ? selectProd.value : null;
-
-  // Validación robusta
-  if (!prodId || prodId === "") return;
-
-  mostrarToast("🔍 Analizando lotes y caducidades...", "info");
-  
-  limpiarCamposSalidaParcial();
-
-  google.script.run
-    .withSuccessHandler(function(respuestaTexto) {
-      let resultado;
-      try {
-        resultado = JSON.parse(respuestaTexto);
-      } catch (e) {
-        console.error(e);
-        return;
-      }
-      
-      if (!resultado.success) {
-        mostrarToast(resultado.error, "error");
-        return;
-      }
-
-      // 1. Renderizar tabla (Versión DOM segura)
-      renderizarTablaDisponibilidad(resultado.lista_completa);
-      
-      // 2. Autoseleccionar FIFO
-      const mejor = resultado.mejor_candidato;
-      if (mejor) {
-          // Seleccionamos la fila 0 por defecto
-          seleccionarLote(mejor.lote, mejor.presentacion_id, mejor.ubicacion_id, mejor.stock_real, 0); 
-          mostrarToast("Sugerido: " + mejor.lote, "success");
-      } else {
-          mostrarToast("Sin stock disponible", "warning");
-      }
-    })
-    .withFailureHandler(mostrarError)
-    .obtenerSugerenciaFIFO(prodId, (typeof COLA_SALIDAS !== 'undefined') ? COLA_SALIDAS : []);
-}
-
-function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila) {
-  // Llenar campos
-  const elLote = document.getElementById("sal_lote");
-  if(elLote) {
-      elLote.value = lote;
-      elLote.readOnly = true; // Bloquear
-      elLote.style.backgroundColor = "#e9ecef";
-  }
-  
-  const elPres = document.getElementById("sal_presentacion");
-  if(elPres) {
-      elPres.value = presId;
-      elPres.disabled = true; // Bloquear
-  }
-  
-  const elUbic = document.getElementById("sal_ubicacion");
-  if(elUbic) {
-      elUbic.value = ubicId;
-      elUbic.disabled = true; // Bloquear
-  }
-
-  const inputCant = document.getElementById("sal_cantidad");
-  if (inputCant) {
-      inputCant.value = "";
-      inputCant.placeholder = "Máx: " + Number(stockMax).toFixed(2) + " L";
-      inputCant.setAttribute("data-max-stock", stockMax);
-      inputCant.focus();
-  }
-  
-  const elInfo = document.getElementById("sal_infoTotal");
-  if(elInfo) elInfo.innerText = "0 L";
-
-  iluminarFilaTabla(indiceFila);
-}
-
-// --- VERSIÓN SEGURA: Sin HTML strings para evitar errores de parser ---
-function renderizarTablaDisponibilidad(lista) {
-  const div = document.getElementById("div-disponibilidad");
-  if (!div) return;
-  div.innerHTML = ""; // Limpiar contenido previo
-  div.style.display = "block";
-  
-  // Mensaje de ayuda
-  const msg = document.createElement("div");
-  msg.style.cssText = "margin-bottom:5px; font-size:0.8rem; color:#666;";
-  msg.innerText = "ℹ️ Haz clic en una fila para cambiar de lote.";
-  div.appendChild(msg);
-
-  // Crear Tabla
-  const table = document.createElement("table");
-  table.style.cssText = "width:100%; font-size:0.85rem; border-collapse:collapse; border:1px solid #eee;";
-  
-  // Encabezados
-  const thead = document.createElement("tr");
-  thead.style.background = "#f8f9fa";
-  
-  ["Lote", "Caducidad", "Ubic", "Stock"].forEach(function(titulo) {
-      const th = document.createElement("th");
-      th.innerText = titulo;
-      th.style.padding = "8px";
-      th.style.textAlign = "left";
-      thead.appendChild(th);
-  });
-  table.appendChild(thead);
-  
-  // Filas
-  if (lista && lista.length) { // Verificamos que tenga elementos
-      lista.forEach(function(l, idx) {
-          const tr = document.createElement("tr");
-          tr.id = "fila-lote-" + idx;
-          tr.style.cursor = "pointer";
-          tr.style.borderBottom = "1px solid #eee";
-          
-          // Evento Clic seguro
-          tr.addEventListener("click", function() {
-             seleccionarLote(l.lote, l.presentacion_id, l.ubicacion_id, l.stock, idx);
-          });
-          
-          // Celda Lote
-          const td1 = document.createElement("td");
-          td1.innerText = l.lote;
-          td1.style.padding = "8px";
-          td1.style.fontWeight = "bold";
-          tr.appendChild(td1);
-          
-          // Celda Caducidad
-          const td2 = document.createElement("td");
-          td2.innerText = l.fecha_caducidad || l.caducidad || "---";
-          td2.style.padding = "8px";
-          td2.style.color = "#d35400";
-          tr.appendChild(td2);
-          
-          // Celda Ubic
-          const td3 = document.createElement("td");
-          td3.innerText = l.nombre_ubicacion || l.ubicacion_id;
-          td3.style.padding = "8px";
-          tr.appendChild(td3);
-          
-          // Celda Stock
-          const td4 = document.createElement("td");
-          td4.innerText = l.stock + " L";
-          td4.style.padding = "8px";
-          td4.style.textAlign = "right";
-          td4.style.color = "#27ae60";
-          tr.appendChild(td4);
-          
-          table.appendChild(tr);
-      });
-  } else {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 4;
-      td.innerText = "Sin stock disponible";
-      td.style.padding = "10px";
-      td.style.textAlign = "center";
-      tr.appendChild(td);
-      table.appendChild(tr);
-  }
-  
-  div.appendChild(table);
-}
-
-function iluminarFilaTabla(indice) {
-  // Limpiar estilos
-  const filas = document.querySelectorAll('[id^="fila-lote-"]');
-  filas.forEach(function(f) { f.style.backgroundColor = "transparent"; });
-  
-  // Iluminar activa
-  const activa = document.getElementById("fila-lote-" + indice);
-  if (activa) activa.style.backgroundColor = "#e8f0fe";
-}
+// -------------------------------------------------
+// A. FUNCIONES DEL CARRITO (AGREGAR A PEDIDO)
+// -------------------------------------------------
 
 function agregarColaSalida() {
-  const vol = calcularTotalSalida();
+  const item = construirItemSalida(); 
+  if (!item) return; 
+
+  const existente = COLA_SALIDAS.find(i => i.lote === item.lote && i.ubicacion_id === item.ubicacion_id);
   
-  // Validacion segura sin simbolo menor que
-  if (!(vol > 0)) return mostrarToast("Cantidad incorrecta", "error");
+  if (existente) {
+     mostrarToast("Nota: Este lote ya estaba en la lista.", "info");
+  }
+
+  COLA_SALIDAS.push(item);
+  renderizarColaSalida();
+  
+  mostrarToast("Agregado al pedido ✅", "success");
+  limpiarCamposSalidaParcial(); 
+}
+
+function eliminarSal(index) {
+    COLA_SALIDAS.splice(index, 1);
+    renderizarColaSalida();
+}
+
+function renderizarColaSalida() {
+  if(typeof renderColaGenerica === 'function') {
+     renderColaGenerica(COLA_SALIDAS, "area-cola-salidas", "tablaColaSalidaBody", "contadorColaSal", "sal");
+  }
+}
+
+// -------------------------------------------------
+// B. BOTONES PRINCIPALES
+// -------------------------------------------------
+
+function guardarSalidaDirecta() {
+  const item = construirItemSalida();
+  if (!item) return; 
+
+  console.log("⚡ Iniciando Salida Rápida:", item);
+  ITEMS_PENDIENTES_ENVIO = [item]; // Guardamos en temporal
+  abrirModalGenerico('modalLogistica');
+}
+
+function procesarSalidas() {
+  if (COLA_SALIDAS.length === 0) {
+     return Swal.fire('Pedido Vacío', 'Agrega productos a la lista antes de finalizar.', 'warning');
+  }
+  ITEMS_PENDIENTES_ENVIO = []; // Limpiamos temporal
+  abrirModalGenerico('modalLogistica');
+}
+
+// -------------------------------------------------
+// C. CONFIRMACIÓN FINAL (CRÍTICO: ESTA FUNCIÓN FALLABA)
+// -------------------------------------------------
+
+function confirmarPedidoCompleto() {
+  console.log("🔄 Confirmando pedido...");
+  
+  const nombreEl = document.getElementById("log_nombre");
+  const nombre = nombreEl ? nombreEl.value.trim() : "";
+  
+  if (!nombre) return mostrarToast("Falta nombre del cliente", "error");
+
+  // Determinar qué lista enviar (Rápida o Carrito)
+  let itemsAEnviar = [];
+  if (ITEMS_PENDIENTES_ENVIO && ITEMS_PENDIENTES_ENVIO.length > 0) {
+      itemsAEnviar = ITEMS_PENDIENTES_ENVIO;
+  } else if (COLA_SALIDAS && COLA_SALIDAS.length > 0) {
+      itemsAEnviar = COLA_SALIDAS;
+  }
+
+  if (itemsAEnviar.length === 0) {
+      return Swal.fire("Error", "No se encontraron productos para enviar.", "error");
+  }
+
+  const btn = document.querySelector(".btn-finish-order") || event.target;
+  const txtOriginal = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = "Procesando...";
+
+  const datosLogistica = {
+    idCliente: document.getElementById("log_cliente_select").value || "nuevo",
+    nombreCliente: nombre,
+    empresa: document.getElementById("log_empresa").value,
+    direccion: document.getElementById("log_direccion").value,
+    telefono: document.getElementById("log_telefono").value,
+    email: document.getElementById("log_email").value,
+    tipoEnvio: document.getElementById("log_tipo_envio").value,
+    paqueteria: document.getElementById("log_paqueteria").value,
+    guia: document.getElementById("log_guia").value,
+    costoEnvio: document.getElementById("log_costo").value || 0,
+  };
+  
+  const chkGuardar = document.getElementById("log_guardar_cliente");
+  const guardarCli = chkGuardar ? chkGuardar.checked : false;
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      console.log("Respuesta servidor:", res);
+      // Parseo de seguridad
+      if(typeof res === 'string') { try { res = JSON.parse(res); } catch(e){} }
+
+      if (res && res.success) {
+          Swal.fire({ 
+              title: '¡Pedido Generado!', 
+              text: 'ID: ' + res.idPedido, 
+              icon: 'success' 
+          });
+          
+          // Limpiar todo
+          COLA_SALIDAS = []; // Vaciar array global
+          ITEMS_PENDIENTES_ENVIO = [];
+          
+          renderizarColaSalida();
+          limpiarFormularioSalidaTotal();
+          cerrarModalGenerico("modalLogistica");
+          
+          // Actualizar inventario visual
+          if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
+      } else {
+          Swal.fire("Error", (res && res.error) ? res.error : "Error desconocido al guardar.", "error");
+      }
+      
+      btn.disabled = false;
+      btn.innerText = txtOriginal;
+    })
+    .withFailureHandler((err) => {
+      console.error(err);
+      Swal.fire("Error de Conexión", err.message, "error");
+      btn.disabled = false;
+      btn.innerText = txtOriginal;
+    })
+    .procesarPedidoCompleto(datosLogistica, itemsAEnviar, guardarCli);
+}
+
+// -------------------------------------------------
+// D. UTILIDADES (AQUÍ ESTABA EL ERROR DEL SELECT)
+// -------------------------------------------------
+
+// Esta función debe estar disponible globalmente
+function alSeleccionarCliente() {
+  const sel = document.getElementById("log_cliente_select");
+  const idCliente = sel ? sel.value : "";
+  
+  if(typeof LISTA_CLIENTES === 'undefined') return;
+
+  if(!idCliente || idCliente === "") {
+     // Limpiar campos
+     ["log_nombre", "log_empresa", "log_direccion", "log_telefono", "log_email"].forEach(id => {
+         const el = document.getElementById(id); if(el) el.value = "";
+     });
+     return;
+  }
+
+  const cliente = LISTA_CLIENTES.find(c => String(c.id) === String(idCliente));
+  if (cliente) {
+     if(document.getElementById("log_nombre")) document.getElementById("log_nombre").value = cliente.nombre || "";
+     if(document.getElementById("log_empresa")) document.getElementById("log_empresa").value = cliente.empresa || "";
+     if(document.getElementById("log_direccion")) document.getElementById("log_direccion").value = cliente.direccion || "";
+     if(document.getElementById("log_telefono")) document.getElementById("log_telefono").value = cliente.telefono || "";
+     if(document.getElementById("log_email")) document.getElementById("log_email").value = cliente.email || "";
+  }
+}
+
+function construirItemSalida() {
+  const volTotal = calcularTotalSalida(); 
+
+  if (!(volTotal > 0)) {
+     mostrarToast("Cantidad incorrecta (0 L)", "error");
+     return null;
+  }
   
   const elLote = document.getElementById("sal_lote");
   const lote = elLote ? elLote.value.trim() : "";
-  
-  if (!lote) return mostrarToast("Falta Lote", "error");
+  if (!lote) {
+     mostrarToast("Selecciona un Lote", "warning");
+     return null;
+  }
 
-  const item = {
+  const inputCant = document.getElementById("sal_cantidad");
+  const maxPzas = parseFloat(inputCant.getAttribute("data-max-pzas")) || 999999;
+  const pzas = parseFloat(inputCant.value);
+  
+  if (pzas > maxPzas) {
+     mostrarToast("⚠️ Stock insuficiente (Máx: " + maxPzas + ")", "error");
+     return null;
+  }
+
+  return {
     producto_id: document.getElementById("sal_producto").value,
     nombre_producto: getTextoSelect("sal_producto"),
     presentacion_id: document.getElementById("sal_presentacion").value,
     nombre_presentacion: getTextoSelect("sal_presentacion"),
     ubicacion_id: document.getElementById("sal_ubicacion").value,
     nombre_ubicacion: getTextoSelect("sal_ubicacion"),
-    volumen_L: vol,
-    piezas: document.getElementById("sal_cantidad").value,
+    volumen_L: volTotal,
+    piezas: pzas,
     lote: lote,
+    caducidad: inputCant.getAttribute("data-caducidad") || "---"
   };
-  
-  if(typeof COLA_SALIDAS !== 'undefined') {
-      COLA_SALIDAS.push(item);
-      renderizarColaSalida();
+}
+
+function calcularTotalSalida() {
+  if (typeof calcTotalGenerico === 'function') {
+      const total = calcTotalGenerico("sal_presentacion", "sal_cantidad");
+      const elTotal = document.getElementById("sal_infoTotal");
+      if (elTotal) elTotal.innerText = total.toFixed(2) + " L";
+      return total;
   }
-  
-  limpiarCamposSalidaParcial();
-  mostrarToast("Agregado al pedido", "success");
+  return 0;
 }
 
 function limpiarCamposSalidaParcial() {
   const inputCant = document.getElementById("sal_cantidad");
-  if(inputCant) {
-      inputCant.value = "";
-      inputCant.placeholder = "Cantidad";
-      inputCant.removeAttribute("data-max-stock");
+  if(inputCant) { 
+     inputCant.value = ""; 
+     inputCant.placeholder = "Cantidad"; 
+     inputCant.removeAttribute("data-max-pzas");
+  }
+  document.getElementById("sal_infoTotal").innerText = "0 L";
+  
+  const elLote = document.getElementById("sal_lote"); 
+  if(elLote) { 
+     elLote.value = ""; 
+     elLote.readOnly = false; 
+     elLote.style.backgroundColor = "white"; 
   }
   
-  const elInfo = document.getElementById("sal_infoTotal");
-  if(elInfo) elInfo.innerText = "0 L";
-  
-  const elLote = document.getElementById("sal_lote");
-  if(elLote) {
-      elLote.value = "";
-      elLote.readOnly = false;
-      elLote.style.backgroundColor = "white";
-  }
-
-  const elPres = document.getElementById("sal_presentacion");
-  if(elPres) {
-      elPres.value = "";
-      elPres.disabled = false;
-  }
-  
-  const elUbic = document.getElementById("sal_ubicacion");
-  if(elUbic) {
-      elUbic.value = "";
-      elUbic.disabled = false;
-  }
-  
-  const div = document.getElementById("div-disponibilidad");
+  const elPres = document.getElementById("sal_presentacion"); 
+  if(elPres) { elPres.value = ""; elPres.disabled = false; }
+  const elUbic = document.getElementById("sal_ubicacion"); 
+  if(elUbic) { elUbic.value = ""; elUbic.disabled = false; }
+  const div = document.getElementById("div-disponibilidad"); 
   if(div) div.style.display = "none";
 }
 
-function renderizarColaSalida() {
-  if(typeof COLA_SALIDAS !== 'undefined' && typeof renderColaGenerica === 'function') {
-     renderColaGenerica(COLA_SALIDAS, "area-cola-salidas", "tablaColaSalidaBody", "contadorColaSal", "sal");
-  }
+function limpiarFormularioSalidaTotal() {
+  const ids = ["log_nombre", "log_empresa", "log_direccion", "log_telefono", "log_email", "log_paqueteria", "log_costo", "log_guia"];
+  ids.forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; });
+  
+  const selCli = document.getElementById("log_cliente_select"); if(selCli) selCli.value = "";
+  const chk = document.getElementById("log_guardar_cliente"); if(chk) chk.checked = false;
+  
+  limpiarCamposSalidaParcial();
 }
 
-function getTextoSelect(id) {
-  const s = document.getElementById(id);
-  // Validacion segura sin simbolo menor que
-  if (s && s.selectedIndex !== -1) {
-      return s.options[s.selectedIndex].text;
-  }
-  return "";
+// -------------------------------------------------
+// E. LÓGICA FIFO (Búsqueda de Stock)
+// -------------------------------------------------
+
+function aplicarFIFO() {
+  const selectProd = document.getElementById("sal_producto");
+  const prodId = selectProd ? selectProd.value : null;
+  if (!prodId) return;
+
+  mostrarToast("🔍 Buscando stock...", "info");
+  limpiarCamposSalidaParcial();
+
+  google.script.run
+    .withSuccessHandler(function(jsonResp) {
+      let resultado;
+      try { resultado = JSON.parse(jsonResp); } catch (e) { console.error(e); return; }
+      
+      if (!resultado.success) { 
+         mostrarToast(resultado.error, "warning"); 
+         return; 
+      }
+      renderizarTablaDisponibilidad(resultado.lista_completa);
+      
+      const mejor = resultado.mejor_candidato;
+      if (mejor) {
+          const fecha = mejor.fecha_caducidad || mejor.caducidad || "---";
+          seleccionarLote(mejor.lote, mejor.presentacion_id, mejor.ubicacion_id, mejor.stock_real, 0, fecha); 
+      }
+    })
+    .withFailureHandler(mostrarError)
+    .obtenerSugerenciaFIFO(prodId, COLA_SALIDAS);
 }
 
-// --- AUTO-CONEXIÓN DE EMERGENCIA ---
-// Si core.js cargó antes y no encontró aplicarFIFO, esto lo arregla ahora que sí existe.
-(function() {
-  const sel = document.getElementById("sal_producto");
-  if (sel) {
-      // Removemos listeners previos clonando
-      const nuevo = sel.cloneNode(true);
-      sel.parentNode.replaceChild(nuevo, sel);
-      nuevo.addEventListener("change", aplicarFIFO);
-      console.log("✅ Evento FIFO conectado desde Salidas.");
+function renderizarTablaDisponibilidad(lista) {
+  const div = document.getElementById("div-disponibilidad");
+  if (!div) return;
+  div.innerHTML = ""; div.style.display = "block";
+  
+  const table = document.createElement("table");
+  table.style.cssText = "width:100%; font-size:0.85rem; border-collapse:collapse; border:1px solid #eee; background:white; border-radius:8px;";
+  
+  const thead = document.createElement("tr"); thead.style.background = "#f1f3f5";
+  ["Lote", "Caducidad", "Ubic", "Stock"].forEach(t => {
+      const th = document.createElement("th"); th.innerText = t; th.style.padding = "8px"; th.style.textAlign = "left"; thead.appendChild(th);
+  });
+  table.appendChild(thead);
+  
+  if (lista && lista.length) { 
+      lista.forEach((l, idx) => {
+          const tr = document.createElement("tr");
+          tr.id = "fila-lote-" + idx; tr.style.cursor = "pointer"; tr.style.borderBottom = "1px solid #eee";
+          const fechaCad = l.caducidad || "---";
+          tr.onclick = function() { seleccionarLote(l.lote, l.presentacion_id, l.ubicacion_id, l.stock, idx, fechaCad); };
+          tr.innerHTML = `<td style="padding:8px; font-weight:bold;">${l.lote}</td><td style="padding:8px; color:#d35400;">${fechaCad}</td><td style="padding:8px;">${l.nombre_ubicacion||l.ubicacion_id}</td><td style="padding:8px; text-align:right; color:#27ae60;">${l.stock} L</td>`;
+          table.appendChild(tr);
+      });
+  } else { 
+      table.innerHTML += '<tr><td colspan="4" style="text-align:center;">Sin stock</td></tr>'; 
   }
-})();
+  div.appendChild(table);
+}
+
+function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) {
+  const elLote = document.getElementById("sal_lote");
+  if(elLote) { elLote.value = lote; elLote.readOnly = true; elLote.style.backgroundColor = "#fff5f5"; }
+  
+  const elPres = document.getElementById("sal_presentacion");
+  let volUnitario = 0;
+  if(elPres) {
+      elPres.value = presId; elPres.disabled = true;
+      const opt = elPres.options[elPres.selectedIndex];
+      if(opt) volUnitario = parseFloat(opt.getAttribute("data-volumen")) || 0;
+  }
+  
+  const elUbic = document.getElementById("sal_ubicacion");
+  if(elUbic) { elUbic.value = ubicId; elUbic.disabled = true; }
+
+  const inputCant = document.getElementById("sal_cantidad");
+  if (inputCant) {
+      inputCant.value = "";
+      let maxPiezas = 9999;
+      if (volUnitario > 0) maxPiezas = Math.floor(stockMax / volUnitario);
+      inputCant.placeholder = "Máx: " + maxPiezas + " pzas";
+      inputCant.setAttribute("data-max-pzas", maxPiezas);
+      inputCant.setAttribute("data-caducidad", caducidad);
+      inputCant.focus();
+  }
+  
+  const filas = document.querySelectorAll('[id^="fila-lote-"]');
+  filas.forEach(f => f.style.backgroundColor = "transparent");
+  const activa = document.getElementById("fila-lote-" + indiceFila);
+  if (activa) activa.style.backgroundColor = "#e8f0fe"; 
+}

@@ -504,60 +504,77 @@
   </div>
 
 <div id="modalLogistica" class="modal-overlay" style="display: none; z-index: 2000;">
-    <div class="modal-content" style="max-width: 700px; padding: 0;">
-      <div style="background: #333; padding: 15px 20px; display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="margin:0; color: white;">📦 Checkout / Envío</h3>
-        <button onclick="cerrarModalGenerico('modalLogistica')" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
-      </div>
+  <div class="modal-content" style="max-width: 900px; padding: 0; border-radius: 16px; overflow: hidden;">
+    
+    <div class="modal-header-checkout">
+      <h3>🚀 Finalizar Envío / Checkout</h3>
+      <button onclick="cerrarModalGenerico('modalLogistica')" style="background:none; border:none; color:white; font-size:1.8rem; cursor:pointer; opacity:0.8;">&times;</button>
+    </div>
 
-      <div style="padding: 20px; max-height: 80vh; overflow-y: auto;">
+    <div class="checkout-grid">
+      
+      <div class="checkout-section">
+        <h4 class="checkout-title title-blue">👤 Datos del Destinatario</h4>
         
-        <h4 style="margin-top:0; color:#007aff; border-bottom:1px solid #eee; padding-bottom:5px;">👤 Destinatario</h4>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-          
-          <div style="grid-column: 1 / -1;">
-            <label style="font-size:0.85rem; font-weight:bold;">Buscar Cliente:</label>
-            <select id="log_cliente_select" class="input-modern" onchange="alSeleccionarCliente()" style="background:#eef1f6;">
-               <option value="">-- Nuevo Cliente --</option>
-            </select>
-          </div>
-
-          <div><input type="text" id="log_nombre" class="input-modern" placeholder="Nombre Contacto *"></div>
-          <div><input type="text" id="log_empresa" class="input-modern" placeholder="Empresa"></div>
-          <div style="grid-column: 1 / -1;"><input type="text" id="log_direccion" class="input-modern" placeholder="Dirección Completa *"></div>
-          <div><input type="text" id="log_telefono" class="input-modern" placeholder="Teléfono"></div>
-          <div><input type="text" id="log_email" class="input-modern" placeholder="Email"></div>
-          
-          <div style="grid-column: 1 / -1; display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="log_guardar_cliente">
-            <label for="log_guardar_cliente" style="font-size:0.85rem; color:#666;">Guardar en agenda</label>
-          </div>
+        <div class="form-group">
+          <label for="log_cliente_select" style="font-weight: bold; color:#007aff;">🔍 Buscar / Autocompletar:</label>
+          <select id="log_cliente_select" class="input-modern input-compact" onchange="alSeleccionarCliente()" style="background:#f0f8ff; border-color:#b3d7ff; font-weight:500;">
+             <option value="">-- Nuevo / Manual --</option>
+          </select>
         </div>
 
-        <h4 style="margin-top:0; color:#d63031; border-bottom:1px solid #eee; padding-bottom:5px;">🚚 Paquetería</h4>
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-          
-          <div>
-            <label style="font-size:0.8rem;">Tipo</label>
-            <select id="log_tipo_envio" class="input-modern">
-              <option value="Nacional">Nacional</option><option value="Internacional">Internacional</option>
-            </select>
-          </div>
-          <div><label style="font-size:0.8rem;">Paquetería</label><input type="text" id="log_paqueteria" class="input-modern" placeholder="DHL/Fedex"></div>
-          <div><label style="font-size:0.8rem;">Costo ($)</label><input type="number" id="log_costo" class="input-modern" placeholder="0.00"></div>
-          
-          <div style="grid-column: 1 / -1;">
-            <label style="font-size:0.8rem;">Guía / Rastreo</label>
-            <input type="text" id="log_guia" class="input-modern" placeholder="Número de guía" style="font-family:monospace; font-weight:bold;">
-          </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div><label>Nombre Contacto *</label><input type="text" id="log_nombre" class="input-modern input-compact"></div>
+            <div><label>Empresa / Negocio</label><input type="text" id="log_empresa" class="input-modern input-compact"></div>
+        </div>
+        
+        <div class="form-group" style="margin-top: 10px;">
+            <label>Dirección Completa de Envío *</label>
+            <input type="text" id="log_direccion" class="input-modern input-compact" placeholder="Calle, Número, Colonia, Ciudad...">
         </div>
 
-        <div style="margin-top: 20px; text-align:right;">
-          <button onclick="confirmarPedidoCompleto()" class="btn-field" style="width:100%; background:#2ecc71; color:white; border:none; font-size:1.1rem;">✅ FINALIZAR ORDEN</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div><label>Teléfono</label><input type="text" id="log_telefono" class="input-modern input-compact"></div>
+            <div><label>Email</label><input type="text" id="log_email" class="input-modern input-compact"></div>
+        </div>
+
+        <div class="save-client-box">
+          <input type="checkbox" id="log_guardar_cliente" style="transform: scale(1.2);">
+          <label for="log_guardar_cliente" style="margin:0; font-weight:500; color:#004085; cursor:pointer;">Guardar estos datos en la agenda de clientes</label>
         </div>
       </div>
+
+      <div class="checkout-section" style="border-top: 3px solid #d63031;">
+        <h4 class="checkout-title title-red">🚚 Datos de Logística</h4>
+        
+        <div class="form-group">
+            <label>Tipo de Envío</label>
+            <select id="log_tipo_envio" class="input-modern input-compact">
+              <option value="Nacional" selected>🇲🇽 Nacional</option>
+              <option value="Internacional">🌎 Internacional</option>
+              <option value="Local">🛵 Entrega Local / Mostrador</option>
+            </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+             <div><label>Paquetería / Servicio</label><input type="text" id="log_paqueteria" class="input-modern input-compact" placeholder="Ej. DHL Express"></div>
+             <div><label>Costo ($)</label><input type="number" id="log_costo" class="input-modern input-compact" placeholder="0.00"></div>
+        </div>
+
+        <div class="form-group" style="margin-top: 15px; background: #fff5f5; padding: 15px; border-radius: 8px; border: 1px dashed #d63031;">
+          <label style="font-weight:bold; color:#c0392b; font-size:0.9rem;">🎫 Número de Guía / Rastreo (Tracking)</label>
+          <input type="text" id="log_guia" class="input-modern" placeholder="Escanea o escribe la guía..." style="font-family: monospace; font-size: 1.1rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; border-color: #d63031;">
+          <small style="display:block; margin-top:5px; color:#888;">Si no la tienes, déjalo vacío (se marcará PENDIENTE).</small>
+        </div>
+      </div>
+
+    </div> <div class="modal-footer-checkout">
+      <button onclick="confirmarPedidoCompleto()" class="btn-field btn-finish-order">
+        ✅ CONFIRMAR Y FINALIZAR ORDEN
+      </button>
     </div>
   </div>
+</div>
 
   <div id="modalDetallePedido" class="modal-overlay" style="display: none; z-index: 2001;">
     <div class="modal-content" style="max-width: 650px; padding:0;">

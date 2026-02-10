@@ -46,3 +46,67 @@ function filtrarProductos() {
       tr.style.display = tr.innerText.toLowerCase().includes(txt) ? "" : "none";
     });
 }
+
+// --- FUNCIONES PARA CREAR NUEVOS REGISTROS (Faltaban estas) ---
+
+function guardarProducto() {
+  const nombre = document.getElementById("nuevoNombre").value;
+  const desc = document.getElementById("nuevaDescripcion").value;
+  const unidad = document.getElementById("nuevaUnidad").value;
+
+  if (!nombre) return mostrarToast("Falta el nombre", "error");
+
+  const btn = event.target;
+  const textoOriginal = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = "Guardando...";
+
+  google.script.run
+    .withSuccessHandler(function() {
+      mostrarToast("Producto creado ✅", "success");
+      // Limpiar campos
+      document.getElementById("nuevoNombre").value = "";
+      document.getElementById("nuevaDescripcion").value = "";
+      // Recargar selectores y cerrar modal
+      recargarSelectores();
+      if(typeof cerrarModal === 'function') cerrarModal();
+      
+      btn.disabled = false;
+      btn.innerText = textoOriginal;
+    })
+    .withFailureHandler(function(err) {
+      mostrarError(err);
+      btn.disabled = false;
+      btn.innerText = textoOriginal;
+    })
+    .registrarNuevoProducto({ nombre: nombre, descripcion: desc, unidad: unidad });
+}
+
+function guardarPresentacion() {
+  const desc = document.getElementById("nuevaPresDesc").value;
+  
+  if (!desc) return mostrarToast("Falta descripción", "error");
+
+  const btn = event.target;
+  const textoOriginal = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = "Guardando...";
+
+  google.script.run
+    .withSuccessHandler(function() {
+      mostrarToast("Presentación creada ✅", "success");
+      document.getElementById("nuevaPresDesc").value = "";
+      
+      recargarSelectores();
+      if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalPresentacion');
+
+      btn.disabled = false;
+      btn.innerText = textoOriginal;
+    })
+    .withFailureHandler(function(err) {
+      mostrarError(err);
+      btn.disabled = false;
+      btn.innerText = textoOriginal;
+    })
+    .registrarNuevaPresentacion(desc);
+}

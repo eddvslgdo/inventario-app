@@ -1,34 +1,56 @@
 function verDetallePedido(idPedido) {
+  // 1. PROTECCIÓN: Si el ID no es válido, detenemos todo para no causar errores
+  if (!idPedido || idPedido === "undefined" || idPedido === "null") {
+    return Swal.fire("Error", "Este pedido tiene datos corruptos (ID inválido).", "error");
+  }
+
   PEDIDO_ACTUAL_ID = idPedido;
   document.getElementById("tituloDetallePedido").innerText = "Cargando...";
   abrirModalGenerico("modalDetallePedido");
 
+  // Limpiamos los campos antes de cargar para que no se vean datos viejos
+  document.getElementById("det_fecha_est").value = "";
+  document.getElementById("det_fecha_real").value = "";
+  document.getElementById("tablaItemsPedido").innerHTML = "";
+
   google.script.run
     .withSuccessHandler((data) => {
-      const cab = data.cabecera;
-      document.getElementById("tituloDetallePedido").innerText =
-        "Pedido: " + cab.id;
-      document.getElementById("det_cliente").innerText = cab.cliente;
-      document.getElementById("det_direccion").innerText = cab.direccion;
-      document.getElementById("det_guia").innerText =
-        `${cab.paqueteria} - ${cab.guia}`;
+      // 2. PROTECCIÓN: Si no hay cabecera, salimos
+      if (!data || !data.cabecera) {
+          document.getElementById("tituloDetallePedido").innerText = "Error de datos";
+          return;
+      }
 
-      // Fechas
-      document.getElementById("det_fecha_est").value = cab.fechaEst;
-      document.getElementById("det_fecha_real").value = cab.fechaReal;
+      const cab = data.cabecera;
+      document.getElementById("tituloDetallePedido").innerText = "Pedido: " + (cab.id || "---");
+      document.getElementById("det_cliente").innerText = cab.cliente || "Sin cliente";
+      document.getElementById("det_direccion").innerText = cab.direccion || "";
+      document.getElementById("det_guia").innerText = 
+        `${cab.paqueteria || ""} - ${cab.guia || ""}`;
+
+      // 3. SOLUCIÓN DEL ERROR DE FECHA:
+      // Usamos || "" para asegurar que si es undefined, se ponga cadena vacía
+      document.getElementById("det_fecha_est").value = cab.fechaEst || "";
+      document.getElementById("det_fecha_real").value = cab.fechaReal || "";
+      
       document.getElementById("det_estatus").value = cab.estatus || "Pendiente";
 
       // Tabla Items
       const tbody = document.getElementById("tablaItemsPedido");
       tbody.innerHTML = "";
-      data.items.forEach((item) => {
-        tbody.innerHTML += `
-            <tr style="border-bottom:1px solid #eee;">
-              <td style="padding:8px;">${item.producto}<br><small style="color:#888">${item.presentacion}</small></td>
-              <td style="padding:8px; font-family:monospace; color:#d63031;">${item.lote}</td>
-              <td style="padding:8px; text-align:right;"><strong>${item.volumen} L</strong><br><small>(${item.cantidad} pzs)</small></td>
-            </tr>`;
-      });
+      
+      if (data.items && data.items.length > 0) {
+          data.items.forEach((item) => {
+            tbody.innerHTML += `
+                <tr style="border-bottom:1px solid #eee;">
+                  <td style="padding:8px;">${item.producto}<br><small style="color:#888">${item.presentacion}</small></td>
+                  <td style="padding:8px; font-family:monospace; color:#d63031;">${item.lote}</td>
+                  <td style="padding:8px; text-align:right;"><strong>${item.volumen} L</strong><br><small>(${item.cantidad} pzs)</small></td>
+                </tr>`;
+          });
+      } else {
+          tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:10px;'>Sin items</td></tr>";
+      }
     })
     .obtenerDetallePedidoCompleto(idPedido);
 }
@@ -41,6 +63,7 @@ function guardarActualizacionPedido() {
   const st = document.getElementById("det_estatus").value;
 
   const btn = event.target;
+  const txtOriginal = btn.innerText;
   btn.disabled = true;
   btn.innerText = "Guardando...";
 
@@ -50,26 +73,28 @@ function guardarActualizacionPedido() {
       cerrarModalGenerico("modalDetallePedido");
       cargarDashboardPedidos(); // Refrescar lista
       btn.disabled = false;
-      btn.innerText = "💾 Actualizar Seguimiento";
+      btn.innerText = txtOriginal;
     })
     .actualizarPedido(PEDIDO_ACTUAL_ID, fEst, fReal, st);
 }
 
 function cargarDashboardPedidos() {
   const tbody = document.getElementById("tablaPedidosBody");
-  tbody.innerHTML =
-    '<tr><td colspan="5" style="text-align:center; padding:20px;">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Cargando...</td></tr>';
 
   google.script.run
     .withSuccessHandler((lista) => {
       tbody.innerHTML = "";
-      if (lista.length === 0) {
-        tbody.innerHTML =
-          '<tr><td colspan="5" style="text-align:center; padding:20px;">Sin envíos registrados.</td></tr>';
+      if (!lista || lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Sin envíos registrados.</td></tr>';
         return;
       }
 
       lista.forEach((p) => {
+        // 4. FILTRO DE SEGURIDAD:
+        // Si el pedido no tiene ID (fila vacía), no lo dibujamos
+        if (!p.id) return;
+
         const tr = document.createElement("tr");
         tr.style.borderBottom = "1px solid #eee";
 
@@ -85,7 +110,7 @@ function cargarDashboardPedidos() {
              <div style="font-size:0.75rem; color:#888;">${p.fecha}</div>
            </td>
            <td style="padding:12px;">
-             <div style="font-weight:500;">${p.cliente}</div>
+             <div style="font-weight:500;">${p.cliente || "---"}</div>
              <div style="font-size:0.75rem; color:#888;">${p.destino ? p.destino.substring(0, 20) + "..." : "-"}</div>
            </td>
            <td style="padding:12px; text-align:center;">
@@ -106,6 +131,7 @@ function confirmarPedidoCompleto() {
   if (!nombre) return mostrarToast("Falta nombre", "error");
 
   const btn = event.target;
+  const txtOriginal = btn.innerText; // Guardamos el texto original
   btn.disabled = true;
   btn.innerText = "Procesando...";
 
@@ -125,19 +151,32 @@ function confirmarPedidoCompleto() {
 
   google.script.run
     .withSuccessHandler((res) => {
-      mostrarToast(`Pedido Generado: ${res.idPedido} 🚀`, "success");
-      COLA_SALIDAS = [];
-      renderizarColaSalida();
-      limpiarFormularioSalidaTotal();
-      cerrarModalGenerico("modalLogistica");
-      recargarSelectores(); // Recarga y limpia ceros
+      // Manejo seguro de la respuesta por si viene como string
+      let respObj = res;
+      if (typeof res === 'string') { try { respObj = JSON.parse(res); } catch(e){} }
+
+      if (respObj && respObj.success) {
+          mostrarToast(`Pedido Generado: ${respObj.idPedido} 🚀`, "success");
+          
+          // Limpieza
+          if(typeof COLA_SALIDAS !== 'undefined') COLA_SALIDAS = [];
+          if(typeof renderizarColaSalida === 'function') renderizarColaSalida();
+          if(typeof limpiarFormularioSalidaTotal === 'function') limpiarFormularioSalidaTotal();
+          
+          cerrarModalGenerico("modalLogistica");
+          
+          if(typeof recargarSelectores === 'function') recargarSelectores(); 
+      } else {
+          mostrarToast("Error: " + (respObj.error || "Desconocido"), "error");
+      }
+
       btn.disabled = false;
-      btn.innerText = "✅ CONFIRMAR ENVÍO";
+      btn.innerText = txtOriginal;
     })
     .withFailureHandler((err) => {
       mostrarError(err);
       btn.disabled = false;
-      btn.innerText = "✅ CONFIRMAR ENVÍO";
+      btn.innerText = txtOriginal;
     })
-    .procesarPedidoCompleto(datosLogistica, COLA_SALIDAS, guardarCli);
+    .procesarPedidoCompleto(datosLogistica, (typeof COLA_SALIDAS !== 'undefined' ? COLA_SALIDAS : []), guardarCli);
 }

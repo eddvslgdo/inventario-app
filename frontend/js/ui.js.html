@@ -2,7 +2,6 @@
 
 function mostrarToast(mensaje, tipo) {
   if (!tipo) tipo = "info";
-  
   const toast = document.getElementById("toast-container");
   if (!toast) return alert(mensaje);
   
@@ -33,13 +32,8 @@ function cerrarModalGenerico(id) {
   if (el) el.style.display = "none";
 }
 
-function abrirModal() {
-  abrirModalGenerico("modalProducto");
-}
-
-function cerrarModal() {
-  cerrarModalGenerico("modalProducto");
-}
+function abrirModal() { abrirModalGenerico("modalProducto"); }
+function cerrarModal() { cerrarModalGenerico("modalProducto"); }
 
 // --- CALCULADORA GLOBAL ---
 function calcTotalGenerico(idPres, idCant) {
@@ -47,23 +41,105 @@ function calcTotalGenerico(idPres, idCant) {
   const inp = document.getElementById(idCant);
   
   if (!sel || !inp) return 0;
-  
-  // CORRECCIÓN: Usamos "=== -1" en lugar de "< 0" para evitar el error de símbolo
-  if (sel.selectedIndex === -1) return 0;
+  if (sel.selectedIndex === -1) return 0; // Validación segura
   
   const opt = sel.options[sel.selectedIndex];
   if (!opt) return 0;
   
   let dataVol = opt.getAttribute("data-volumen");
   let volUnitario = parseFloat(dataVol);
-  
   if (isNaN(volUnitario)) volUnitario = 0;
   
   let cantidad = parseFloat(inp.value);
   if (isNaN(cantidad)) cantidad = 0;
 
-  console.log("Calculando: " + cantidad + " * " + volUnitario);
-
   const total = (cantidad * volUnitario);
   return parseFloat(total.toFixed(2));
+}
+
+// --- RENDERIZADOR COMPACTO (FIXED LAYOUT) ---
+function renderColaGenerica(lista, idArea, idBody, idContador, tipo) {
+  const area = document.getElementById(idArea);
+  const tbody = document.getElementById(idBody);
+  const contador = document.getElementById(idContador);
+  
+  if(contador) contador.innerText = lista.length;
+  
+  if (!lista || lista.length === 0) {
+    if(area) area.style.display = "none";
+    return;
+  }
+  
+  if(area) area.style.display = "block";
+  if(tbody) {
+      tbody.innerHTML = "";
+      
+      for (var i = lista.length - 1; i >= 0; i--) {
+          const item = lista[i];
+          const idxOriginal = i;
+          
+          const tr = document.createElement("tr");
+          tr.style.borderBottom = "1px solid #eee";
+          
+          const color = (tipo === "sal") ? "#d63031" : "#007aff"; 
+          
+          // COLUMNA 1: INFO (55%) - El texto largo se cortará con "..."
+          const tdInfo = document.createElement("td");
+          tdInfo.style.width = "55%"; 
+          tdInfo.style.padding = "4px 2px"; // Padding mínimo
+          tdInfo.style.verticalAlign = "middle";
+          tdInfo.style.overflow = "hidden"; // Importante para layout fijo
+          
+          let infoHtml = `<div style="font-weight:600; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${item.nombre_producto}">${item.nombre_producto}</div>`;
+          
+          // Fila: Lote + Caducidad
+          infoHtml += `<div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin-top:2px;">`;
+          infoHtml += `  <span style="font-size:0.75rem; font-family:monospace; color:${color}; background:#f5f5f5; padding:0 3px; border-radius:3px;">${item.lote}</span>`;
+          
+          // MOSTRAR CADUCIDAD SI EXISTE
+          if (item.caducidad && item.caducidad !== "---") {
+             infoHtml += `  <span style="font-size:0.7rem; color:#d35400;">📅 ${item.caducidad}</span>`;
+          }
+          infoHtml += `</div>`;
+          
+          tdInfo.innerHTML = infoHtml;
+          tr.appendChild(tdInfo);
+          
+          // COLUMNA 2: CANTIDAD (25%)
+          const tdCant = document.createElement("td");
+          tdCant.style.width = "25%";
+          tdCant.style.padding = "4px 2px";
+          tdCant.style.textAlign = "right";
+          tdCant.style.verticalAlign = "middle";
+          
+          tdCant.innerHTML = `<div style="font-weight:bold; font-size:0.9rem;">${item.volumen_L} L</div><div style="font-size:0.7rem; color:#888;">(${item.piezas} pzas)</div>`;
+          tr.appendChild(tdCant);
+          
+          // COLUMNA 3: ACCIONES (20%) - Botones pegados
+          const tdAx = document.createElement("td");
+          tdAx.style.width = "20%";
+          tdAx.style.padding = "4px 0";
+          tdAx.style.textAlign = "right";
+          tdAx.style.verticalAlign = "middle";
+          
+          const btnStyle = "border:none; background:transparent; cursor:pointer; font-size:1rem; padding:2px 4px; margin:0;";
+          
+          const btnEdit = document.createElement("button");
+          btnEdit.innerText = "✏️";
+          btnEdit.style.cssText = btnStyle;
+          const fnEdit = (tipo === "sal") ? "editarSal" : "editarEnt";
+          btnEdit.setAttribute("onclick", fnEdit + "(" + idxOriginal + ")");
+          tdAx.appendChild(btnEdit);
+
+          const btnDel = document.createElement("button");
+          btnDel.innerText = "🗑️";
+          btnDel.style.cssText = btnStyle + " color:red;";
+          const fnBorrar = (tipo === "sal") ? "eliminarSal" : "eliminarEnt";
+          btnDel.setAttribute("onclick", fnBorrar + "(" + idxOriginal + ")");
+          tdAx.appendChild(btnDel);
+          
+          tr.appendChild(tdAx);
+          tbody.appendChild(tr);
+      }
+  }
 }
