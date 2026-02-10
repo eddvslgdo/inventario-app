@@ -1,5 +1,6 @@
 /**
- * Controller.gs - VERSIÓN FINAL CON TODAS LAS FUNCIONES Y CORRECCIÓN DE SALIDAS
+ * Controller.gs - VERSIÓN CORREGIDA (FIX-SALIDAS)
+ * Incluye todas las funciones originales + procesarPedidoCompleto arreglado.
  */
 
 // ==========================================
