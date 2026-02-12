@@ -239,5 +239,845 @@
     .checkout-grid { grid-template-columns: 1fr; gap: 15px; padding: 15px; }
     .modal-content { max-width: 95% !important; }
 }
+
+
+/* --- ESTILOS MODERNOS PARA PRODUCTOS --- */
+
+.product-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Sombra suave */
+  margin-bottom: 20px;
+  border: 1px solid #eef2f6;
+  overflow: hidden; /* Para que las esquinas no se salgan */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-2px); /* Efecto de elevación al pasar mouse */
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.product-header {
+  padding: 20px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  cursor: pointer; /* Indica que es clickable */
+}
+
+.product-info h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.product-info span {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+}
+
+.product-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.stock-badge {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.btn-toggle-details {
+  background: transparent;
+  border: 1px solid #dfe6e9;
+  color: #636e72;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-toggle-details:hover {
+  background: #f1f2f6;
+  color: #2d3436;
+  border-color: #b2bec3;
+}
+
+/* --- TABLA INTERNA (DETALLES) --- */
+.product-details {
+  background-color: #f8f9fa;
+  border-top: 1px solid #eef2f6;
+  padding: 0;
+  display: none; /* Oculto por defecto */
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.details-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #b2bec3;
+  padding: 15px 25px;
+  font-weight: 600;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.details-table td {
+  padding: 12px 25px;
+  font-size: 0.9rem;
+  color: #2d3436;
+  border-bottom: 1px solid #f1f2f6;
+}
+
+.details-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Estilos específicos para columnas */
+.col-lote {
+  font-family: 'Consolas', monospace;
+  color: #e67e22; /* Naranja para resaltar lote */
+  font-weight: 600;
+}
+
+.col-number {
+  text-align: right; /* Números a la derecha se leen mejor */
+  font-weight: 600;
+}
+
+/* --- ESTILOS PRODUCTOS V2 (PREMIUM) --- */
+
+.product-card {
+  background: white;
+  border-radius: 16px; /* Bordes más redondeados */
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06); /* Sombra difusa y elegante */
+  margin-bottom: 24px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+}
+
+/* Efecto Hover: La tarjeta se levanta */
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+  border-color: #e0e0e0;
+}
+
+/* Borde lateral decorativo (Azul por defecto) */
+.product-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 6px;
+  background: linear-gradient(to bottom, #007aff, #00c6ff);
+}
+
+/* CABECERA DE TARJETA */
+.product-header {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  cursor: pointer;
+  padding-left: 30px; /* Espacio para el borde lateral */
+}
+
+.product-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.2rem;
+  font-weight: 800; /* Texto más grueso */
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.product-info span {
+  font-size: 0.9rem;
+  color: #888;
+  font-weight: 500;
+}
+
+/* BOTONES Y STOCK */
+.product-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.stock-badge {
+  background-color: #f5f9ff;
+  color: #007aff;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1rem;
+  box-shadow: inset 0 0 0 1px rgba(0,122,255,0.1); /* Borde sutil interno */
+}
+
+.btn-toggle-details {
+  background: white;
+  border: 1px solid #e1e4e8;
+  color: #555;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-toggle-details:hover {
+  background: #f8f9fa;
+  border-color: #ccc;
+  color: #333;
+}
+
+/* --- DETALLES INTERNOS (TABLA) --- */
+.product-details {
+  background-color: #fafbfc; /* Fondo muy sutil */
+  border-top: 1px dashed #e1e4e8; /* Línea punteada para separar */
+  display: none; 
+  padding: 15px 20px;
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: separate; 
+  border-spacing: 0 8px; /* Espacio entre filas */
+}
+
+.details-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #a0a0a0;
+  padding: 0 15px 5px 15px;
+  font-weight: 700;
+}
+
+.details-table tbody tr {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: transform 0.1s;
+}
+.details-table tbody tr:hover {
+  transform: scale(1.005); /* Micro efecto zoom al pasar mouse */
+}
+
+.details-table td {
+  padding: 12px 15px;
+  font-size: 0.9rem;
+  color: #444;
+  border: 1px solid #f0f0f0;
+  border-width: 1px 0; /* Solo bordes arriba y abajo */
+}
+
+.details-table td:first-child { border-left: 1px solid #f0f0f0; border-radius: 8px 0 0 8px; }
+.details-table td:last-child { border-right: 1px solid #f0f0f0; border-radius: 0 8px 8px 0; }
+
+/* Estilos de Celdas */
+.col-lote { font-family: 'Monaco', 'Consolas', monospace; color: #e67e22; font-weight: 700; background: #fffdf5; border-radius: 4px; padding: 4px 8px !important; display:inline-block; border: 1px solid #fceecb;}
+.col-number { text-align: right; font-weight: 700; color: #2c3e50; }
+
+
+/* --- ESTILOS PRODUCTOS PREMIUM --- */
+
+/* Animación de carga */
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Tarjeta Principal */
+.product-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  margin-bottom: 24px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+}
+
+/* Línea de color lateral */
+.product-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 6px;
+  /* El color se define inline en el HTML, esto es fallback */
+  background: #007aff; 
+}
+
+/* Cabecera */
+.product-header {
+  padding: 20px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  cursor: pointer;
+  padding-left: 30px; /* Espacio para el borde de color */
+}
+
+.product-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #2c3e50;
+  letter-spacing: -0.5px;
+}
+
+.product-info span {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+/* Acciones y Badges */
+.product-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.stock-badge {
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  /* El color de texto y fondo se define inline */
+}
+
+.btn-toggle-details {
+  background: white;
+  border: 1px solid #e1e4e8;
+  color: #555;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.btn-toggle-details:hover {
+  background: #f8f9fa;
+  border-color: #ccc;
+  color: #333;
+}
+
+/* Detalles (Tabla interna) */
+.product-details {
+  background-color: #fafbfc;
+  border-top: 1px dashed #e1e4e8;
+  display: none;
+  padding: 15px 25px;
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: separate; 
+  border-spacing: 0 6px; /* Espacio entre filas */
+}
+
+.details-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #a0a0a0;
+  padding: 0 10px 5px 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.details-table tbody tr {
+  background: white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  transition: transform 0.1s;
+}
+
+.details-table td {
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  border: 1px solid #f0f0f0;
+  border-width: 1px 0;
+}
+
+.details-table td:first-child { border-left: 1px solid #f0f0f0; border-radius: 6px 0 0 6px; }
+.details-table td:last-child { border-right: 1px solid #f0f0f0; border-radius: 0 6px 6px 0; }
+
+.col-lote { 
+  font-family: 'Consolas', monospace; 
+  color: #e67e22; 
+  font-weight: 700; 
+  background: #fffdf5; 
+  border: 1px solid #fceecb;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.col-number { text-align: right; font-weight: 700; color: #2c3e50; }
+
+/* --- ADAPTACIÓN MÓVIL (RESPONSIVE) --- */
+
+@media only screen and (max-width: 600px) {
+  
+  /* Ajustes generales de la tarjeta principal */
+  .product-header {
+    padding: 15px; /* Menos relleno para aprovechar espacio */
+    flex-direction: column; /* Elementos uno debajo del otro */
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .product-actions {
+    width: 100%;
+    justify-content: space-between; /* Botón y Stock separados */
+    margin-top: 5px;
+  }
+
+  /* --- TRANSFORMACIÓN DE LA TABLA DE DETALLES --- */
+  /* Ocultamos los encabezados de la tabla porque en móvil estorban */
+  .details-table thead {
+    display: none; 
+  }
+
+  /* Convertimos cada fila (tr) en una cajita individual */
+  .details-table tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    background: white;
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+  }
+
+  /* Ajustamos las celdas (td) para que fluyan mejor */
+  .details-table td {
+    border: none;
+    padding: 4px 0;
+    width: 100%; /* Ocupan todo el ancho por defecto */
+    display: flex;
+    justify-content: space-between; /* Etiqueta a la izq, valor a la der */
+    font-size: 0.9rem;
+  }
+  
+  /* Quitamos bordes redondeados específicos de escritorio */
+  .details-table td:first-child, .details-table td:last-child {
+    border-radius: 0;
+    border: none;
+  }
+
+  /* --- ETIQUETAS VISUALES PARA MÓVIL --- */
+  /* Como ocultamos el encabezado, agregamos etiquetas con CSS */
+  
+  .details-table td:nth-of-type(1)::before { content: "📍 Ubicación:"; color: #999; font-weight: 500; }
+  .details-table td:nth-of-type(2)::before { content: "📦 Presentación:"; color: #999; font-weight: 500; }
+  .details-table td:nth-of-type(3)::before { content: "#️⃣ Lote:"; color: #999; font-weight: 500; }
+  .details-table td:nth-of-type(4)::before { content: "📅 Caducidad:"; color: #999; font-weight: 500; }
+  .details-table td:nth-of-type(5)::before { content: "💧 Cantidad:"; color: #999; font-weight: 500; }
+
+  /* Ajustes específicos para que se vea bonito */
+  .details-table td:nth-of-type(3) { /* Lote */
+    margin-top: 5px;
+    background: #fff8e1; /* Fondo amarillito suave para resaltar */
+    padding: 8px;
+    border-radius: 6px;
+  }
+  
+  .details-table td:nth-of-type(5) { /* Cantidad */
+    font-size: 1.1rem;
+    color: #007aff;
+    font-weight: 800;
+    border-top: 1px dashed #eee;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+}
+
+.info-row {
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 4px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- ESTILOS GESTIÓN DE ENVÍOS (DISEÑO GOOGLE / CLEAN) --- */
+
+/* Contenedor Principal */
+.main-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Header Superior */
+.view-header {
+  padding: 15px 25px;
+  background: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #202124;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Pestañas (Tabs) */
+.tabs-wrapper {
+  background: #f1f3f4;
+  padding: 4px;
+  border-radius: 8px;
+  display: flex;
+  gap: 5px;
+}
+
+.tab-item {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: #5f6368;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.tab-item.active {
+  background: #ffffff;
+  color: #1a73e8; /* Azul Google */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Barra de Herramientas (Fondo Gris) */
+.toolbar-container {
+  padding: 12px 25px;
+  background: #ffffff;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* Input Buscador Estilo Cápsula */
+.search-input-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #f1f3f4;
+  border-radius: 24px;
+  padding: 6px 20px;
+  border: 1px solid transparent;
+  transition: background 0.2s, box-shadow 0.2s;
+  max-width: 600px;
+}
+
+.search-input-group:focus-within {
+  background: #ffffff;
+  border-color: #dfe1e5;
+  box-shadow: 0 1px 6px rgba(32,33,36,0.15);
+}
+
+.search-icon {
+  font-size: 1.1rem;
+  color: #5f6368;
+  margin-right: 12px;
+}
+
+.big-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 0.95rem;
+  color: #3c4043;
+  padding: 5px 0;
+}
+
+/* Filtro de Fechas */
+.date-filter-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dadce0;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: white;
+}
+
+.date-input {
+  border: none;
+  outline: none;
+  color: #5f6368;
+  font-family: inherit;
+  font-size: 0.85rem;
+  background: transparent;
+}
+
+/* Botón Reset */
+.btn-reset {
+  color: #d93025;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+}
+.btn-reset:hover { text-decoration: underline; }
+
+/* Tabla de Datos */
+.table-area {
+  flex: 1;
+  overflow-y: auto;
+  background: #ffffff;
+  position: relative;
+}
+
+.google-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.google-table th {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 10;
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #5f6368;
+  text-transform: uppercase;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.google-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  color: #3c4043;
+}
+
+.google-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Textos de Celda */
+.txt-main {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #202124;
+  display: block;
+}
+
+.txt-sub {
+  font-size: 0.8rem;
+  color: #5f6368;
+  display: block;
+  margin-top: 3px;
+}
+
+/* Badges de Estatus */
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+}
+
+.st-pend { background: #fef7e0; color: #b06000; border: 1px solid #fce8b2; }
+.st-blue { background: #e8f0fe; color: #1967d2; border: 1px solid #d2e3fc; }
+.st-green { background: #e6f4ea; color: #137333; border: 1px solid #ceead6; }
+.st-red { background: #fce8e6; color: #c5221f; border: 1px solid #fad2cf; }
+
+/* Botón de Acción */
+.btn-action {
+  background: #ffffff;
+  border: 1px solid #dadce0;
+  color: #1a73e8;
+  padding: 6px 16px;
+  border-radius: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-action:hover {
+  background: #f1f3f4;
+  border-color: #1a73e8;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* --- ESTILOS DEL MODAL INTERNO --- */
+.modal-head-clean {
+  padding: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  background: #fff;
+}
+
+.input-locked {
+  background: #f1f3f4;
+  color: #80868b;
+  cursor: not-allowed;
+  border: 1px solid #dadce0;
+}
+
+/* Ocultar cabecera negra fea del modal genérico si existe */
+#modalDetallePedido .modal-header, 
+#modalDetallePedido h3 {
+    display: none !important;
+}
+#modalDetallePedido .modal-content {
+    padding: 0 !important;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* --- ESTILOS ENVIOS V6 (CORREGIDO) --- */
+
+.main-envios-container {
+  background: white;
+  border: 1px solid #dce0e4;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Header */
+.envios-header {
+  padding: 15px 20px;
+  background: white;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.envios-title { font-size: 1.2rem; font-weight: 700; color: #333; }
+
+/* Pestañas */
+.tabs-envios { display: flex; gap: 5px; background: #f1f3f5; padding: 4px; border-radius: 6px; }
+.tab-envio-btn {
+  border: none; background: transparent; padding: 6px 15px;
+  font-weight: 600; color: #666; cursor: pointer; border-radius: 4px;
+}
+.tab-envio-btn.active { background: white; color: #007aff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* BARRA DE HERRAMIENTAS (Fondo Gris Claro para contraste) */
+.envios-toolbar {
+  padding: 15px 20px;
+  background: #f8f9fa; 
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* INPUT BUSCADOR (VISIBLE) */
+.input-search-container {
+  flex: 1;
+  position: relative;
+  max-width: 500px;
+}
+.input-search-visible {
+  width: 100%;
+  padding: 10px 10px 10px 35px; /* Espacio para el icono */
+  border: 1px solid #999 !important; /* Borde forzado gris oscuro */
+  border-radius: 6px;
+  background: #ffffff !important;
+  color: #333 !important;
+  font-size: 0.95rem;
+  outline: none;
+}
+.input-search-visible:focus {
+  border-color: #007aff !important;
+  box-shadow: 0 0 0 3px rgba(0,122,255,0.1);
+}
+.icon-lupa { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #666; }
+
+/* Inputs Fecha */
+.date-group { display: flex; gap: 5px; align-items: center; background: white; border: 1px solid #ccc; padding: 5px 10px; border-radius: 6px; }
+.input-date-simple { border: none; color: #333; outline: none; }
+
+/* Tabla */
+.table-scroll-wrapper { flex: 1; overflow-y: auto; background: white; }
+.table-envios { width: 100%; border-collapse: collapse; }
+.table-envios th {
+  position: sticky; top: 0; background: #f1f3f5; z-index: 5;
+  text-align: left; padding: 12px 15px;
+  font-size: 0.75rem; font-weight: 700; color: #555; text-transform: uppercase;
+  border-bottom: 2px solid #ddd;
+}
+.table-envios td { padding: 12px 15px; border-bottom: 1px solid #eee; color: #333; font-size: 0.9rem; vertical-align: middle; }
+.table-envios tr:hover { background: #f9fbfd; }
+
+/* Textos */
+.txt-bold { font-weight: 600; color: #222; display: block; }
+.txt-dim { font-size: 0.85rem; color: #777; display: block; margin-top: 2px; }
+.txt-prod { color: #007aff; font-weight: 500; font-size: 0.9rem; }
+
+/* Badges */
+.badge-st { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; display: inline-block; }
+.b-pend { background: #fff3cd; color: #856404; }
+.b-blue { background: #d1ecf1; color: #0c5460; }
+.b-green { background: #d4edda; color: #155724; }
+
+/* Modal Limpio */
+.modal-header-white { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
 </style>
+
 

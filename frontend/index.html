@@ -277,25 +277,20 @@
     </div>
   </div>
 
-  <div id="vista-productos" class="vista" style="display: none;">
-    <div class="card" style="max-width: 900px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-        <h2 style="margin: 0;">Inventario Global</h2>
-        <input type="text" id="buscadorProductos" placeholder="🔍 Buscar producto..." class="input-modern" style="max-width: 300px; margin: 0;" onkeyup="filtrarProductos()">
+<div id="vista-productos" class="vista" style="display: none;">
+    <div class="card" style="max-width: 900px; background: transparent; box-shadow: none; padding: 0;">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background:white; padding:15px; border-radius:12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+        <h2 style="margin: 0; font-size: 1.2rem;">📦 Inventario Global</h2>
+        <input type="text" id="buscadorProductos" placeholder="🔍 Buscar producto..." class="input-modern" style="max-width: 300px; margin: 0; border:1px solid #eee;" onkeyup="filtrarProductos()">
       </div>
-      <div id="loading-productos" style="text-align: center; margin: 20px; color: #666;">Calculando totales...</div>
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background: #333; color: white; text-align: left;">
-              <th style="padding: 12px; border-radius: 8px 0 0 0;">Producto</th>
-              <th style="padding: 12px; text-align: right;">Total Stock (L)</th>
-              <th style="padding: 12px; border-radius: 0 8px 0 0; text-align: center;">Detalle</th>
-            </tr>
-          </thead>
-          <tbody id="tablaProductosBody"></tbody>
-        </table>
+
+      <div id="loading-productos" style="text-align: center; margin: 40px; color: #666;">
+        <div class="spinner"></div> Calculando totales...
       </div>
+      
+      <div id="contenedor-productos-lista"></div>
+
     </div>
   </div>
 
@@ -549,9 +544,9 @@
         <div class="form-group">
             <label>Tipo de Envío</label>
             <select id="log_tipo_envio" class="input-modern input-compact">
-              <option value="Nacional" selected>🇲🇽 Nacional</option>
-              <option value="Internacional">🌎 Internacional</option>
-              <option value="Local">🛵 Entrega Local / Mostrador</option>
+              <option value="Nacional" selected>Nacional</option>
+              <option value="Internacional">Internacional</option>
+              <option value="Local">Entrega Local / Mostrador</option>
             </select>
         </div>
 
@@ -575,61 +570,23 @@
   </div>
 </div>
 
-  <div id="modalDetallePedido" class="modal-overlay" style="display: none; z-index: 2001;">
-    <div class="modal-content" style="max-width: 650px; padding:0;">
-      <div style="background: #007aff; padding: 15px 20px; display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="margin:0; color: white;" id="tituloDetallePedido">Pedido #...</h3>
-        <button onclick="cerrarModalGenerico('modalDetallePedido')" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+<div id="modalDetallePedido" class="modal-overlay" style="display: none; z-index: 2001;">
+    <div class="modal-content" style="max-width: 750px; padding:0; border-radius:16px; overflow:hidden;">
+      
+      <div style="background: #333; padding: 15px 25px; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; color: white; font-size:1.1rem;">📦 Gestión de Envío</h3>
+        <button onclick="cerrarModalGenerico('modalDetallePedido')" style="background:none; border:none; color:white; font-size:1.8rem; cursor:pointer; opacity:0.7;">&times;</button>
       </div>
       
-      <div style="padding: 20px; max-height: 80vh; overflow-y: auto;">
-        <div style="background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9rem;">
-          <strong id="det_cliente">Cliente: ...</strong><br>
-          <span id="det_direccion" style="color:#666;">Dirección...</span><br>
-          <span id="det_guia" style="font-family:monospace; color:#d63031;">Guía: ...</span>
-        </div>
+      <div id="contenido-modal-pedido"></div>
 
-        <h4 style="margin:0 0 10px 0; color:#333;">📦 Contenido</h4>
-        <table style="width:100%; font-size:0.85rem; border-collapse:collapse; margin-bottom:20px;">
-          <thead>
-            <tr style="border-bottom:2px solid #eee; text-align:left; color:#888;">
-              <th style="padding:5px;">Producto</th>
-              <th style="padding:5px;">Lote</th>
-              <th style="padding:5px; text-align:right;">Cant.</th>
-            </tr>
-          </thead>
-          <tbody id="tablaItemsPedido"></tbody>
-        </table>
-
-        <hr style="border:0; border-top:1px dashed #ccc; margin: 15px 0;">
-
-        <h4 style="margin:0 0 10px 0; color:#333;">📅 Seguimiento</h4>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-          <div>
-            <label style="font-size:0.8rem; font-weight:bold;">Fecha Estimada:</label>
-            <input type="date" id="det_fecha_est" class="input-modern">
-          </div>
-          <div>
-            <label style="font-size:0.8rem; font-weight:bold;">Fecha REAL Entrega:</label>
-            <input type="date" id="det_fecha_real" class="input-modern">
-          </div>
-          <div style="grid-column: 1 / -1;">
-            <label style="font-size:0.8rem; font-weight:bold;">Estatus:</label>
-            <select id="det_estatus" class="input-modern">
-              <option value="Pendiente">🟡 Pendiente</option>
-              <option value="En Camino">🔵 En Camino</option>
-              <option value="Entregado">🟢 Entregado</option>
-              <option value="Cancelado">🔴 Cancelado</option>
-            </select>
-          </div>
-        </div>
-
-        <button onclick="guardarActualizacionPedido()" class="btn-field" style="width:100%; margin-top:20px; background:#007aff; color:white; border:none;">💾 Actualizar Seguimiento</button>
-      </div>
     </div>
   </div>
 
-
+<div id="global-loader" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+  <div class="spinner" style="border: 5px solid #f3f3f3; border-top: 5px solid #007aff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;"></div>
+  <p style="margin-top: 15px; font-weight: bold; color: #555;">Procesando...</p>
+</div>
   
 <div id="toast-container"></div>
 <?!= include('frontend/js.loader'); ?>

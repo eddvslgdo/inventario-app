@@ -1,13 +1,21 @@
 /**
- * Controller.gs - VERSIÓN CORREGIDA (FIX-SALIDAS)
- * Incluye todas las funciones originales + procesarPedidoCompleto arreglado.
+ * Controller.gs - VERSIÓN V21 (INTEGRAL FINAL)
+ * - Mantiene el arreglo matemático de Envíos (V19).
+ * - RESTAURA las funciones perdidas: transferirProducto y realizarTransformacion.
+ * - Elimina la edición de nombres de ubicaciones (Solicitud usuario).
+ * - Incluye todas las funciones de Entradas, Salidas y Ubicaciones.
  */
 
 // ==========================================
-// 0. HERRAMIENTA DE REPARACIÓN
+// 0. HERRAMIENTAS BASE
 // ==========================================
+function obtenerHojaSegura(nombre) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ss.getSheetByName(nombre);
+}
+
 function obtenerHojaOCrear(nombre, encabezados) {
-  const ss = SpreadsheetApp.openById(ID_HOJA);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(nombre);
   if (!sheet) {
     sheet = ss.insertSheet(nombre);
@@ -20,23 +28,18 @@ function obtenerHojaOCrear(nombre, encabezados) {
 // 1. CATÁLOGOS E INICIALIZACIÓN
 // ==========================================
 function obtenerCatalogos() {
-  const headersProd = ['ID', 'NOMBRE', 'DESCRIPCION', 'UNIDAD'];
-  const headersPres = ['ID', 'NOMBRE', 'VOLUMEN'];
-  const headersUbic = ['ID', 'NOMBRE'];
+  const sProd = obtenerHojaOCrear('PRODUCTOS', ['ID', 'NOMBRE', 'DESCRIPCION', 'UNIDAD']);
+  const sPres = obtenerHojaOCrear('PRESENTACIONES', ['ID', 'NOMBRE', 'VOLUMEN']);
+  const sUbic = obtenerHojaOCrear('UBICACIONES', ['ID', 'NOMBRE']);
 
-  const sProd = obtenerHojaOCrear('PRODUCTOS', headersProd);
-  const sPres = obtenerHojaOCrear('PRESENTACIONES', headersPres);
-  const sUbic = obtenerHojaOCrear('UBICACIONES', headersUbic);
-
-  const leerData = (sheet, esPresentacion = false) => {
-    if (sheet.getLastRow() < 2) return [];
-    const data = sheet.getDataRange().getValues();
+  const leer = (s, esPres) => {
+    if (!s || s.getLastRow() < 2) return [];
+    const data = s.getDataRange().getValues();
     let res = [];
-    for(let i=1; i<data.length; i++) {
-      if(data[i][0]) {
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]) {
         let item = { id: String(data[i][0]).trim(), nombre: data[i][1] };
-        // Si es presentación, leemos el volumen. Si no existe, ponemos 0.
-        if(esPresentacion) item.volumen = Number(data[i][2]) || 0; 
+        if (esPres) item.volumen = Number(data[i][2]) || 0;
         res.push(item);
       }
     }
@@ -44,128 +47,104 @@ function obtenerCatalogos() {
   };
 
   return {
-    productos: leerData(sProd),
-    presentaciones: leerData(sPres, true),
-    ubicaciones: leerData(sUbic)
+    productos: leer(sProd, false),
+    presentaciones: leer(sPres, true),
+    ubicaciones: leer(sUbic, false)
   };
 }
 
 function obtenerListaClientes() {
-  const sheet = obtenerHojaOCrear('CLIENTES', ['ID', 'NOMBRE', 'EMPRESA', 'DIRECCION', 'TELEFONO', 'EMAIL']);
-  if (sheet.getLastRow() < 2) return [];
-  const data = sheet.getDataRange().getValues();
+  const s = obtenerHojaOCrear('CLIENTES', ['ID', 'NOMBRE', 'EMPRESA', 'DIRECCION', 'TELEFONO', 'EMAIL']);
+  if (!s || s.getLastRow() < 2) return [];
+  const data = s.getDataRange().getValues();
   let clientes = [];
-  for(let i=1; i<data.length; i++) {
-    if(data[i][0]) clientes.push({
-        id: data[i][0], nombre: data[i][1], empresa: data[i][2],
-        direccion: data[i][3], telefono: data[i][4], email: data[i][5]
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) clientes.push({
+      id: data[i][0], nombre: data[i][1], empresa: data[i][2],
+      direccion: data[i][3], telefono: data[i][4], email: data[i][5]
     });
   }
   return clientes;
 }
 
 // ==========================================
-// 2. DASHBOARDS (CORRECCIÓN CRÍTICA DE VOLUMEN)
+// 2. GESTIÓN DE INVENTARIO (DASHBOARDS)
 // ==========================================
 function obtenerDatosUbicaciones() {
-  const sheetInv = obtenerHojaOCrear('INVENTARIO', ['ID_PROD', 'ID_PRES', 'ID_UBIC', 'STOCK', 'CADUCIDAD', 'ELABORACION', 'LOTE', 'F_ENTRADA', 'PROVEEDOR']);
-  const sheetUbic = obtenerHojaOCrear('UBICACIONES', ['ID', 'NOMBRE']);
-  
-  // 1. Mapas de Nombres
-  const mapProd = {}; 
+  const sInv = obtenerHojaOCrear('INVENTARIO', ['ID_PROD', 'ID_PRES', 'ID_UBIC', 'STOCK', 'CADUCIDAD', 'ELABORACION', 'LOTE', 'F_ENTRADA', 'PROVEEDOR']);
+  const sUbic = obtenerHojaOCrear('UBICACIONES', []);
   const sProd = obtenerHojaOCrear('PRODUCTOS', []);
-  if(sProd.getLastRow() > 1) sProd.getDataRange().getValues().forEach((r,i) => { if(i>0) mapProd[String(r[0]).trim()] = r[1]; });
-
-  // 2. Mapas de Presentaciones (NOMBRE Y VOLUMEN)
-  const mapPres = {}; 
-  const mapPresVol = {}; // <--- AQUÍ GUARDAMOS EL VOLUMEN UNITARIO
   const sPres = obtenerHojaOCrear('PRESENTACIONES', []);
-  if(sPres.getLastRow() > 1) {
-    sPres.getDataRange().getValues().forEach((r,i) => { 
-      if(i>0) {
-        const idPres = String(r[0]).trim();
-        mapPres[idPres] = r[1];
-        mapPresVol[idPres] = Number(r[2]) || 0; // Columna C es el volumen
-      }
-    });
-  }
+
+  const mapProd = {}, mapPres = {}, mapPresVol = {};
+  if (sProd.getLastRow() > 1) sProd.getDataRange().getValues().forEach((r, i) => { if (i > 0) mapProd[String(r[0]).trim()] = r[1]; });
+  if (sPres.getLastRow() > 1) sPres.getDataRange().getValues().forEach((r, i) => {
+    if (i > 0) {
+      const id = String(r[0]).trim();
+      mapPres[id] = r[1];
+      mapPresVol[id] = Number(r[2]) || 0;
+    }
+  });
 
   let ubicaciones = [];
-  if(sheetUbic.getLastRow() > 1) {
-    const dataU = sheetUbic.getDataRange().getValues();
-    for(let i=1; i<dataU.length; i++) {
-      if(dataU[i][0]) ubicaciones.push({ id: String(dataU[i][0]).trim(), nombre: dataU[i][1] || 'Sin Nombre', items: [], totalVolumen: 0 });
+  if (sUbic.getLastRow() > 1) {
+    const dU = sUbic.getDataRange().getValues();
+    for (let i = 1; i < dU.length; i++) {
+      if (dU[i][0]) ubicaciones.push({ id: String(dU[i][0]).trim(), nombre: dU[i][1] || 'Sin Nombre', items: [], totalVolumen: 0 });
     }
   }
 
-  const dataInv = sheetInv.getDataRange().getValues();
-  for (let i = 1; i < dataInv.length; i++) {
-    const stock = Number(dataInv[i][3]);
-    if (stock > 0.001) {
-      const uId = String(dataInv[i][2]).trim();
-      let ubic = ubicaciones.find(u => u.id === uId);
-      if (!ubic) {
-        ubic = { id: uId, nombre: "Ubic: " + uId, items: [], totalVolumen: 0 };
-        ubicaciones.push(ubic);
-      }
-      const pId = String(dataInv[i][0]).trim();
-      const presId = String(dataInv[i][1]).trim();
-      const nProd = mapProd[pId] || (pId.length>8 ? "ID:"+pId.substring(0,5) : pId);
-      const nPres = mapPres[presId] || presId;
-      
-      // RECUPERAMOS EL VOLUMEN UNITARIO PARA EL FRONTEND
-      const volUnitario = mapPresVol[presId] || 0;
+  if (sInv.getLastRow() > 1) {
+    const dInv = sInv.getDataRange().getValues();
+    for (let i = 1; i < dInv.length; i++) {
+      const stock = Number(dInv[i][3]);
+      if (stock > 0.001) {
+        const uId = String(dInv[i][2]).trim();
+        let ubic = ubicaciones.find(u => u.id === uId) || { id: uId, nombre: "Ubic: " + uId, items: [], totalVolumen: 0 };
+        if (!ubicaciones.includes(ubic)) ubicaciones.push(ubic);
 
-      ubic.items.push({
-        raw_producto_id: pId, 
-        producto: nProd,
-        raw_presentacion_id: presId, 
-        presentacion: nPres,
-        lote: String(dataInv[i][6]), 
-        volumen: stock, // Stock total en litros
-        volumen_nominal: volUnitario, // <--- ESTO ARREGLA EL ERROR DE "SIN VOLUMEN"
-        caducidad: dataInv[i][4] instanceof Date ? dataInv[i][4].toLocaleDateString() : dataInv[i][4],
-        nombre_completo: `${nProd} (${nPres})`
-      });
-      ubic.totalVolumen += stock;
+        const pId = String(dInv[i][0]).trim();
+        const presId = String(dInv[i][1]).trim();
+        const nProd = mapProd[pId] || pId;
+        const nPres = mapPres[presId] || presId;
+
+        ubic.items.push({
+          raw_producto_id: pId, producto: nProd, raw_presentacion_id: presId, presentacion: nPres,
+          lote: String(dInv[i][6]), volumen: stock, volumen_nominal: mapPresVol[presId] || 0,
+          caducidad: dInv[i][4] instanceof Date ? dInv[i][4].toLocaleDateString() : dInv[i][4],
+          nombre_completo: `${nProd} (${nPres})`
+        });
+        ubic.totalVolumen += stock;
+      }
     }
   }
   return ubicaciones;
 }
 
 function obtenerDatosProductos() {
-  const sheetInv = obtenerHojaOCrear('INVENTARIO', []);
-  if(sheetInv.getLastRow() < 2) return [];
+  const sInv = obtenerHojaOCrear('INVENTARIO', []);
+  if(sInv.getLastRow() < 2) return [];
 
-  const mapProd = {}; const sP = obtenerHojaOCrear('PRODUCTOS', []);
-  if(sP.getLastRow()>1) sP.getDataRange().getValues().forEach((r,i)=> {if(i>0) mapProd[String(r[0]).trim()] = r[1]});
-  const mapUbic = {}; const sU = obtenerHojaOCrear('UBICACIONES', []);
-  if(sU.getLastRow()>1) sU.getDataRange().getValues().forEach((r,i)=> {if(i>0) mapUbic[String(r[0]).trim()] = r[1]});
-  const mapPres = {}; const sPr = obtenerHojaOCrear('PRESENTACIONES', []);
-  if(sPr.getLastRow()>1) sPr.getDataRange().getValues().forEach((r,i)=> {if(i>0) mapPres[String(r[0]).trim()] = r[1]});
+  const mapProd = {}, mapUbic = {}, mapPres = {};
+  const sP = obtenerHojaOCrear('PRODUCTOS', []), sU = obtenerHojaOCrear('UBICACIONES', []), sPr = obtenerHojaOCrear('PRESENTACIONES', []);
+  if(sP.getLastRow()>1) sP.getDataRange().getValues().forEach((r,i)=> { if(i>0) mapProd[String(r[0]).trim()] = r[1]; });
+  if(sU.getLastRow()>1) sU.getDataRange().getValues().forEach((r,i)=> { if(i>0) mapUbic[String(r[0]).trim()] = r[1]; });
+  if(sPr.getLastRow()>1) sPr.getDataRange().getValues().forEach((r,i)=> { if(i>0) mapPres[String(r[0]).trim()] = r[1]; });
 
-  const dataInv = sheetInv.getDataRange().getValues();
+  const dataInv = sInv.getDataRange().getValues();
   let productosMap = {};
 
   for (let i = 1; i < dataInv.length; i++) {
     const stock = Number(dataInv[i][3]);
     if (stock > 0.001) {
        const pId = String(dataInv[i][0]).trim();
-       if (!productosMap[pId]) {
-         productosMap[pId] = { 
-           id: pId, nombre: mapProd[pId] || "ID: " + pId.substring(0,8), 
-           totalVolumen: 0, lotes: [] 
-         };
-       }
+       if (!productosMap[pId]) productosMap[pId] = { id: pId, nombre: mapProd[pId] || pId, totalVolumen: 0, lotes: [] };
        productosMap[pId].totalVolumen += stock;
        const uId = String(dataInv[i][2]).trim();
        const presId = String(dataInv[i][1]).trim();
-
        productosMap[pId].lotes.push({
-         lote: dataInv[i][6], volumen: stock,
-         ubicacion: mapUbic[uId] || uId, 
-         presentacion: mapPres[presId] || presId, 
-         caducidad: dataInv[i][4] instanceof Date ? dataInv[i][4].toLocaleDateString() : ''
+         lote: dataInv[i][6], volumen: stock, ubicacion: mapUbic[uId] || uId,
+         presentacion: mapPres[presId] || presId, caducidad: dataInv[i][4] instanceof Date ? dataInv[i][4].toLocaleDateString() : ''
        });
     }
   }
@@ -173,26 +152,305 @@ function obtenerDatosProductos() {
 }
 
 // ==========================================
-// 3. FIFO
+// 3. REGISTRO DE MOVIMIENTOS (ENTRADAS)
 // ==========================================
+function registrarNuevoProducto(d) {
+  const s = obtenerHojaOCrear('PRODUCTOS', ['ID', 'NOMBRE', 'DESCRIPCION', 'UNIDAD']);
+  s.appendRow([Utilities.getUuid(), d.nombre, d.descripcion, d.unidad]); return true;
+}
+
+function registrarNuevaPresentacion(nombre) {
+  const s = obtenerHojaOCrear('PRESENTACIONES', ['ID', 'NOMBRE', 'VOLUMEN']);
+  let volumen = 0;
+  const match = String(nombre).match(/[\d\.]+/);
+  if (match) {
+    volumen = parseFloat(match[0]);
+    if (String(nombre).toLowerCase().includes('ml')) volumen /= 1000;
+  }
+  s.appendRow([Utilities.getUuid(), nombre, volumen]); return true;
+}
+
+function registrarNuevaUbicacion(nombre) {
+  const s = obtenerHojaOCrear('UBICACIONES', ['ID', 'NOMBRE']);
+  s.appendRow([Utilities.getUuid(), nombre]); return true;
+}
+
+// Se elimina actualizarNombreUbicacion por petición del usuario
+
+function borrarUbicacion(id) {
+  const s = obtenerHojaOCrear('UBICACIONES', []);
+  const d = s.getDataRange().getValues();
+  for(let i=1; i<d.length; i++) if(d[i][0]==id) { s.deleteRow(i+1); return true; }
+}
+
+function registrarEntradaUnica(datos) { return registrarEntradaMasiva([datos]); }
+
+function registrarEntradaMasiva(lista) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+    const sInv = obtenerHojaOCrear('INVENTARIO', ['ID_PROD', 'ID_PRES', 'ID_UBIC', 'STOCK', 'CADUCIDAD', 'ELABORACION', 'LOTE', 'F_ENTRADA', 'PROVEEDOR']);
+    const sLog = obtenerHojaOCrear('REGISTROS_ENTRADA', ['FECHA', 'PROD', 'PRES', 'UBIC', 'VOL', 'LOTE', 'PROVEEDOR', 'TIPO']);
+    lista.forEach(d => {
+      if(d.producto_id.includes("Selecciona") || d.producto_id === "undefined") throw new Error("Error: Producto no válido.");
+      sInv.appendRow([d.producto_id, d.presentacion_id, d.ubicacion_id, Number(d.volumen_L), d.fecha_caducidad, d.fecha_elaboracion, d.lote, new Date(), d.proveedor]);
+      sLog.appendRow([new Date(), d.producto_id, d.presentacion_id, d.ubicacion_id, d.volumen_L, d.lote, d.proveedor, 'Entrada']);
+    });
+    return true;
+  } catch(e){ throw e; } finally { lock.releaseLock(); }
+}
+
+// ==========================================
+// 4. MOVER Y TRANSFORMAR (¡RESTAURADAS!)
+// ==========================================
+function transferirProducto(origenId, destinoId, productoId, presentacionId, lote, cantidadMover) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const sInv = obtenerHojaOCrear('INVENTARIO', []);
+    const data = sInv.getDataRange().getValues();
+    
+    // Buscar origen
+    let idxOrigen = -1, stockOrigen = 0;
+    for(let i=1; i<data.length; i++) {
+      if(String(data[i][0])==String(productoId) && String(data[i][1])==String(presentacionId) && 
+         String(data[i][2])==String(origenId) && String(data[i][6])==String(lote)) {
+         idxOrigen = i+1; stockOrigen = Number(data[i][3]); break;
+      }
+    }
+    if(idxOrigen == -1) throw new Error("Origen no encontrado");
+    if(stockOrigen < cantidadMover - 0.001) throw new Error("Stock insuficiente");
+
+    // Restar
+    const nStock = stockOrigen - cantidadMover;
+    if(nStock <= 0.001) sInv.deleteRow(idxOrigen); else sInv.getRange(idxOrigen, 4).setValue(nStock);
+
+    // Sumar a Destino (Búsqueda nueva por si cambiaron índices)
+    const d2 = sInv.getDataRange().getValues();
+    let idxDest = -1;
+    for(let i=1; i<d2.length; i++) {
+      if(String(d2[i][0])==String(productoId) && String(d2[i][1])==String(presentacionId) && 
+         String(d2[i][2])==String(destinoId) && String(d2[i][6])==String(lote)) {
+         idxDest = i+1; break;
+      }
+    }
+
+    if(idxDest > -1) {
+      sInv.getRange(idxDest, 4).setValue(Number(sInv.getRange(idxDest, 4).getValue()) + Number(cantidadMover));
+    } else {
+      const meta = data[idxOrigen-1]; // Usar datos originales
+      sInv.appendRow([productoId, presentacionId, destinoId, Number(cantidadMover), meta[4], meta[5], lote, new Date(), "Transferencia"]);
+    }
+    return {success:true};
+  } catch(e) { return {success:false, error:e.message}; } finally { lock.releaseLock(); }
+}
+
+function realizarTransformacion(datos) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const sInv = obtenerHojaOCrear('INVENTARIO', []);
+    const data = sInv.getDataRange().getValues();
+    
+    // Buscar Origen
+    let idxOrg = -1;
+    for(let i=1; i<data.length; i++) {
+      if(String(data[i][2])==String(datos.origenId) && String(data[i][0])==String(datos.productoIdOrigen) && 
+         String(data[i][6]).toUpperCase()==String(datos.loteOrigen).toUpperCase()) {
+         idxOrg = i+1; break;
+      }
+    }
+    if(idxOrg == -1) throw new Error("Lote origen no encontrado");
+    
+    const stock = Number(sInv.getRange(idxOrg, 4).getValue());
+    if(stock < Number(datos.cantidadLitros)) throw new Error("Stock insuficiente");
+
+    // Restar
+    const nS = stock - Number(datos.cantidadLitros);
+    if(nS <= 0.001) sInv.deleteRow(idxOrg); else sInv.getRange(idxOrg, 4).setValue(nS);
+
+    // Agregar nuevo
+    const lFin = datos.nuevoLote || datos.loteOrigen;
+    sInv.appendRow([datos.nuevoProductoId, datos.nuevaPresentacionId, datos.origenId, Number(datos.cantidadLitros), 
+                    data[idxOrg-1][4], data[idxOrg-1][5], lFin, new Date(), "Transformación"]);
+    
+    return {success:true};
+  } catch(e) { return {success:false, error:e.message}; } finally { lock.releaseLock(); }
+}
+
+// ==========================================
+// 5. PROCESAMIENTO DE SALIDAS (PEDIDOS V19)
+// ==========================================
+function registrarSalidas(lista) {
+  return procesarPedidoCompleto({
+      idCliente: 'GENERICO', nombreCliente: 'Salida Rápida', direccion:'-', telefono:'-', email:'-', tipoEnvio:'Nacional', paqueteria:'Mostrador', guia:'-', costoEnvio:0
+  }, lista, false);
+}
+
+function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    
+    // 1. VALIDACIÓN
+    itemsCarrito.forEach(item => {
+      const p = String(item.producto_id);
+      if (p.includes("Selecciona") || p === "undefined" || !p) throw new Error("⚠️ Producto inválido. Recarga.");
+      if (!item.lote || item.lote === "undefined") throw new Error("⚠️ Lote inválido.");
+    });
+
+    // 2. CONSOLIDACIÓN (AGRUPAR ITEMS IGUALES)
+    const unicos = {};
+    itemsCarrito.forEach(i => {
+      const k = `${i.producto_id}|${i.presentacion_id}|${i.lote}|${i.ubicacion_id}`;
+      if(unicos[k]) { unicos[k].volumen_L += Number(i.volumen_L); unicos[k].piezas += Number(i.piezas); }
+      else { unicos[k] = {...i, volumen_L: Number(i.volumen_L), piezas: Number(i.piezas)}; }
+    });
+    const itemsProcesar = Object.values(unicos);
+
+    const idPedido = "PED-" + Math.floor(Date.now() / 1000);
+    const fechaHoy = new Date();
+
+    if (guardarCliente) {
+      const sCli = obtenerHojaOCrear('CLIENTES', ['ID', 'NOMBRE', 'EMPRESA', 'DIRECCION', 'TELEFONO', 'EMAIL']);
+      let idCli = datosPedido.idCliente;
+      if (!idCli || idCli === 'nuevo') idCli = "CLI-" + Math.floor(Math.random()*10000);
+      sCli.appendRow([idCli, datosPedido.nombreCliente, datosPedido.empresa, datosPedido.direccion, datosPedido.telefono, datosPedido.email]);
+    }
+
+    const sPed = obtenerHojaOCrear('PEDIDOS', ['ID_PEDIDO', 'FECHA', 'ID_CLIENTE', 'NOMBRE', 'DIRECCION', 'TELEFONO', 'PAQUETERIA', 'GUIA', 'TIPO', 'COSTO', 'ESTATUS', 'F_EST', 'F_REAL', 'LINK']);
+    sPed.appendRow([idPedido, fechaHoy, datosPedido.idCliente, datosPedido.nombreCliente, datosPedido.direccion, datosPedido.telefono, datosPedido.paqueteria, datosPedido.guia, datosPedido.tipoEnvio, datosPedido.costoEnvio, 'Pendiente', '', '', '']);
+
+    const sInv = obtenerHojaOCrear('INVENTARIO', []), sSal = obtenerHojaOCrear('REGISTROS_SALIDA', []), sDet = obtenerHojaOCrear('DETALLE_PEDIDOS', ['ID_PEDIDO', 'PRODUCTO', 'PRESENTACION', 'LOTE', 'VOLUMEN']);
+    const dataInv = sInv.getDataRange().getValues();
+
+    itemsProcesar.forEach(item => {
+      sDet.appendRow([idPedido, item.nombre_producto, item.nombre_presentacion || '---', item.lote, Number(item.volumen_L)]);
+
+      let updated = false;
+      for (let i = 1; i < dataInv.length; i++) {
+        if (String(dataInv[i][0]).trim() == String(item.producto_id).trim() && 
+            String(dataInv[i][6]).trim().toUpperCase() == String(item.lote).trim().toUpperCase() &&
+            String(dataInv[i][2]).trim() == String(item.ubicacion_id).trim()) {
+          const actual = Number(dataInv[i][3]);
+          if(actual < item.volumen_L - 0.01) throw new Error(`Stock insuficiente para ${item.nombre_producto} (${actual}L disponibles)`);
+          sInv.getRange(i + 1, 4).setValue(actual - item.volumen_L);
+          updated = true; break;
+        }
+      }
+      if(!updated) console.warn("Lote no encontrado para restar: " + item.lote);
+      
+      sSal.appendRow([item.producto_id, item.nombre_producto, item.presentacion_id, item.nombre_presentacion, item.volumen_L, item.piezas, item.ubicacion_id, item.lote, datosPedido.nombreCliente, Session.getActiveUser().getEmail(), fechaHoy, idPedido]);
+    });
+
+    return { success: true, idPedido: idPedido };
+  } catch (e) { return { success: false, error: e.message }; } finally { lock.releaseLock(); }
+}
+
+// ==========================================
+// 6. HISTORIAL DE ENVÍOS
+// ==========================================
+function obtenerHistorialPedidos() {
+  const sPed = obtenerHojaSegura('PEDIDOS');
+  if (!sPed) return [];
+  const data = sPed.getDataRange().getDisplayValues();
+  if (data.length < 2) return [];
+
+  const sDet = obtenerHojaSegura('DETALLE_PEDIDOS');
+  const sCli = obtenerHojaSegura('CLIENTES');
+
+  const mapProd = {}, mapEmp = {};
+  if(sDet) {
+    const dDet = sDet.getDataRange().getDisplayValues();
+    for(let i=1; i<dDet.length; i++) {
+      let id = String(dDet[i][0]).trim();
+      if(id) {
+        if(!mapProd[id]) mapProd[id] = [];
+        mapProd[id].push(`${dDet[i][1]} (${dDet[i][4]}L)`);
+      }
+    }
+  }
+  if(sCli) sCli.getDataRange().getDisplayValues().forEach((r,i) => { if(i>0) mapEmp[String(r[0]).trim()] = r[2]; });
+
+  let pedidos = [];
+  for(let i = data.length - 1; i >= 1; i--) {
+    let r = data[i], id = String(r[0]).trim();
+    if(id) {
+      let prods = mapProd[id] || [], resumen = prods.length > 0 ? prods.join(", ") : "---";
+      if(resumen.length > 55) resumen = resumen.substring(0, 55) + "...";
+      pedidos.push({
+        id: id, fecha: r[1], cliente: r[3], empresa: mapEmp[String(r[2]).trim()] || "",
+        resumenProductos: resumen, logistica: r[6], guia: r[7], estatus: r[10] || "Pendiente",
+        costo: r[9] ? String(r[9]).replace(/[^0-9.]/g, '') : 0
+      });
+    }
+  }
+  return pedidos;
+}
+
+function obtenerDetallePedidoCompleto(idPedido) {
+  const sPed = obtenerHojaSegura('PEDIDOS'), sDet = obtenerHojaSegura('DETALLE_PEDIDOS'), sCli = obtenerHojaSegura('CLIENTES');
+  const id = String(idPedido).trim();
+  const dP = sPed.getDataRange().getDisplayValues();
+  let cab = null, items = [];
+
+  for(let i=1; i<dP.length; i++) {
+    if(String(dP[i][0]).trim() === id) {
+      let r = dP[i], email = "---";
+      if(sCli) {
+        const dC = sCli.getDataRange().getDisplayValues();
+        for(let k=1; k<dC.length; k++) if(String(dC[k][0]).trim() === String(r[2]).trim()) { email = dC[k][5]; break; }
+      }
+      cab = {
+        id: r[0], cliente: r[3], direccion: r[4], telefono: r[5], email: email,
+        paqueteria: r[6], guia: r[7], costoEnvio: r[9] ? r[9].replace(/[^0-9.]/g, '') : 0,
+        estatus: r[10], fechaEst: _fmtF(r[12]), fechaReal: _fmtF(r[13])
+      };
+      break;
+    }
+  }
+  if(!cab) throw new Error("Pedido no encontrado");
+
+  if(sDet) {
+    const dD = sDet.getDataRange().getDisplayValues();
+    for(let i=1; i<dD.length; i++) {
+      if(String(dD[i][0]).trim() === id) {
+        let pName = dD[i][1];
+        if(pName.includes("Selecciona") || pName === "undefined") pName = "⚠️ Error Datos";
+        items.push({ producto: pName, presentacion: dD[i][2], lote: dD[i][3], volumen: dD[i][4] });
+      }
+    }
+  }
+  return { cabecera: cab, items: items };
+}
+
+function actualizarPedido(id, fe, fr, st) {
+  const s = obtenerHojaSegura('PEDIDOS');
+  const d = s.getDataRange().getValues();
+  for(let i=1; i<d.length; i++) {
+    if(String(d[i][0]).trim() === String(id).trim()) {
+      s.getRange(i+1, 11).setValue(st); s.getRange(i+1, 13).setValue(fe); s.getRange(i+1, 14).setValue(fr); return "OK";
+    }
+  }
+}
+
+// FIFO & AUX
 function obtenerSugerenciaFIFO(productoId, carrito) {
   try {
-    if (!productoId) throw new Error("ID vacío");
     const prodIdBuscado = String(productoId).trim();
-    const sheetInv = obtenerHojaOCrear('INVENTARIO', []);
-    if(sheetInv.getLastRow() < 2) return JSON.stringify({ success: false, error: "Inventario vacío" });
-    const data = sheetInv.getDataRange().getValues();
+    const sheetInv = obtenerHojaSegura('INVENTARIO');
+    if(!sheetInv || sheetInv.getLastRow() < 2) return JSON.stringify({ success: false, error: "Sin stock" });
     
-    const mapUbic = {}; const sU = obtenerHojaOCrear('UBICACIONES', []);
-    if(sU.getLastRow()>1) sU.getDataRange().getValues().forEach((r,i)=> {if(i>0) mapUbic[String(r[0]).trim()] = r[1]});
-    const mapPres = {}; const sP = obtenerHojaOCrear('PRESENTACIONES', []);
-    if(sP.getLastRow()>1) sP.getDataRange().getValues().forEach((r,i)=> {if(i>0) mapPres[String(r[0]).trim()] = r[1]});
+    const data = sheetInv.getDataRange().getValues();
+    const mapUbic = {}, mapPres = {};
+    const sU = obtenerHojaSegura('UBICACIONES'), sP = obtenerHojaSegura('PRESENTACIONES');
+    if(sU) sU.getDataRange().getValues().forEach((r,i)=> {if(i>0) mapUbic[String(r[0]).trim()] = r[1]});
+    if(sP) sP.getDataRange().getValues().forEach((r,i)=> {if(i>0) mapPres[String(r[0]).trim()] = r[1]});
 
     let lotes = [];
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).trim() === prodIdBuscado) {
-        const uId = String(data[i][2]).trim();
-        const presId = String(data[i][1]).trim();
+        const uId = String(data[i][2]).trim(); const presId = String(data[i][1]).trim();
         lotes.push({
           producto_id: prodIdBuscado, presentacion_id: presId, ubicacion_id: uId,
           stock_real: Number(data[i][3]), caducidad: data[i][4], elaboracion: data[i][5],
@@ -210,26 +468,18 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
     }
 
     const validos = lotes.filter(l => l.stock_real > 0.001);
-    if (validos.length === 0) return JSON.stringify({ success: false, error: "Sin stock." });
-
+    if (validos.length === 0) return JSON.stringify({ success: false, error: "Sin stock disponible" });
+    
     const getMs = (d) => (d instanceof Date) ? d.getTime() : 0;
-    validos.sort((a, b) => {
-      let fA = getMs(a.elaboracion) || getMs(a.fecha_entrada);
-      let fB = getMs(b.elaboracion) || getMs(b.fecha_entrada);
-      return fA - fB;
-    });
+    validos.sort((a, b) => getMs(a.elaboracion||a.fecha_entrada) - getMs(b.elaboracion||b.fecha_entrada));
 
     const mejor = validos[0];
     return JSON.stringify({
       success: true,
-      mejor_candidato: {
-         presentacion_id: mejor.presentacion_id, ubicacion_id: mejor.ubicacion_id,
-         lote: mejor.lote, stock_real: mejor.stock_real
-      },
+      mejor_candidato: { presentacion_id: mejor.presentacion_id, ubicacion_id: mejor.ubicacion_id, lote: mejor.lote, stock_real: mejor.stock_real },
       lista_completa: lotes.map(l => ({
         presentacion_id: l.presentacion_id, ubicacion_id: l.ubicacion_id, lote: l.lote,
-        stock: l.stock_real.toFixed(2),
-        caducidad: l.caducidad instanceof Date ? l.caducidad.toLocaleDateString() : String(l.caducidad),
+        stock: l.stock_real.toFixed(2), caducidad: l.caducidad instanceof Date ? l.caducidad.toLocaleDateString() : String(l.caducidad),
         nombre_ubicacion: l.nombre_ubicacion, nombre_presentacion: l.nombre_presentacion,
         es_sugerido: (l.lote === mejor.lote && l.ubicacion_id === mejor.ubicacion_id)
       }))
@@ -237,365 +487,20 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
   } catch (e) { return JSON.stringify({ success: false, error: e.message }); }
 }
 
-// ==========================================
-// 4. TRANSACCIONES
-// ==========================================
-function registrarEntradaUnica(datos) { return registrarEntradaMasiva([datos]); }
-
-function registrarEntradaMasiva(lista) {
-  const lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000);
-    const sheetInv = obtenerHojaOCrear('INVENTARIO', ['ID_PROD', 'ID_PRES', 'ID_UBIC', 'STOCK', 'CADUCIDAD', 'ELABORACION', 'LOTE', 'F_ENTRADA', 'PROVEEDOR']);
-    const sheetLog = obtenerHojaOCrear('REGISTROS_ENTRADA', ['FECHA', 'PROD', 'PRES', 'UBIC', 'VOL', 'LOTE', 'PROVEEDOR', 'TIPO']);
-    
-    lista.forEach(d => {
-       sheetInv.appendRow([d.producto_id, d.presentacion_id, d.ubicacion_id, Number(d.volumen_L), d.fecha_caducidad, d.fecha_elaboracion, d.lote, new Date(), d.proveedor]);
-       sheetLog.appendRow([new Date(), d.producto_id, d.presentacion_id, d.ubicacion_id, d.volumen_L, d.lote, d.proveedor, 'Entrada']);
-    });
-    return true;
-  } catch(e) { throw e; } finally { lock.releaseLock(); }
+function _fmtF(f) {
+  if(!f) return ""; if(f.match(/^\d{4}-\d{2}-\d{2}$/)) return f;
+  if(f.includes('-')) { let p = f.split('-'); return p[0].length===4 ? f : `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`; }
+  if(f.includes('/')) { let p = f.split('/'); return `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`; }
+  return "";
 }
+function formatearFechaInput(f) { return _fmtF(f); }
 
-function registrarSalidaMasiva(lista) {
-  return procesarPedidoCompleto({
-      idCliente: 'GENERICO', nombreCliente: 'Salida Rápida', direccion:'-', telefono:'-', email:'-', tipoEnvio:'Nacional', paqueteria:'Mostrador', guia:'-', costoEnvio:0
-  }, lista, false);
-}
-
-// =========================================================================
-// FUNCIÓN CORREGIDA Y ROBUSTA PARA PROCESAR PEDIDOS Y SALIDAS
-// =========================================================================
-function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
-  const lock = LockService.getScriptLock();
-  try {
-    // Esperamos hasta 30 segundos para evitar choques de escritura
-    lock.waitLock(30000);
-    
-    const idPedido = "PED-" + Math.floor(Date.now() / 1000);
-    const fechaHoy = new Date();
-
-    // 1. GUARDAR CLIENTE (Solo si se solicitó)
-    if (guardarCliente) {
-        const sheetCli = obtenerHojaOCrear('CLIENTES', ['ID', 'NOMBRE', 'EMPRESA', 'DIRECCION', 'TELEFONO', 'EMAIL']);
-        let idCli = datosPedido.idCliente;
-        // Si es nuevo o no tiene ID, generamos uno
-        if (!idCli || idCli === 'nuevo' || idCli === '') {
-            idCli = "CLI-" + Math.floor(Math.random()*10000);
-        }
-        sheetCli.appendRow([
-            idCli, 
-            datosPedido.nombreCliente, 
-            datosPedido.empresa, 
-            datosPedido.direccion, 
-            datosPedido.telefono, 
-            datosPedido.email
-        ]);
-    }
-
-    // 2. REGISTRAR EL PEDIDO (Cabecera)
-    const sheetPed = obtenerHojaOCrear('PEDIDOS', ['ID_PEDIDO', 'FECHA', 'ID_CLIENTE', 'NOMBRE', 'DIRECCION', 'TELEFONO', 'PAQUETERIA', 'GUIA', 'TIPO', 'COSTO', 'ESTATUS', 'F_EST', 'F_REAL', 'LINK']);
-    sheetPed.appendRow([
-        idPedido, 
-        fechaHoy, 
-        datosPedido.idCliente, 
-        datosPedido.nombreCliente, 
-        datosPedido.direccion, 
-        datosPedido.telefono, 
-        datosPedido.paqueteria, 
-        datosPedido.guia, 
-        datosPedido.tipoEnvio, 
-        datosPedido.costoEnvio, 
-        'Pendiente', // Estatus inicial
-        '', '', ''   // Fechas y link vacíos
-    ]);
-
-    // 3. PROCESAR INVENTARIO Y DETALLE (Salidas)
-    const sheetInv = obtenerHojaOCrear('INVENTARIO', []);
-    const sheetSal = obtenerHojaOCrear('REGISTROS_SALIDA', ['PROD_ID', 'PROD_NOM', 'PRES_ID', 'PRES_NOM', 'VOL', 'PZAS', 'UBIC', 'LOTE', 'CLIENTE', 'USUARIO', 'FECHA', 'ID_PEDIDO']);
-    
-    // Obtenemos todos los datos del inventario de una vez para ser rápidos
-    const dataInv = sheetInv.getDataRange().getValues();
-    
-    // Recorremos cada producto del carrito
-    itemsCarrito.forEach(item => {
-      let inventarioActualizado = false;
-      
-      // Limpieza de datos recibidos (Trim y UpperCase para evitar errores tontos)
-      const reqProd = String(item.producto_id).trim();
-      const reqPres = String(item.presentacion_id).trim();
-      const reqUbic = String(item.ubicacion_id).trim();
-      const reqLote = String(item.lote).trim().toUpperCase(); // CLAVE: Lote siempre mayúsculas
-      
-      // Buscamos coincidencia en el inventario
-      for (let i = 1; i < dataInv.length; i++) {
-        const invProd = String(dataInv[i][0]).trim();
-        const invPres = String(dataInv[i][1]).trim();
-        const invUbic = String(dataInv[i][2]).trim();
-        const invLote = String(dataInv[i][6]).trim().toUpperCase();
-
-        // Si todo coincide, descontamos
-        if (invProd === reqProd && invPres === reqPres && invUbic === reqUbic && invLote === reqLote) {
-          
-          const stockActual = Number(dataInv[i][3]);
-          const cantidadRestar = Number(item.volumen_L);
-          
-          const nuevoStock = stockActual - cantidadRestar;
-          
-          // Guardamos el nuevo stock en la celda correspondiente (Columna D = índice 4)
-          sheetInv.getRange(i + 1, 4).setValue(nuevoStock);
-          
-          inventarioActualizado = true;
-          break; // Dejamos de buscar este item, pasamos al siguiente
-        }
-      }
-
-      // 4. GUARDAR EN REGISTROS_SALIDA (Independientemente de si se descontó o no)
-      // Esto asegura que la venta quede registrada aunque el inventario tenga un error
-      sheetSal.appendRow([
-        item.producto_id, 
-        item.nombre_producto || '---', 
-        item.presentacion_id, 
-        item.nombre_presentacion || '---', 
-        Number(item.volumen_L), 
-        Number(item.piezas), 
-        item.ubicacion_id, 
-        item.lote, 
-        datosPedido.nombreCliente, 
-        Session.getActiveUser().getEmail(), 
-        fechaHoy, 
-        idPedido
-      ]);
-      
-      if (!inventarioActualizado) {
-         console.warn("⚠️ Advertencia: No se encontró stock exacto para descontar el lote " + item.lote + ", pero se registró la salida.");
-      }
-    });
-
-    return { success: true, idPedido: idPedido };
-
-  } catch (e) {
-    // Si algo falla, devolvemos el error al frontend para mostrarlo
-    return { success: false, error: "Error en servidor: " + e.message };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// ==========================================
-// 5. HISTORIAL / CREACIÓN
-// ==========================================
-function obtenerHistorialPedidos() {
-  const sheet = obtenerHojaOCrear('PEDIDOS', []);
-  if(sheet.getLastRow() < 2) return [];
-  
-  const data = sheet.getDataRange().getValues();
-  let pedidos = [];
-  
-  // Recorremos de abajo hacia arriba (más recientes primero)
-  for(let i=data.length-1; i>=1; i--) {
-    // IMPORTANTE: Verificamos que data[i][0] (el ID) exista
-    if(data[i][0] && String(data[i][0]).trim() !== "") {
-      pedidos.push({
-        id: data[i][0],
-        fecha: data[i][1] instanceof Date ? data[i][1].toLocaleDateString() : data[i][1],
-        cliente: data[i][3], 
-        destino: data[i][4], 
-        paqueteria: data[i][6], 
-        guia: data[i][7], 
-        estatus: data[i][10] || 'Pendiente'
-      });
-    }
-  }
-  return pedidos;
-}
-
-function obtenerDetallePedidoCompleto(idPedido) {
-  const sheetItems = obtenerHojaOCrear('REGISTROS_SALIDA', []);
-  if(sheetItems.getLastRow() < 2) return { cabecera: {}, items: [] };
-  const sheetPed = obtenerHojaOCrear('PEDIDOS', []);
-  let cabecera = { id: idPedido, cliente: "Desconocido" };
-
-  if(sheetPed.getLastRow() > 1) {
-     const d = sheetPed.getDataRange().getValues();
-     for(let i=1; i<d.length; i++) {
-        if(String(d[i][0]) === String(idPedido)) {
-           cabecera = {
-             id: d[i][0], cliente: d[i][3], direccion: d[i][4], 
-             paqueteria: d[i][6], guia: d[i][7],
-             fechaEst: d[i][11] instanceof Date ? d[i][11].toISOString().split('T')[0] : '',
-             fechaReal: d[i][12] instanceof Date ? d[i][12].toISOString().split('T')[0] : '',
-             estatus: d[i][10]
-           };
-           break;
-        }
-     }
-  }
-  const dataItems = sheetItems.getDataRange().getValues();
-  let items = [];
-  const colIdIndex = dataItems[0].length - 1; 
-  for(let i=1; i<dataItems.length; i++){
-    if(String(dataItems[i][colIdIndex]) === String(idPedido)){
-      items.push({
-        producto: dataItems[i][1], presentacion: dataItems[i][3],
-        lote: dataItems[i][7], volumen: dataItems[i][4], cantidad: dataItems[i][5]
-      });
-    }
-  }
-  return { cabecera: cabecera, items: items };
-}
-
-function actualizarPedido(idPedido, fEst, fReal, estatus) {
-  const sheet = obtenerHojaOCrear('PEDIDOS', []);
-  if(sheet.getLastRow() < 2) return "Error";
-  const data = sheet.getDataRange().getValues();
-  for(let i=1; i<data.length; i++){
-    if(String(data[i][0]) === String(idPedido)){
-      sheet.getRange(i+1, 12).setValue(fEst); 
-      sheet.getRange(i+1, 13).setValue(fReal); 
-      sheet.getRange(i+1, 11).setValue(estatus); 
-      return "OK";
-    }
-  }
-  return "No encontrado";
-}
-
-// ----------------------------------------------------
-// OPERACIONES DE MOVER Y TRANSFORMAR
-// ----------------------------------------------------
-
-function transferirProducto(origenId, destinoId, productoId, presentacionId, lote, cantidadMover) {
-  const lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000);
-    const ss = SpreadsheetApp.openById(ID_HOJA);
-    const sheet = ss.getSheetByName('INVENTARIO');
-    const data = sheet.getDataRange().getValues();
-    
-    // 1. Origen
-    let filaOrigen = -1; let datosOrigen = null;
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][2] == origenId && String(data[i][6]) == String(lote) && data[i][0] == productoId) {
-        filaOrigen = i + 1; datosOrigen = data[i]; break;
-      }
-    }
-    if (filaOrigen === -1) throw new Error("Origen no encontrado");
-    
-    // 2. Restar
-    const stockActual = Number(sheet.getRange(filaOrigen, 4).getValue());
-    if (cantidadMover > stockActual + 0.001) throw new Error("Stock insuficiente");
-
-    const nuevoStock = stockActual - cantidadMover;
-    if (nuevoStock <= 0.001) sheet.deleteRow(filaOrigen);
-    else sheet.getRange(filaOrigen, 4).setValue(nuevoStock);
-
-    // 3. Destino
-    const dataNew = sheet.getDataRange().getValues();
-    let filaDestino = -1;
-    for (let i = 1; i < dataNew.length; i++) {
-      if (dataNew[i][2] == destinoId && String(dataNew[i][6]) == String(lote) && dataNew[i][0] == productoId) {
-        filaDestino = i + 1; break;
-      }
-    }
-
-    if (filaDestino > 0) {
-      const cell = sheet.getRange(filaDestino, 4);
-      cell.setValue(Number(cell.getValue()) + Number(cantidadMover));
-    } else {
-      sheet.appendRow([
-        datosOrigen[0], datosOrigen[1], destinoId, Number(cantidadMover),
-        datosOrigen[4], datosOrigen[5], datosOrigen[6], new Date(), "Transferencia"
-      ]);
-    }
-    return true;
-  } catch (e) { throw new Error(e.message); } finally { lock.releaseLock(); }
-}
-
-function realizarTransformacion(datos) {
-  const lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000);
-    const ss = SpreadsheetApp.openById(ID_HOJA);
-    const sheet = ss.getSheetByName('INVENTARIO');
-    const data = sheet.getDataRange().getValues();
-    
-    let filaOrigen = -1; let infoOrigen = null;
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][2] == datos.origenId && String(data[i][6]) == String(datos.loteOrigen) && data[i][0] == datos.productoIdOrigen) {
-        filaOrigen = i + 1; infoOrigen = { cad: data[i][4], elab: data[i][5] }; break;
-      }
-    }
-    if(filaOrigen===-1) throw new Error("Origen no encontrado");
-    
-    const cellVol = sheet.getRange(filaOrigen, 4);
-    const nuevoVol = cellVol.getValue() - datos.cantidadLitros;
-    if(nuevoVol <= 0.001) sheet.deleteRow(filaOrigen); else cellVol.setValue(nuevoVol);
-
-    const dataNew = sheet.getDataRange().getValues();
-    let filaDestino = -1;
-    const loteFinal = datos.nuevoLote || datos.loteOrigen;
-    
-    for (let i = 1; i < dataNew.length; i++) {
-      if (dataNew[i][0] == datos.nuevoProductoId && dataNew[i][1] == datos.nuevaPresentacionId && 
-          dataNew[i][2] == datos.origenId && String(dataNew[i][6]) == String(loteFinal)) {
-        filaDestino = i + 1; break;
-      }
-    }
-
-    if (filaDestino > 0) {
-      const c = sheet.getRange(filaDestino, 4); c.setValue(Number(c.getValue()) + Number(datos.cantidadLitros));
-    } else {
-      sheet.appendRow([
-        datos.nuevoProductoId, datos.nuevaPresentacionId, datos.origenId, Number(datos.cantidadLitros),
-        infoOrigen.cad, infoOrigen.elab, loteFinal, new Date(), "Transformación"
-      ]);
-    }
-    return true;
-  } catch (e) { throw new Error(e.message); } finally { lock.releaseLock(); }
-}
-
-// ----------------------------------------------------
-// CREACIÓN INTELIGENTE (ESTO ARREGLA LOS FUTUROS 0)
-// ----------------------------------------------------
-function registrarNuevaPresentacion(nombre) {
-  const s = obtenerHojaOCrear('PRESENTACIONES', ['ID', 'NOMBRE', 'VOLUMEN']);
-  
-  // LOGICA INTELIGENTE DE EXTRACCIÓN
-  let volumen = 0;
-  // Buscamos cualquier número (entero o decimal) en el texto
-  const match = String(nombre).match(/[\d\.]+/);
-  if (match) {
-    volumen = parseFloat(match[0]);
-    // Si dice "ml", convertimos a litros
-    if (String(nombre).toLowerCase().includes('ml')) {
-      volumen = volumen / 1000;
-    }
-  }
-  
-  s.appendRow([Utilities.getUuid(), nombre, volumen]); 
-  return true;
-}
-
-function registrarNuevoProducto(d) { 
-  const s = obtenerHojaOCrear('PRODUCTOS', ['ID', 'NOMBRE', 'DESCRIPCION', 'UNIDAD']);
-  s.appendRow([Utilities.getUuid(), d.nombre, d.descripcion, d.unidad]); return true;
-}
-function registrarNuevaUbicacion(d) {
-  const s = obtenerHojaOCrear('UBICACIONES', ['ID', 'NOMBRE']);
-  s.appendRow([Utilities.getUuid(), d]); return true;
-}
-function actualizarNombreUbicacion(id, n) { 
-  const s = obtenerHojaOCrear('UBICACIONES', []);
-  const d = s.getDataRange().getValues();
-  for(let i=1; i<d.length; i++) if(d[i][0]==id) { s.getRange(i+1, 2).setValue(n); return true; }
-}
-function borrarUbicacion(id) {
-  const s = obtenerHojaOCrear('UBICACIONES', []);
-  const d = s.getDataRange().getValues();
-  for(let i=1; i<d.length; i++) if(d[i][0]==id) { s.deleteRow(i+1); return true; }
-}
-
-// --- PUENTE PARA EL FRONTEND ---
-function registrarSalidas(lista) {
-  return registrarSalidaMasiva(lista);
+function EJECUTAR_DIAGNOSTICO_DEBUG() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sD = ss.getSheetByName('DEBUG'); if (!sD) sD = ss.insertSheet('DEBUG'); sD.clear();
+  let rep = [["HOJA", "EXISTE?", "FILAS"]];
+  ['PEDIDOS', 'DETALLE_PEDIDOS', 'CLIENTES', 'INVENTARIO'].forEach(n => {
+    let s = ss.getSheetByName(n); rep.push([n, s ? "SÍ" : "NO", s ? s.getLastRow() : "-"]);
+  });
+  sD.getRange(1,1,rep.length,3).setValues(rep);
 }

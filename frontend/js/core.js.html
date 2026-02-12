@@ -20,11 +20,19 @@ window.cambiarVista = function (vistaId) {
 };
 
 function recargarSelectores() {
-  if(typeof api !== 'undefined') api.obtenerCatalogos(llenarSelects);
+  mostrarCargando("Actualizando catálogos..."); // <--- INICIO
+
+  if(typeof api !== 'undefined') api.obtenerCatalogos(function(data){
+      llenarSelects(data);
+      // Solo ocultamos si ya terminamos la parte de clientes también, 
+      // pero para simplificar, puedes ocultarlo en el último callback que se ejecute.
+  });
+  
   if(typeof api !== 'undefined') {
       google.script.run.withSuccessHandler((c) => {
         LISTA_CLIENTES = c;
         if(typeof llenarSelectClientes === 'function') llenarSelectClientes();
+        ocultarCargando(); // <--- FIN (Cuando terminan de cargar los clientes)
       }).obtenerListaClientes();
   }
 }

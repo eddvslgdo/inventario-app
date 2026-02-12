@@ -1,36 +1,50 @@
+// ==========================================
+// LÓGICA DE ENTRADAS (CLEAN VERSION)
+// ==========================================
+
 function calcularTotalEntrada() {
-  const total = calcTotalGenerico("presentacion", "cantidad");
-  const el = document.getElementById("infoTotal");
-  if(el) el.innerText = total + " L";
+  var total = 0;
+  // Intentamos usar la función genérica si existe
+  if (typeof calcTotalGenerico === 'function') {
+      total = calcTotalGenerico("presentacion", "cantidad");
+  } else {
+      // Fallback simple por si core.js no cargó
+      var p = document.getElementById("presentacion");
+      var c = document.getElementById("cantidad");
+      if(p && c) {
+          var vol = parseFloat(p.options[p.selectedIndex].getAttribute("data-volumen") || 0);
+          total = vol * (parseFloat(c.value) || 0);
+      }
+  }
+  
+  var el = document.getElementById("infoTotal");
+  if(el) el.innerText = total.toFixed(2) + " L";
   return total;
 }
 
 function guardarEntradaDirecta() {
-  const item = construirObjetoEntrada();
+  var item = construirObjetoEntrada();
   if (!item) return;
-  const btn = event.target;
-  const txt = btn.innerText;
-  btn.disabled = true;
-  btn.innerText = "Guardando...";
+  
+  // Loader visual
+  if(typeof mostrarCargando === 'function') mostrarCargando("Guardando entrada...");
   
   api.registrarEntradaUnica(item, 
-    function() {
-      mostrarToast("Entrada Directa Guardada ⚡", "success");
+    function(response) {
+      if(typeof ocultarCargando === 'function') ocultarCargando();
+      mostrarToast("Entrada Guardada Correctamente ✅", "success");
       limpiarFormularioEntrada();
-      recargarSelectores();
-      btn.disabled = false;
-      btn.innerText = txt;
+      if(typeof recargarSelectores === 'function') recargarSelectores();
     },
     function(err) {
+      if(typeof ocultarCargando === 'function') ocultarCargando();
       mostrarError(err);
-      btn.disabled = false;
-      btn.innerText = txt;
     }
   );
 }
 
 function agregarColaEntrada() {
-  const item = construirObjetoEntrada();
+  var item = construirObjetoEntrada();
   if (!item) return;
   
   if(typeof COLA_ENTRADAS !== 'undefined') {
@@ -38,43 +52,40 @@ function agregarColaEntrada() {
       renderizarColaEntrada();
   }
   
-  const els = ["cantidad", "lote"];
-  els.forEach(id => { const e = document.getElementById(id); if(e) e.value = ""; });
+  // Limpieza parcial
+  var ids = ["cantidad", "lote"];
+  ids.forEach(function(id) { var e = document.getElementById(id); if(e) e.value = ""; });
   
-  const info = document.getElementById("infoTotal");
+  var info = document.getElementById("infoTotal");
   if(info) info.innerText = "0 L";
   
-  const lot = document.getElementById("lote");
+  var lot = document.getElementById("lote");
   if(lot) lot.focus();
   
   mostrarToast("Agregado a la lista", "success");
 }
 
 function construirObjetoEntrada() {
-  const vol = calcularTotalEntrada();
+  var vol = calcularTotalEntrada();
 
-  // --- CORRECCIÓN ---
-  // Usamos "!(vol > 0)" para evitar escribir el símbolo "<" 
-  // que el navegador está confundiendo con HTML.
+  // VALIDACIÓN SEGURA: Usamos lógica inversa para evitar símbolo menor que
   if (!(vol > 0)) { 
-    mostrarToast("Cantidad inválida (debe ser mayor a 0)", "error");
+    mostrarToast("Cantidad inválida (0 L)", "error");
     return null;
   }
   
-  const elLote = document.getElementById("lote");
-  const lote = elLote ? elLote.value.trim() : "";
+  var elLote = document.getElementById("lote");
+  var lote = elLote ? elLote.value.trim() : "";
   
-  if (!lote) {
-    mostrarToast("Falta Lote", "error");
+  if (!lote || lote === "") {
+    mostrarToast("Falta el Lote", "error");
     if(elLote) elLote.focus();
     return null;
   }
   
-  let fc = new Date();
-  fc.setFullYear(fc.getFullYear() + 2);
-  
-  const elElab = document.getElementById("elaboracion");
-  let fab = (elElab && elElab.value) ? elElab.value : new Date().toISOString().split("T")[0];
+  var elElab = document.getElementById("elaboracion");
+  // Si hay fecha, la usamos. Si no, enviamos cadena vacía.
+  var fab = (elElab && elElab.value) ? elElab.value : "";
   
   return {
     producto_id: document.getElementById("producto").value,
@@ -86,27 +97,33 @@ function construirObjetoEntrada() {
     piezas: document.getElementById("cantidad").value,
     lote: lote,
     proveedor: document.getElementById("proveedor").value,
+    
+    // Enviamos la fecha tal cual. El Backend calculará la caducidad.
     fecha_elaboracion: fab,
-    fecha_caducidad: fc.toISOString().split("T")[0],
+    fecha_caducidad: "" 
   };
 }
 
 function limpiarFormularioEntrada() {
-  const ids = ["cantidad", "lote", "proveedor", "elaboracion", "producto", "presentacion", "ubicacion"];
-  ids.forEach(id => { const e = document.getElementById(id); if(e) e.value = ""; });
-  const info = document.getElementById("infoTotal");
+  var ids = ["cantidad", "lote", "proveedor", "elaboracion", "producto", "presentacion", "ubicacion"];
+  ids.forEach(function(id) { var e = document.getElementById(id); if(e) e.value = ""; });
+  var info = document.getElementById("infoTotal");
   if(info) info.innerText = "0 L";
 }
 
 function procesarEntradas() {
   if (typeof COLA_ENTRADAS === 'undefined' || COLA_ENTRADAS.length === 0) return;
   TIPO_ACCION_MASIVA = "ENTRADA";
-  document.getElementById("lblCantMasiva").innerText = COLA_ENTRADAS.length + " partidas (Entrada)";
+  var lbl = document.getElementById("lblCantMasiva");
+  if(lbl) lbl.innerText = COLA_ENTRADAS.length + " partidas";
   abrirModalGenerico("modalConfirmarMasivo");
 }
 
 function renderizarColaEntrada() {
-  if(typeof COLA_ENTRADAS !== 'undefined') {
+  if(typeof COLA_ENTRADAS !== 'undefined' && typeof renderColaGenerica === 'function') {
       renderColaGenerica(COLA_ENTRADAS, "area-cola-entradas", "tablaColaEntradaBody", "contadorColaEnt", "ent");
   }
 }
+
+// Mensaje de confirmación en consola
+console.log("✅ FRONTEND: Lógica de Entradas cargada correctamente");

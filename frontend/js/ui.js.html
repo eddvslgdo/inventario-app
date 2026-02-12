@@ -143,3 +143,23 @@ function renderColaGenerica(lista, idArea, idBody, idContador, tipo) {
       }
   }
 }
+
+// --- CONTROL DEL SPINNER DE CARGA ---
+
+function mostrarCargando(texto) {
+  const loader = document.getElementById("global-loader");
+  if (loader) {
+    // Si pasamos texto, actualizamos el mensaje
+    const p = loader.querySelector("p");
+    if(p) p.innerText = texto || "Procesando...";
+    
+    loader.style.display = "flex";
+  }
+}
+
+function ocultarCargando() {
+  const loader = document.getElementById("global-loader");
+  if (loader) {
+    loader.style.display = "none";
+  }
+}

@@ -94,38 +94,87 @@ function guardarLogEntrada(record) {
   ]);
 }
 
-function actualizarInventarioEntrada(datos) {
-  const sheet = getDb().getSheetByName(SHEETS.INVENTARIO);
+// ==========================================
+// HERRAMIENTA DE DEBUG (USANDO getDb)
+// ==========================================
+function logToDebug(paso, mensaje, datos) {
+  try {
+    // CORRECCIÓN 1: Usamos getDb() en lugar de getActiveSpreadsheet()
+    const ss = getDb(); 
+    let sheet = ss.getSheetByName("DEBUG");
+    
+    if (!sheet) {
+      sheet = ss.insertSheet("DEBUG");
+      sheet.appendRow(["TIMESTAMP", "PASO", "MENSAJE", "DATOS (JSON)"]);
+    }
+    
+    sheet.appendRow([
+      new Date(),
+      paso,
+      mensaje,
+      JSON.stringify(datos)
+    ]);
+  } catch (e) {
+    // Si falla el log, lo mostramos en la consola de Apps Script
+    console.error("Error en logToDebug: " + e.message);
+  }
+}
+
+// ==========================================
+// FUNCIÓN PRINCIPAL DE INVENTARIO
+// ==========================================
+ function actualizarInventarioEntrada(datos) {
+  const ss = getDb();
+  const sheet = ss.getSheetByName("INVENTARIO");
+  
+  // Preparamos los valores asegurando que sean texto (con apóstrofe)
+  // Si por milagro llegaran vacíos, ponemos "SIN-FECHA" para que sea visible el error
+  const valCad = datos.fecha_caducidad ? "'" + datos.fecha_caducidad : "'SIN-FECHA";
+  const valElab = datos.fecha_elaboracion ? "'" + datos.fecha_elaboracion : "'SIN-FECHA";
+
   const data = sheet.getDataRange().getValues();
   let fila = -1;
-  
-  // LOGICA NUEVA: Buscamos coincidencia en Prod + Pres + Ubic + LOTE
-  // Si el Lote cambia, se crea una fila nueva.
-  for (let i = 1; i < data.length; i++) {
-    const mismoProd = data[i][0] == datos.producto_id;
-    const mismaPres = data[i][1] == datos.presentacion_id;
-    const mismaUbic = data[i][2] == datos.ubicacion_id;
-    const mismoLote = String(data[i][6]).trim() == String(datos.lote).trim(); // Comparamos Lotes
+  const loteBusqueda = String(datos.lote).trim().toUpperCase();
 
-    if (mismoProd && mismaPres && mismaUbic && mismoLote) {
-      fila = i + 1; break;
+  // Buscar si ya existe el lote en esa ubicación
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (String(row[0]) == datos.producto_id && 
+        String(row[2]) == datos.ubicacion_id && 
+        String(row[6]).trim().toUpperCase() == loteBusqueda) {
+       fila = i + 1;
+       break;
     }
   }
 
   if (fila > 0) {
-    // Si existe el lote en esa ubicación, sumamos
-    const cell = sheet.getRange(fila, 4); 
-    cell.setValue(Number(cell.getValue()) + Number(datos.volumen_L));
+     // CASO: EXISTE -> ACTUALIZAR
+     const celdaVol = sheet.getRange(fila, 4);
+     const nuevoVol = Number(celdaVol.getValue()) + Number(datos.volumen_L);
+     celdaVol.setValue(nuevoVol);
+     
+     // Actualizamos fechas también (Columna E=5, F=6)
+     sheet.getRange(fila, 5).setValue(valCad);
+     sheet.getRange(fila, 6).setValue(valElab);
+     sheet.getRange(fila, 8).setValue(new Date()); // Columna H (Ultima act)
+     
+     return fila;
   } else {
-    // Si es lote nuevo, fila nueva
-    sheet.appendRow([
-      datos.producto_id, datos.presentacion_id, datos.ubicacion_id, 
-      Number(datos.volumen_L), datos.fecha_caducidad, 
-      datos.fecha_elaboracion, datos.lote, new Date()
-    ]);
+     // CASO: NUEVO -> CREAR
+     sheet.appendRow([
+        datos.producto_id,
+        datos.presentacion_id,
+        datos.ubicacion_id,
+        Number(datos.volumen_L),
+        valCad,   // Columna E (Caducidad)
+        valElab,  // Columna F (Elaboración)
+        loteBusqueda,
+        new Date(),
+        Session.getActiveUser().getEmail()
+     ]);
+     return sheet.getLastRow();
   }
 }
-
 // --- SALIDAS ---
 function getInventarioDisponible(prod, pres, ubic) {
   const data = getDb().getSheetByName(SHEETS.INVENTARIO).getDataRange().getValues();

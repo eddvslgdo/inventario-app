@@ -1,5 +1,5 @@
 // ==========================================
-// LÓGICA DE SALIDAS (CON AUTO-LIMPIEZA)
+// LÓGICA DE SALIDAS (LIMPIEZA AUTOMÁTICA AL CAMBIAR PRODUCTO)
 // ==========================================
 
 // --- A. FUNCIONES DEL CARRITO ---
@@ -21,8 +21,7 @@ function agregarColaSalida() {
   renderizarColaSalida();
   mostrarToast("Agregado al pedido ✅", "success");
   
-  // === CAMBIO CLAVE: REINICIAR FORMULARIO COMPLETO ===
-  // Al agregar, limpiamos todo para que el usuario elija el siguiente producto
+  // Limpiamos formulario para el siguiente
   reiniciarFormularioSalidas();
 }
 
@@ -30,7 +29,8 @@ function eliminarSal(index) {
     COLA_SALIDAS.splice(index, 1);
     renderizarColaSalida();
     mostrarToast("Item eliminado.", "info");
-    // Al eliminar, no necesitamos refrescar la tabla porque el formulario ya se reseteó
+    // Al eliminar, refrescamos la tabla si hay un producto seleccionado
+    if(typeof aplicarFIFO === 'function') aplicarFIFO();
 }
 
 function renderizarColaSalida() {
@@ -81,8 +81,13 @@ function confirmarPedidoCompleto() {
   var chkGuardar = document.getElementById("log_guardar_cliente");
   var guardarCli = chkGuardar ? chkGuardar.checked : false;
 
+  // AGREGAMOS LOADER VISUAL
+  if(typeof mostrarCargando === 'function') mostrarCargando("Guardando pedido...");
+
   google.script.run
     .withSuccessHandler(function(res) {
+      if(typeof ocultarCargando === 'function') ocultarCargando();
+      
       if(typeof res === 'string') { try { res = JSON.parse(res); } catch(e){} }
 
       if (res && res.success) {
@@ -98,7 +103,7 @@ function confirmarPedidoCompleto() {
           limpiarFormularioSalidaTotal();
           cerrarModalGenerico("modalLogistica");
           
-          // Aseguramos que la pantalla de atrás también esté limpia
+          // Reinicio completo de la pantalla
           reiniciarFormularioSalidas();
           
           if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
@@ -109,6 +114,7 @@ function confirmarPedidoCompleto() {
       btn.innerText = txtOriginal;
     })
     .withFailureHandler(function(err) {
+      if(typeof ocultarCargando === 'function') ocultarCargando();
       console.error(err);
       Swal.fire("Error de Conexión", err.message, "error");
       btn.disabled = false;
@@ -124,14 +130,11 @@ function reiniciarFormularioSalidas() {
   var selProd = document.getElementById("sal_producto");
   if(selProd) selProd.value = ""; 
   
-  // 2. Oculta y vacía la tabla de lotes (ESTO SOLUCIONA TU PROBLEMA)
+  // 2. Oculta la tabla
   var divDisp = document.getElementById("div-disponibilidad");
-  if(divDisp) { 
-      divDisp.innerHTML = ""; 
-      divDisp.style.display = "none"; 
-  }
+  if(divDisp) { divDisp.innerHTML = ""; divDisp.style.display = "none"; }
   
-  // 3. Limpia los inputs restantes
+  // 3. Limpia los inputs
   limpiarCamposSalidaParcial();
 }
 
@@ -196,15 +199,19 @@ function calcularTotalSalida() {
 }
 
 function limpiarCamposSalidaParcial() {
+  // Limpia inputs de cantidad
   var inputCant = document.getElementById("sal_cantidad");
   if(inputCant) { inputCant.value = ""; inputCant.placeholder = "Cantidad"; inputCant.removeAttribute("data-max-pzas"); }
   document.getElementById("sal_infoTotal").innerText = "0 L";
   
+  // Limpia Lote
   var elLote = document.getElementById("sal_lote"); 
   if(elLote) { elLote.value = ""; elLote.readOnly = false; elLote.style.backgroundColor = "white"; }
   
+  // Limpia Presentación y Ubicación
   var elPres = document.getElementById("sal_presentacion"); 
   if(elPres) { elPres.value = ""; elPres.disabled = false; }
+  
   var elUbic = document.getElementById("sal_ubicacion"); 
   if(elUbic) { elUbic.value = ""; elUbic.disabled = false; }
 }
@@ -217,28 +224,41 @@ function limpiarFormularioSalidaTotal() {
   limpiarCamposSalidaParcial();
 }
 
-// --- E. LÓGICA FIFO ---
+// --- E. LÓGICA FIFO (BÚSQUEDA) ---
 
 function aplicarFIFO() {
   var selectProd = document.getElementById("sal_producto");
   var prodId = selectProd ? selectProd.value : null;
   
-  // ARREGLO IMPORTANTE: Si no hay producto, BORRAMOS la tabla inmediatamente
+  // === AQUÍ ESTÁ EL ARREGLO ===
+  // Siempre que se llame a esta función (al cambiar producto), limpiamos los campos viejos
+  limpiarCamposSalidaParcial(); 
+  // ============================
+
+  // Si no hay producto, borramos la tabla y salimos
   if (!prodId || prodId === "") {
       var div = document.getElementById("div-disponibilidad");
       if(div) { div.innerHTML = ""; div.style.display = "none"; }
       return;
   }
 
+  // Loader visual
+  if(typeof mostrarCargando === 'function') mostrarCargando("Buscando stock...");
+
   google.script.run
     .withSuccessHandler(function(jsonResp) {
+      if(typeof ocultarCargando === 'function') ocultarCargando();
+      
       var resultado;
       try { resultado = JSON.parse(jsonResp); } catch (e) { console.error(e); return; }
       
       if (!resultado.success) { renderizarTablaDisponibilidad([]); return; }
       renderizarTablaDisponibilidad(resultado.lista_completa);
     })
-    .withFailureHandler(mostrarError)
+    .withFailureHandler(function(err){
+       if(typeof ocultarCargando === 'function') ocultarCargando();
+       mostrarError(err);
+    })
     .obtenerSugerenciaFIFO(prodId, COLA_SALIDAS);
 }
 
@@ -246,13 +266,6 @@ function renderizarTablaDisponibilidad(lista) {
   var div = document.getElementById("div-disponibilidad");
   if (!div) return;
   
-  // Si la lista está vacía, ocultamos todo
-  if (!lista || lista.length === 0) {
-      div.innerHTML = ""; 
-      div.style.display = "none";
-      return;
-  }
-
   div.innerHTML = ""; 
   div.style.display = "block";
   
@@ -265,27 +278,33 @@ function renderizarTablaDisponibilidad(lista) {
   });
   table.appendChild(thead);
   
-  lista.forEach(function(l, idx) {
-      var tr = document.createElement("tr");
-      tr.id = "fila-lote-" + idx; tr.style.cursor = "pointer"; tr.style.borderBottom = "1px solid #eee";
-      
-      var stockNum = parseFloat(l.stock);
-      
-      if (stockNum > 0.001) {
-         tr.style.opacity = "1";
-         tr.style.pointerEvents = "auto";
-      } else {
-         tr.style.opacity = "0.5";
-         tr.style.pointerEvents = "none";
-         l.stock = "0.00";
-      }
+  var filasAgregadas = 0;
 
-      var fechaCad = l.caducidad || "---";
-      tr.onclick = function() { seleccionarLote(l.lote, l.presentacion_id, l.ubicacion_id, l.stock, idx, fechaCad); };
-      
-      tr.innerHTML = `<td style="padding:8px; font-weight:bold;">${l.lote}</td><td style="padding:8px; color:#d35400;">${fechaCad}</td><td style="padding:8px;">${l.nombre_ubicacion||l.ubicacion_id}</td><td style="padding:8px; text-align:right; color:#27ae60;">${l.stock} L</td>`;
-      table.appendChild(tr);
-  });
+  if (lista && lista.length) { 
+      lista.forEach(function(l, idx) {
+          var stockNum = parseFloat(l.stock);
+          
+          // FILTRO: Solo mostramos si hay stock positivo (Mayor a 0.001)
+          if (stockNum > 0.001) {
+             var tr = document.createElement("tr");
+             tr.id = "fila-lote-" + idx; tr.style.cursor = "pointer"; tr.style.borderBottom = "1px solid #eee";
+             
+             tr.style.opacity = "1";
+             tr.style.pointerEvents = "auto";
+
+             var fechaCad = l.caducidad || "---";
+             tr.onclick = function() { seleccionarLote(l.lote, l.presentacion_id, l.ubicacion_id, l.stock, idx, fechaCad); };
+             
+             tr.innerHTML = `<td style="padding:8px; font-weight:bold;">${l.lote}</td><td style="padding:8px; color:#d35400;">${fechaCad}</td><td style="padding:8px;">${l.nombre_ubicacion||l.ubicacion_id}</td><td style="padding:8px; text-align:right; color:#27ae60; font-weight:bold;">${l.stock} L</td>`;
+             table.appendChild(tr);
+             filasAgregadas++;
+          }
+      });
+  } 
+  
+  if (filasAgregadas === 0) { 
+      table.innerHTML += '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">⚠️ No hay stock disponible.</td></tr>'; 
+  }
   div.appendChild(table);
 }
 
