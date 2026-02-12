@@ -1,14 +1,12 @@
 // ==========================================
-// LÓGICA DE ENTRADAS (CLEAN VERSION)
+// LÓGICA DE ENTRADAS (CON ANIMACIÓN EN MASIVA)
 // ==========================================
 
 function calcularTotalEntrada() {
   var total = 0;
-  // Intentamos usar la función genérica si existe
   if (typeof calcTotalGenerico === 'function') {
       total = calcTotalGenerico("presentacion", "cantidad");
   } else {
-      // Fallback simple por si core.js no cargó
       var p = document.getElementById("presentacion");
       var c = document.getElementById("cantidad");
       if(p && c) {
@@ -26,21 +24,20 @@ function guardarEntradaDirecta() {
   var item = construirObjetoEntrada();
   if (!item) return;
   
-  // Loader visual
   if(typeof mostrarCargando === 'function') mostrarCargando("Guardando entrada...");
   
-  api.registrarEntradaUnica(item, 
-    function(response) {
+  google.script.run
+    .withSuccessHandler(function(response) {
       if(typeof ocultarCargando === 'function') ocultarCargando();
       mostrarToast("Entrada Guardada Correctamente ✅", "success");
       limpiarFormularioEntrada();
       if(typeof recargarSelectores === 'function') recargarSelectores();
-    },
-    function(err) {
+    })
+    .withFailureHandler(function(err) {
       if(typeof ocultarCargando === 'function') ocultarCargando();
-      mostrarError(err);
-    }
-  );
+      mostrarToast("Error: " + err.message, "error");
+    })
+    .registrarEntradaUnica(item);
 }
 
 function agregarColaEntrada() {
@@ -52,7 +49,6 @@ function agregarColaEntrada() {
       renderizarColaEntrada();
   }
   
-  // Limpieza parcial
   var ids = ["cantidad", "lote"];
   ids.forEach(function(id) { var e = document.getElementById(id); if(e) e.value = ""; });
   
@@ -68,7 +64,6 @@ function agregarColaEntrada() {
 function construirObjetoEntrada() {
   var vol = calcularTotalEntrada();
 
-  // VALIDACIÓN SEGURA: Usamos lógica inversa para evitar símbolo menor que
   if (!(vol > 0)) { 
     mostrarToast("Cantidad inválida (0 L)", "error");
     return null;
@@ -84,7 +79,6 @@ function construirObjetoEntrada() {
   }
   
   var elElab = document.getElementById("elaboracion");
-  // Si hay fecha, la usamos. Si no, enviamos cadena vacía.
   var fab = (elElab && elElab.value) ? elElab.value : "";
   
   return {
@@ -97,8 +91,6 @@ function construirObjetoEntrada() {
     piezas: document.getElementById("cantidad").value,
     lote: lote,
     proveedor: document.getElementById("proveedor").value,
-    
-    // Enviamos la fecha tal cual. El Backend calculará la caducidad.
     fecha_elaboracion: fab,
     fecha_caducidad: "" 
   };
@@ -113,7 +105,8 @@ function limpiarFormularioEntrada() {
 
 function procesarEntradas() {
   if (typeof COLA_ENTRADAS === 'undefined' || COLA_ENTRADAS.length === 0) return;
-  TIPO_ACCION_MASIVA = "ENTRADA";
+  
+  // Preparamos el modal de confirmación
   var lbl = document.getElementById("lblCantMasiva");
   if(lbl) lbl.innerText = COLA_ENTRADAS.length + " partidas";
   abrirModalGenerico("modalConfirmarMasivo");
@@ -125,33 +118,39 @@ function renderizarColaEntrada() {
   }
 }
 
+// --- FUNCIÓN MODIFICADA CON ANIMACIÓN ---
 function ejecutarGuardadoMasivo() {
   if (typeof COLA_ENTRADAS === 'undefined' || COLA_ENTRADAS.length === 0) return;
 
-  // Visual feedback
-  var btn = document.querySelector("#modalConfirmarMasivo button.btn-primary"); // Adjust selector if needed
-  if(btn) { btn.innerText = "Saving..."; btn.disabled = true; }
+  // 1. Ocultar el modal de confirmación para que no estorbe
+  cerrarModalGenerico("modalConfirmarMasivo");
+
+  // 2. ACTIVAR LA PANTALLA DE CARGA (Overlay blanco con spinner)
+  var loader = document.getElementById("global-loader");
+  if(loader) loader.style.display = "flex";
 
   google.script.run
     .withSuccessHandler(function(response) {
-       // Clear list and close modal on success
+       // 3. APAGAR PANTALLA DE CARGA
+       if(loader) loader.style.display = "none";
+
+       // Limpiar todo tras éxito
        COLA_ENTRADAS = []; 
        renderizarColaEntrada();
-       cerrarModalGenerico("modalConfirmarMasivo");
-       mostrarToast("Entries saved successfully ✅", "success");
+       mostrarToast("¡Carga Masiva Exitosa! ✅", "success");
        
-       // Reset button
-       if(btn) { btn.innerText = "Yes, Save"; btn.disabled = false; }
-       
-       // Reload data if needed
-       if(typeof cargarDashboardEntradas === 'function') cargarDashboardEntradas();
+       // Recargar dashboard si aplica
+       if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
     })
     .withFailureHandler(function(err) {
+       // 3. APAGAR PANTALLA DE CARGA (Incluso si falla)
+       if(loader) loader.style.display = "none";
+       
        mostrarToast("Error: " + err.message, "error");
-       if(btn) { btn.innerText = "Yes, Save"; btn.disabled = false; }
+       // Volvemos a abrir el modal por si quiere reintentar
+       abrirModalGenerico("modalConfirmarMasivo");
     })
-    .registrarEntradaMasiva(COLA_ENTRADAS); // Calls the backend function we fixed in V24
+    .registrarEntradaMasiva(COLA_ENTRADAS);
 }
 
-// Mensaje de confirmación en consola
 console.log("✅ FRONTEND: Lógica de Entradas cargada correctamente");
