@@ -121,15 +121,36 @@ function logToDebug(paso, mensaje, datos) {
 }
 
 // ==========================================
-// FUNCIÓN PRINCIPAL DE INVENTARIO
+// FUNCIÓN PRINCIPAL DE INVENTARIO (CORREGIDA)
 // ==========================================
- function actualizarInventarioEntrada(datos) {
+function actualizarInventarioEntrada(datos) {
   const ss = getDb();
   const sheet = ss.getSheetByName("INVENTARIO");
-  
-  // Preparamos los valores asegurando que sean texto (con apóstrofe)
-  // Si por milagro llegaran vacíos, ponemos "SIN-FECHA" para que sea visible el error
-  const valCad = datos.fecha_caducidad ? "'" + datos.fecha_caducidad : "'SIN-FECHA";
+
+  // --- 1. LÓGICA DE CÁLCULO DE CADUCIDAD ---
+  // Si el frontend no mandó caducidad, la calculamos basada en la elaboración (+2 AÑOS)
+  let fechaCalculada = datos.fecha_caducidad;
+
+  if (!fechaCalculada && datos.fecha_elaboracion) {
+    try {
+      // Convertimos la fecha de texto (yyyy-mm-dd) a objeto fecha
+      // Nota: Es mejor manipular el string directamente para evitar problemas de zona horaria
+      var partes = String(datos.fecha_elaboracion).split('-'); // [2026, 02, 05]
+      
+      if (partes.length === 3) {
+        var anio = parseInt(partes[0]) + 2; // <--- AQUÍ SUMAMOS 2 AÑOS
+        var mes = partes[1];
+        var dia = partes[2];
+        fechaCalculada = anio + "-" + mes + "-" + dia; // Resultado: 2028-02-05
+      }
+    } catch (e) {
+      console.error("Error calculando fecha caducidad: " + e.message);
+    }
+  }
+  // -----------------------------------------
+
+  // Preparamos los valores asegurando que sean texto (con apóstrofe para que Excel no los cambie)
+  const valCad = fechaCalculada ? "'" + fechaCalculada : "'SIN-FECHA";
   const valElab = datos.fecha_elaboracion ? "'" + datos.fecha_elaboracion : "'SIN-FECHA";
 
   const data = sheet.getDataRange().getValues();
@@ -139,6 +160,7 @@ function logToDebug(paso, mensaje, datos) {
   // Buscar si ya existe el lote en esa ubicación
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
+    // Columna A(0)=Prod, C(2)=Ubic, G(6)=Lote
     if (String(row[0]) == datos.producto_id && 
         String(row[2]) == datos.ubicacion_id && 
         String(row[6]).trim().toUpperCase() == loteBusqueda) {
@@ -148,25 +170,25 @@ function logToDebug(paso, mensaje, datos) {
   }
 
   if (fila > 0) {
-     // CASO: EXISTE -> ACTUALIZAR
+     // CASO: EXISTE -> ACTUALIZAR STOCK Y FECHAS
      const celdaVol = sheet.getRange(fila, 4);
      const nuevoVol = Number(celdaVol.getValue()) + Number(datos.volumen_L);
      celdaVol.setValue(nuevoVol);
      
-     // Actualizamos fechas también (Columna E=5, F=6)
-     sheet.getRange(fila, 5).setValue(valCad);
-     sheet.getRange(fila, 6).setValue(valElab);
+     // Actualizamos las fechas también por si estaban vacías antes
+     sheet.getRange(fila, 5).setValue(valCad);  // Columna E (Caducidad)
+     sheet.getRange(fila, 6).setValue(valElab); // Columna F (Elaboración)
      sheet.getRange(fila, 8).setValue(new Date()); // Columna H (Ultima act)
      
      return fila;
   } else {
-     // CASO: NUEVO -> CREAR
+     // CASO: NUEVO -> CREAR FILA
      sheet.appendRow([
         datos.producto_id,
         datos.presentacion_id,
         datos.ubicacion_id,
         Number(datos.volumen_L),
-        valCad,   // Columna E (Caducidad)
+        valCad,   // Columna E (Caducidad Calculada)
         valElab,  // Columna F (Elaboración)
         loteBusqueda,
         new Date(),
@@ -175,6 +197,7 @@ function logToDebug(paso, mensaje, datos) {
      return sheet.getLastRow();
   }
 }
+
 // --- SALIDAS ---
 function getInventarioDisponible(prod, pres, ubic) {
   const data = getDb().getSheetByName(SHEETS.INVENTARIO).getDataRange().getValues();

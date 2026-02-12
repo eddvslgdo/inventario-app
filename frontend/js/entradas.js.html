@@ -125,5 +125,33 @@ function renderizarColaEntrada() {
   }
 }
 
+function ejecutarGuardadoMasivo() {
+  if (typeof COLA_ENTRADAS === 'undefined' || COLA_ENTRADAS.length === 0) return;
+
+  // Visual feedback
+  var btn = document.querySelector("#modalConfirmarMasivo button.btn-primary"); // Adjust selector if needed
+  if(btn) { btn.innerText = "Saving..."; btn.disabled = true; }
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+       // Clear list and close modal on success
+       COLA_ENTRADAS = []; 
+       renderizarColaEntrada();
+       cerrarModalGenerico("modalConfirmarMasivo");
+       mostrarToast("Entries saved successfully ✅", "success");
+       
+       // Reset button
+       if(btn) { btn.innerText = "Yes, Save"; btn.disabled = false; }
+       
+       // Reload data if needed
+       if(typeof cargarDashboardEntradas === 'function') cargarDashboardEntradas();
+    })
+    .withFailureHandler(function(err) {
+       mostrarToast("Error: " + err.message, "error");
+       if(btn) { btn.innerText = "Yes, Save"; btn.disabled = false; }
+    })
+    .registrarEntradaMasiva(COLA_ENTRADAS); // Calls the backend function we fixed in V24
+}
+
 // Mensaje de confirmación en consola
 console.log("✅ FRONTEND: Lógica de Entradas cargada correctamente");

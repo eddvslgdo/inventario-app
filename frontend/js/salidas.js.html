@@ -1,6 +1,27 @@
 // ==========================================
-// LÓGICA DE SALIDAS (LIMPIEZA AUTOMÁTICA AL CAMBIAR PRODUCTO)
+// LÓGICA DE SALIDAS (CORREGIDA Y LIMPIA)
 // ==========================================
+
+// --- 0. INICIALIZACIÓN (¡NUEVO!) ---
+// Esta función se llamará automáticamente cada vez que cargues la vista
+function iniciarVistaSalidas() {
+  console.log("🚀 Iniciando vista de Salidas limpia...");
+  
+  // 1. Limpiar Carrito
+  COLA_SALIDAS = [];
+  renderizarColaSalida();
+  
+  // 2. Limpiar Formulario
+  reiniciarFormularioSalidas();
+  
+  // 3. Resetear Selector de Producto (Para que no quede el anterior)
+  var selProd = document.getElementById("sal_producto");
+  if(selProd) selProd.selectedIndex = 0;
+  
+  // 4. Asegurar que la tabla de lotes esté oculta
+  var divDisp = document.getElementById("div-disponibilidad");
+  if(divDisp) { divDisp.innerHTML = ""; divDisp.style.display = "none"; }
+}
 
 // --- A. FUNCIONES DEL CARRITO ---
 
@@ -8,7 +29,6 @@ function agregarColaSalida() {
   var item = construirItemSalida(); 
   if (!item) return; 
 
-  // Verificamos duplicados
   var existente = COLA_SALIDAS.find(function(i) {
     return i.lote === item.lote && i.ubicacion_id === item.ubicacion_id;
   });
@@ -21,15 +41,18 @@ function agregarColaSalida() {
   renderizarColaSalida();
   mostrarToast("Agregado al pedido ✅", "success");
   
-  // Limpiamos formulario para el siguiente
-  reiniciarFormularioSalidas();
+  // Limpiamos SOLO los campos de detalle, pero NO el producto seleccionado
+  // Así el usuario puede seguir agregando más lotes del mismo producto si quiere
+  limpiarCamposSalidaParcial(); 
+  
+  // Refrescamos la tabla para que se actualice el "Stock Disp." restando lo que acabamos de agregar
+  aplicarFIFO(); 
 }
 
 function eliminarSal(index) {
     COLA_SALIDAS.splice(index, 1);
     renderizarColaSalida();
     mostrarToast("Item eliminado.", "info");
-    // Al eliminar, refrescamos la tabla si hay un producto seleccionado
     if(typeof aplicarFIFO === 'function') aplicarFIFO();
 }
 
@@ -81,7 +104,6 @@ function confirmarPedidoCompleto() {
   var chkGuardar = document.getElementById("log_guardar_cliente");
   var guardarCli = chkGuardar ? chkGuardar.checked : false;
 
-  // AGREGAMOS LOADER VISUAL
   if(typeof mostrarCargando === 'function') mostrarCargando("Guardando pedido...");
 
   google.script.run
@@ -97,14 +119,11 @@ function confirmarPedidoCompleto() {
               icon: 'success' 
           });
           
-          // Limpieza Total
           COLA_SALIDAS = []; 
           renderizarColaSalida();
           limpiarFormularioSalidaTotal();
           cerrarModalGenerico("modalLogistica");
-          
-          // Reinicio completo de la pantalla
-          reiniciarFormularioSalidas();
+          reiniciarFormularioSalidas(); // Limpieza total
           
           if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
       } else {
@@ -126,15 +145,12 @@ function confirmarPedidoCompleto() {
 // --- D. UTILIDADES Y LÓGICA DE LIMPIEZA ---
 
 function reiniciarFormularioSalidas() {
-  // 1. Resetea el selector de producto
   var selProd = document.getElementById("sal_producto");
   if(selProd) selProd.value = ""; 
   
-  // 2. Oculta la tabla
   var divDisp = document.getElementById("div-disponibilidad");
   if(divDisp) { divDisp.innerHTML = ""; divDisp.style.display = "none"; }
   
-  // 3. Limpia los inputs
   limpiarCamposSalidaParcial();
 }
 
@@ -174,6 +190,11 @@ function construirItemSalida() {
   
   if (pzas - maxPzas > 0) { mostrarToast("⚠️ Stock insuficiente", "error"); return null; }
 
+  // --- CORRECCIÓN: NO LEER LOS VALORES DE LOS CAMPOS DISABLED ---
+  // Cuando un campo está 'disabled', a veces no envía el valor correctamente o el usuario no ve el nombre.
+  // Pero aquí los leemos directo del DOM, así que está bien.
+  // Lo importante es que el ID del producto viene del SELECT principal que NO está disabled.
+
   return {
     producto_id: document.getElementById("sal_producto").value,
     nombre_producto: getTextoSelect("sal_producto"),
@@ -199,16 +220,13 @@ function calcularTotalSalida() {
 }
 
 function limpiarCamposSalidaParcial() {
-  // Limpia inputs de cantidad
   var inputCant = document.getElementById("sal_cantidad");
   if(inputCant) { inputCant.value = ""; inputCant.placeholder = "Cantidad"; inputCant.removeAttribute("data-max-pzas"); }
   document.getElementById("sal_infoTotal").innerText = "0 L";
   
-  // Limpia Lote
   var elLote = document.getElementById("sal_lote"); 
   if(elLote) { elLote.value = ""; elLote.readOnly = false; elLote.style.backgroundColor = "white"; }
   
-  // Limpia Presentación y Ubicación
   var elPres = document.getElementById("sal_presentacion"); 
   if(elPres) { elPres.value = ""; elPres.disabled = false; }
   
@@ -230,19 +248,17 @@ function aplicarFIFO() {
   var selectProd = document.getElementById("sal_producto");
   var prodId = selectProd ? selectProd.value : null;
   
-  // === AQUÍ ESTÁ EL ARREGLO ===
-  // Siempre que se llame a esta función (al cambiar producto), limpiamos los campos viejos
+  // 1. Limpiamos SOLO los campos de abajo, pero NO el producto seleccionado
   limpiarCamposSalidaParcial(); 
-  // ============================
 
-  // Si no hay producto, borramos la tabla y salimos
+  // 2. Si no hay producto (o dice 'Selecciona...'), borramos tabla y salimos
   if (!prodId || prodId === "") {
       var div = document.getElementById("div-disponibilidad");
       if(div) { div.innerHTML = ""; div.style.display = "none"; }
       return;
   }
 
-  // Loader visual
+  // 3. Cargamos datos
   if(typeof mostrarCargando === 'function') mostrarCargando("Buscando stock...");
 
   google.script.run
@@ -284,7 +300,6 @@ function renderizarTablaDisponibilidad(lista) {
       lista.forEach(function(l, idx) {
           var stockNum = parseFloat(l.stock);
           
-          // FILTRO: Solo mostramos si hay stock positivo (Mayor a 0.001)
           if (stockNum > 0.001) {
              var tr = document.createElement("tr");
              tr.id = "fila-lote-" + idx; tr.style.cursor = "pointer"; tr.style.borderBottom = "1px solid #eee";
@@ -315,13 +330,14 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
   var elPres = document.getElementById("sal_presentacion");
   var volUnitario = 0;
   if(elPres) {
-      elPres.value = presId; elPres.disabled = true;
+      elPres.value = presId; elPres.disabled = true; // Se bloquea visualmente
       var opt = elPres.options[elPres.selectedIndex];
       if(opt) volUnitario = parseFloat(opt.getAttribute("data-volumen")) || 0;
   }
   
   var elUbic = document.getElementById("sal_ubicacion");
-  if(elUbic) { elUbic.value = ubicId; elUbic.disabled = true; }
+  if(elUbic) { elUbic.value = ubicId; elUbic.disabled = true; // Se bloquea visualmente
+  }
 
   var inputCant = document.getElementById("sal_cantidad");
   if (inputCant) {
@@ -344,3 +360,7 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
   var activa = document.getElementById("fila-lote-" + indiceFila);
   if (activa) activa.style.backgroundColor = "#e8f0fe"; 
 }
+
+// INICIALIZAR AL CARGAR
+// Esto asegura que la pantalla se limpie si vienes de otra pestaña
+iniciarVistaSalidas();
