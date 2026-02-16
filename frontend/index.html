@@ -124,6 +124,81 @@
       #tablaProductosBody tr[id^="detalle-"] table td:nth-child(4)::before { content: "Cad: "; color:#888; }
       #tablaProductosBody tr[id^="detalle-"] table td:nth-child(5) { text-align: right !important; font-weight: bold; color: #007aff !important; font-size: 1.1rem; }
     }
+
+    /* --- NUEVOS ESTILOS PARA LA BARRA DE PEDIDOS --- */
+
+/* Contenedor principal de la vista pedidos para manejar el scroll */
+#vista-pedidos {
+  height: 100vh; /* Ocupa toda la altura */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Evita doble scroll */
+  padding-bottom: 0 !important; /* Quitamos padding del body si estorba */
+}
+
+/* Header Fijo (Sticky) */
+.envios-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: #f2f2f7; /* Mismo color del fondo body para integración */
+  padding-bottom: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.03); /* Sombra suave al hacer scroll */
+}
+
+/* Tarjeta contenedora de herramientas */
+.toolbar-card {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+  border: 1px solid #e1e4e8;
+  justify-content: space-between;
+}
+
+/* Grupo de Fechas */
+.date-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8f9fa;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #e1e4e8;
+}
+
+.date-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.input-date-clean {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Ajuste a la tabla para que tenga scroll independiente */
+.table-scroll-container {
+  flex: 1; /* Ocupa el espacio restante */
+  overflow-y: auto; /* Scroll interno */
+  margin-top: 10px;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid #e1e4e8;
+}
+
+/* Ocultar botón refresh (ya no se usa) */
+.btn-refresh-hidden { display: none; }
   </style>
 </head>
 
@@ -294,55 +369,66 @@
     </div>
   </div>
 
-  <div id="vista-pedidos" class="vista" style="display: none;">
-    <div style="max-width: 1200px; margin: 0 auto;">
+<div id="vista-pedidos" class="vista" style="display: none;">
       
-      <div class="envios-header">
-        <div>
-           <h2 style="margin:0; color:#1e293b; font-size:1.6rem; letter-spacing:-0.5px;">📦 Envíos</h2>
-           <div style="color:#64748b; font-size:0.9rem; margin-top:4px;">Gestiona el rastreo y estatus de tus pedidos</div>
-        </div>
+      <div class="envios-fixed-header">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+           <div>
+             <h2 style="margin:0; color:#1e293b; font-size:1.5rem;">📦 Gestión de Envíos</h2>
+             <div style="color:#64748b; font-size:0.9rem;">Control logístico y rastreo</div>
+           </div>
+           </div>
 
-        <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
-            
-            <div class="search-container" style="min-width: 300px;">
-               <span class="search-icon">🔍</span>
-               <input type="text" id="buscadorPedidos" class="search-input" 
-                      placeholder="Buscar cliente, ID o guía..." 
-                      onkeyup="filtrarTablaPedidos()">
+        <div class="toolbar-container">
+            <div class="search-box-styled">
+               <span class="search-icon-pos">🔍</span>
+               <input type="text" id="buscadorPedidos" placeholder="Buscar cliente, guía, ID..." onkeyup="filtrarTablaPedidos()">
             </div>
+            
+<div class="date-group-styled">
+   <div class="date-item">
+     <span class="lbl-date">DESDE</span>
+     <input type="date" id="filtroFechaDesde" class="input-date-minimal" onchange="filtrarTablaPedidos()">
+   </div>
+   
+   <div class="date-separator"></div>
+   
+   <div class="date-item">
+     <span class="lbl-date">HASTA</span>
+     <input type="date" id="filtroFechaHasta" class="input-date-minimal" onchange="filtrarTablaPedidos()">
+   </div>
+</div>
 
-            <div class="filter-tabs">
+            <div class="filter-tabs" style="background:#f1f3f5; padding:3px; border-radius:8px;">
                <button class="filter-tab active" onclick="filtrarEstado('Todos', this)">Todos</button>
                <button class="filter-tab" onclick="filtrarEstado('Pendiente', this)">Pendientes</button>
                <button class="filter-tab" onclick="filtrarEstado('Enviado', this)">Enviados</button>
             </div>
-            
-            <button onclick="cargarDashboardPedidos()" class="btn-icon" title="Recargar" style="background:white; border:1px solid #e2e8f0;">🔄</button>
         </div>
       </div>
 
-      <div class="table-container" style="min-height: 500px;">
+      <div class="envios-scroll-body">
+        
         <div id="loading-pedidos" style="text-align:center; padding:60px; color:#64748b;">
-           <div class="spinner"></div> 
-           <p style="margin-top:15px; font-weight:500;">Cargando historial...</p>
+           <div class="spinner"></div><p style="margin-top:15px; font-weight:500;">Sincronizando...</p>
         </div>
         
-        <table class="modern-table" id="tablaPedidosMain" style="display:none;">
-          <thead>
+        <table class="modern-table" id="tablaPedidosMain" style="display:none; width:100%;">
+          <thead class="sticky-thead">
             <tr>
               <th style="width:15%;">ID / Fecha</th>
               <th style="width:25%;">Cliente</th>
-              <th style="width:30%;">Detalle</th> <th style="width:15%;">Estatus</th>
+              <th style="width:30%;">Detalle</th>
+              <th style="width:15%;">Estatus</th>
               <th style="width:15%; text-align:right;">Acción</th>
             </tr>
           </thead>
           <tbody id="tablaPedidosBody">
-             </tbody>
+            </tbody>
         </table>
-      </div>
 
-    </div>
+      </div>
   </div>
 
   <div id="modalProducto" class="modal-overlay" style="display: none;">

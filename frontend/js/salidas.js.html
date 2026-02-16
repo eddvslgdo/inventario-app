@@ -126,6 +126,7 @@ function confirmarPedidoCompleto() {
           reiniciarFormularioSalidas(); // Limpieza total
           
           if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
+          if(typeof recargarSelectores === 'function') recargarSelectores();
       } else {
           Swal.fire("Error", (res && res.error) ? res.error : "Error desconocido.", "error");
       }

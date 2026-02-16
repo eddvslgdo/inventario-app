@@ -24,10 +24,8 @@
   <?!= include('frontend/js/salidas.js.html'); ?>
 </script>
 
-<script>
-  <?!= include('frontend/js/pedidos.js.html'); ?>
-</script>
-  
+
+
 <script>
   <?!= include('frontend/js/productos.js.html'); ?>
 </script>
@@ -514,6 +512,467 @@ function confirmarTransformacion() {
 function abrirModalDesdeTransf() {
    if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalTransformacion');
    if(typeof abrirModalGenerico === 'function') abrirModalGenerico('modalProducto');
+}
+</script>
+
+<script>
+    // ==========================================
+// GESTIÓN DE ENVÍOS (V40 - FIX EMPRESA & RESPONSIVE)
+// ==========================================
+
+var LISTA_PEDIDOS_CACHE = [];
+var FILTRO_ACTUAL_PEDIDOS = 'Todos';
+var ID_PEDIDO_SELECCIONADO = null;
+var EMPRESA_SELECCIONADA_CACHE = ""; // Variable para guardar la empresa temporalmente
+
+// --- ESTILOS INYECTADOS (MODAL PERFECTO & RESPONSIVO) ---
+var ESTILOS_MODAL_PREMIUM = `
+<style>
+  /* 1. FORZAR BORRADO DE ESTILOS VIEJOS */
+  #modalDetallePedido .modal-header, 
+  #modalDetallePedido h3,
+  #modalDetallePedido .close { display: none !important; }
+  
+  /* 2. CONTENEDOR PRINCIPAL */
+  #modalDetallePedido .modal-content {
+      padding: 0 !important;
+      border-radius: 16px !important;
+      overflow: hidden !important;
+      background: #f8fafc;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 95% !important;
+      max-width: 850px !important; 
+      margin: 20px auto;
+  }
+
+  /* HEADER */
+  .clean-header {
+      background: white;
+      padding: 20px 25px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap; 
+      gap: 10px;
+  }
+  .clean-title-group h3 { font-size: 1.2rem; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.5px; }
+  .clean-title-group span { font-size: 0.8rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+
+  /* BODY */
+  .clean-body {
+      padding: 25px;
+      overflow-y: auto;
+      max-height: 65vh; /* Scroll si es muy largo */
+  }
+
+  /* LAYOUT RESPONSIVO (FLEXBOX) */
+  .clean-grid {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+  }
+  .clean-col {
+      flex: 1; /* Ocupan espacio igual */
+      min-width: 280px; /* Si es muy chico, baja */
+  }
+  
+  /* En móviles se apilan */
+  @media (max-width: 700px) {
+      .clean-grid { flex-direction: column; }
+      .clean-header { align-items: flex-start; }
+      .clean-footer { flex-direction: column-reverse; }
+      .btn-action-modal { width: 100%; }
+  }
+
+  /* TARJETAS */
+  .info-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      height: 100%;
+      box-sizing: border-box;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+
+  .card-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 8px;
+  }
+
+  /* DATOS */
+  .data-item { margin-bottom: 10px; font-size: 0.95rem; color: #334155; display: flex; align-items: flex-start; }
+  .data-icon { margin-right: 10px; width: 20px; text-align: center; }
+  .data-bold { font-weight: 700; color: #0f172a; font-size: 1.05rem; }
+
+  /* PRODUCTOS */
+  .prod-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px dashed #e2e8f0;
+  }
+  .prod-item:last-child { border: none; }
+
+  /* FOOTER */
+  .clean-footer {
+      background: white;
+      padding: 20px 25px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+  }
+
+  .btn-action-modal {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+      border: none;
+      transition: all 0.2s;
+  }
+  .btn-close { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+  .btn-close:hover { background: #e2e8f0; }
+  .btn-save { background: #2563eb; color: white; box-shadow: 0 4px 6px rgba(37,99,235,0.2); }
+  .btn-save:hover { background: #1d4ed8; transform: translateY(-1px); }
+
+  /* LOADER */
+  .loader-box { padding: 60px; text-align: center; background: white; }
+  .loader-spinner {
+      width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%;
+      animation: spin 1s linear infinite; margin: 0 auto 15px;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+`;
+
+// 1. CARGAR DATOS
+function cargarDashboardPedidos() {
+  var loading = document.getElementById("loading-pedidos");
+  var tabla = document.getElementById("tablaPedidosMain");
+  
+  if(loading) loading.style.display = "block";
+  if(tabla) tabla.style.display = "none";
+  
+  google.script.run
+    .withSuccessHandler(function(lista) {
+       LISTA_PEDIDOS_CACHE = lista || [];
+       renderizarTablaPedidos(LISTA_PEDIDOS_CACHE);
+    })
+    .withFailureHandler(function(err){
+       console.error(err);
+       if(loading) loading.innerHTML = "<p style='color:red'>Error al cargar</p>";
+    })
+    .obtenerHistorialPedidos();
+}
+
+// 2. RENDERIZAR TABLA PRINCIPAL
+function renderizarTablaPedidos(lista) {
+  var tbody = document.getElementById("tablaPedidosBody");
+  var loading = document.getElementById("loading-pedidos");
+  var tabla = document.getElementById("tablaPedidosMain");
+
+  if(loading) loading.style.display = "none";
+  if(tabla) tabla.style.display = "table"; 
+  if(tbody) tbody.innerHTML = "";
+
+  if (!lista || lista.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:60px; color:#999;">No hay envíos encontrados.</td></tr>`;
+    return;
+  }
+
+  lista.forEach(function(p) {
+    var tr = document.createElement("tr");
+    
+    // Estatus
+    var stClass = "status-pendiente"; var iconSt = "⏳"; var stTexto = p.estatus || "Pendiente";
+    
+    // Ajuste de texto "En Proceso"
+    if(stTexto.indexOf('Enviado') !== -1 || stTexto.indexOf('Camino') !== -1 || stTexto.indexOf('Proceso') !== -1) { 
+        stClass = "status-enviado"; iconSt = "🚀"; stTexto = "En Proceso"; 
+    }
+    if(stTexto.indexOf('Entregado') !== -1) { stClass = "status-entregado"; iconSt = "✅"; }
+
+    var nombreCliente = p.cliente || "Cliente";
+    var iniciales = nombreCliente.substring(0,2).toUpperCase();
+    var fechaStr = p.fecha || ""; if(fechaStr.length > 10) fechaStr = fechaStr.substring(0,10);
+
+    tr.innerHTML = `
+      <td>
+         <span class="id-badge">${p.id}</span>
+         <span class="date-text">${fechaStr}</span>
+      </td>
+      <td>
+         <div class="client-info">
+            <div class="client-avatar">${iniciales}</div>
+            <div>
+               <div style="font-weight:600; color:#1e293b;">${nombreCliente}</div>
+               <div style="font-size:0.8rem; color:#64748b;">${p.empresa || ''}</div>
+            </div>
+         </div>
+      </td>
+      <td>
+         <div style="font-size:0.85rem; color:#334155; line-height:1.4; font-weight:500;">${p.resumenProductos}</div>
+         ${p.guia ? `<div style="font-size:0.75rem; color:#059669; margin-top:4px; font-family:monospace; background:#ecfdf5; display:inline-block; padding:2px 6px; border-radius:4px;">🎫 ${p.guia}</div>` : ''}
+      </td>
+      <td><span class="status-badge ${stClass}">${iconSt} ${stTexto}</span></td>
+      <td style="text-align:right;">
+         <button onclick="verDetallePedido('${p.id}')" class="btn-manage" style="margin-left:auto;">Gestionar ➡️</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 3. FILTROS
+function filtrarTablaPedidos() { aplicarFiltrosCombinados(); }
+function filtrarEstado(estado, btn) {
+    document.querySelectorAll('.filter-tab').forEach(function(b) { b.classList.remove('active'); });
+    if(btn) btn.classList.add('active');
+    FILTRO_ACTUAL_PEDIDOS = estado;
+    aplicarFiltrosCombinados();
+}
+// --- EN frontend/js/pedidos.js.html ---
+
+// Función para traducir cualquier fecha a formato universal YYYY-MM-DD
+function parseDateYMD(dateString) {
+    if (!dateString) return "";
+    var cleanStr = String(dateString).split(" ")[0].split("T")[0]; // Quita las horas
+    var parts = cleanStr.match(/\d+/g);
+    if (!parts || parts.length < 3) return "";
+    
+    // Si empieza con el año (ej. 2026-02-13)
+    if (parts[0].length === 4) {
+        return parts[0] + "-" + parts[1].padStart(2, '0') + "-" + parts[2].padStart(2, '0');
+    }
+    // Si viene de Sheets como DD/MM/YYYY o D/M/YYYY (ej. 13/2/2026)
+    return parts[2] + "-" + parts[1].padStart(2, '0') + "-" + parts[0].padStart(2, '0');
+}
+
+function aplicarFiltrosCombinados() {
+    var input = document.getElementById("buscadorPedidos");
+    var texto = input ? input.value.toLowerCase() : "";
+    
+    var fDesdeInput = document.getElementById("filtroFechaDesde") ? document.getElementById("filtroFechaDesde").value : "";
+    var fHastaInput = document.getElementById("filtroFechaHasta") ? document.getElementById("filtroFechaHasta").value : "";
+
+    var filtrados = LISTA_PEDIDOS_CACHE.filter(function(p) {
+        // 1. Estado
+        var cumpleEstado = true;
+        if(FILTRO_ACTUAL_PEDIDOS === 'Pendiente') cumpleEstado = (p.estatus === 'Pendiente' || !p.estatus);
+        else if (FILTRO_ACTUAL_PEDIDOS === 'Enviado') cumpleEstado = (p.estatus.indexOf('Enviado') !== -1 || p.estatus.indexOf('Camino') !== -1 || p.estatus.indexOf('Entregado') !== -1 || p.estatus.indexOf('Proceso') !== -1);
+        
+        // 2. Texto
+        var todo = (p.id + " " + p.cliente + " " + p.empresa + " " + p.guia).toLowerCase();
+        var cumpleTexto = !texto || todo.indexOf(texto) !== -1;
+
+        // 3. Fechas (CON EL TRADUCTOR)
+        var cumpleFecha = true;
+        if (fDesdeInput || fHastaInput) {
+            var fechaPedStr = parseDateYMD(p.fecha); // Transforma 13/2/2026 a 2026-02-13
+            if (fechaPedStr) {
+                if (fDesdeInput && fechaPedStr < fDesdeInput) cumpleFecha = false;
+                if (fHastaInput && fechaPedStr > fHastaInput) cumpleFecha = false;
+            }
+        }
+        return cumpleEstado && cumpleTexto && cumpleFecha;
+    });
+
+    renderizarTablaPedidos(filtrados);
+}
+
+// 4. DETALLE DEL PEDIDO (MODAL V40 FINAL)
+function verDetallePedido(id) {
+  ID_PEDIDO_SELECCIONADO = id;
+  
+  // --- TRUCO: Recuperar Empresa del Cache antes de ir al servidor ---
+  var pedidoEnCache = LISTA_PEDIDOS_CACHE.find(function(p) { return p.id === id; });
+  EMPRESA_SELECCIONADA_CACHE = (pedidoEnCache && pedidoEnCache.empresa) ? pedidoEnCache.empresa : "";
+
+  if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalDetallePedido");
+  
+  // Limpiamos el modal con el loader bonito
+  var modalPadre = document.querySelector("#modalDetallePedido .modal-content");
+  if(modalPadre) {
+      modalPadre.innerHTML = `
+        ${ESTILOS_MODAL_PREMIUM}
+        <div class="loader-box">
+           <div class="loader-spinner"></div>
+           <h3 style="color:#334155; margin:0;">Cargando Resumen...</h3>
+           <p style="color:#94a3b8; font-size:0.9rem;">Obteniendo detalles del servidor</p>
+        </div>`;
+  }
+  
+  google.script.run
+    .withSuccessHandler(renderModalDetalle)
+    .withFailureHandler(function(e){ 
+        if(modalPadre) modalPadre.innerHTML = `<div style="padding:30px; text-align:center; color:red;">Error: ${e.message} <br><br><button class="btn-action-modal btn-close" onclick="cerrarModalGenerico('modalDetallePedido')">Cerrar</button></div>`; 
+    })
+    .obtenerDetallePedidoCompleto(id);
+}
+
+// En frontend/js/pedidos.js.html
+
+function renderModalDetalle(data) {
+  var modalPadre = document.querySelector("#modalDetallePedido .modal-content");
+  if(!modalPadre) return;
+
+  var cab = data.cabecera;
+  var esFinalizado = (cab.estatus === "Entregado");
+  var disabledAttr = esFinalizado ? "disabled" : "";
+  var fechaEstVal = cab.fechaEst ? cab.fechaEst.split("T")[0] : "";
+  var fechaRealVal = cab.fechaReal ? cab.fechaReal.split("T")[0] : "";
+
+  // 1. LÓGICA DE LA GUÍA (Input vs Texto)
+  let htmlGuia = "";
+  // Si ya tiene guía guardada, mostramos solo texto (Badge azul)
+  if (cab.guia && cab.guia !== "---" && cab.guia !== "") {
+      htmlGuia = `<span style="background:#eff6ff; color:#2563eb; padding:4px 10px; border-radius:6px; font-weight:bold; font-family:monospace; font-size:1rem;">
+                    ${cab.guia}
+                  </span>`;
+  } else {
+      // Si NO tiene guía, mostramos INPUT para escribirla
+      htmlGuia = `<input type="text" id="inputNuevaGuia" placeholder="Ingresar Guía..." 
+                   style="border:1px solid #d63031; padding:5px; border-radius:4px; width:100%; font-family:monospace; color:#d63031;">`;
+  }
+
+  // 2. LÓGICA DE ITEMS (Agregando Piezas)
+  var itemsHtml = "";
+  if(data.items && data.items.length > 0) {
+      itemsHtml = data.items.map(function(i) {
+          return `
+          <div class="prod-item">
+             <div>
+                <div style="font-weight:700; color:#334155;">${i.producto}</div>
+                <div style="font-size:0.8rem; color:#64748b;">
+                   ${i.presentacion} • Lote: <span style="font-family:monospace; color:#333;">${i.lote}</span>
+                </div>
+             </div>
+             <div style="text-align:right;">
+                <div style="font-weight:700; color:#2563eb;">${i.volumen} L</div>
+                <div style="font-size:0.75rem; color:#64748b; font-weight:600;">(${i.piezas || 0} pzas)</div>
+             </div>
+          </div>`;
+      }).join("");
+  } else { itemsHtml = "<div style='color:#999; font-style:italic; padding:10px;'>Sin detalles</div>"; }
+
+  // ... (Resto de variables displayEmpresa, displayEmail, colorSt igual al original) ...
+  var displayEmpresa = (cab.empresa && cab.empresa.length > 1) ? cab.empresa : EMPRESA_SELECCIONADA_CACHE;
+  if(!displayEmpresa || displayEmpresa === "") displayEmpresa = "Particular";
+  var displayEmail = (cab.email && cab.email !== "---") ? cab.email : "<span style='color:#94a3b8; font-style:italic;'>No registrado</span>";
+  var colorSt = "#f59e0b"; 
+  var textoStatus = cab.estatus;
+  if(cab.estatus.indexOf("Entregado") !== -1) { colorSt = "#10b981"; } 
+  if(cab.estatus.indexOf("Camino") !== -1 || cab.estatus.indexOf("Enviado") !== -1) { colorSt = "#3b82f6"; textoStatus = "En Proceso"; }
+
+  // --- HTML ACTUALIZADO ---
+  modalPadre.innerHTML = `
+    ${ESTILOS_MODAL_PREMIUM}
+    
+    <div class="clean-header">
+       <div class="clean-title-group">
+          <span>PEDIDO #${cab.id}</span>
+          <h3 style="color:${colorSt}">${textoStatus}</h3>
+       </div>
+       <div style="text-align:right;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:700;">TOTAL ENVÍO</div>
+          <div style="font-size:1.5rem; font-weight:800; color:#10b981;">$${Number(cab.costoEnvio||0).toFixed(2)}</div>
+       </div>
+    </div>
+    
+    <div class="clean-body">
+       <div class="clean-grid">
+          <div class="clean-col">
+              <div class="info-card">
+                 <div class="card-label">👤 DATOS DEL CLIENTE</div>
+                 <div class="data-item"><span class="data-icon">😊</span> <span class="data-bold">${cab.cliente}</span></div>
+                 <div class="data-item"><span class="data-icon">🏢</span> <span style="font-weight:600; color:#475569;">${displayEmpresa}</span></div>
+                 <div class="data-item"><span class="data-icon">📞</span> ${cab.telefono||"--"}</div>
+                 <div class="data-item"><span class="data-icon">✉️</span> ${displayEmail}</div>
+              </div>
+          </div>
+
+          <div class="clean-col">
+              <div class="info-card">
+                 <div class="card-label">🚚 DETALLES DE ENVÍO</div>
+                 <div class="data-item"><span class="data-icon">📦</span> <span class="data-bold">${cab.paqueteria}</span></div>
+                 
+                 <div class="data-item">
+                    <span class="data-icon">🎫</span> 
+                    ${htmlGuia}
+                 </div>
+                 
+                 <div class="data-item" style="margin-top:10px;"><span class="data-icon">📍</span> <span style="line-height:1.4;">${cab.direccion}</span></div>
+              </div>
+          </div>
+       </div>
+
+       <div class="info-card" style="margin-bottom:20px;">
+          <div class="card-label">🛒 CONTENIDO</div>
+          ${itemsHtml} </div>
+
+       <div class="info-card" style="background:${esFinalizado?'#f0fdf4':'#fff'}; border-color:${esFinalizado?'#bbf7d0':'#e2e8f0'}; margin-bottom:0;">
+          <div class="card-label" style="color:${esFinalizado?'#15803d':'#0f172a'};">📅 ACTUALIZACIÓN</div>
+          <div class="clean-grid" style="margin-bottom:0; gap:15px;">
+             <div class="clean-col">
+                <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:5px;">Fecha Estimada</label>
+                <input type="date" id="fechaEst" value="${fechaEstVal}" ${disabledAttr} style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;">
+             </div>
+             <div class="clean-col">
+                <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:5px;">Fecha Entrega (Real)</label>
+                <input type="date" id="fechaReal" value="${fechaRealVal}" ${disabledAttr} style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;">
+             </div>
+          </div>
+       </div>
+    </div>
+
+    <div class="clean-footer">
+       <button onclick="cerrarModalGenerico('modalDetallePedido')" class="btn-action-modal btn-close">Cerrar</button>
+       ${!esFinalizado ? `<button onclick="guardarCambiosPedido()" class="btn-action-modal btn-save">Guardar Cambios</button>` : ''}
+    </div>
+  `;
+}
+
+// En frontend/js/pedidos.js.html
+
+function guardarCambiosPedido() {
+   var fe = document.getElementById("fechaEst").value;
+   var fr = document.getElementById("fechaReal").value;
+   
+   // --- CAMBIO: Capturar nueva guía si existe el input ---
+   var inputGuia = document.getElementById("inputNuevaGuia");
+   var nuevaGuia = "";
+   if (inputGuia) {
+       nuevaGuia = inputGuia.value.trim();
+   }
+   // ----------------------------------------------------
+
+   var nuevoSt = "Pendiente";
+   if (fe) nuevoSt = "En Camino"; 
+   if (fr) nuevoSt = "Entregado";
+
+   var btn = document.querySelector(".btn-save");
+   if(btn) { btn.innerText = "Guardando..."; btn.disabled = true; }
+
+   google.script.run
+     .withSuccessHandler(function() {
+        if(typeof mostrarToast === 'function') mostrarToast("Pedido actualizado ✅", "success");
+        if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico("modalDetallePedido");
+        cargarDashboardPedidos(); 
+     })
+     .withFailureHandler(function(err) {
+        if(typeof mostrarToast === 'function') mostrarToast("Error: " + err.message, "error");
+        if(btn) { btn.innerText = "Guardar Cambios"; btn.disabled = false; }
+     })
+     // --- CAMBIO: Enviamos nuevaGuia como último parámetro ---
+     .actualizarPedido(ID_PEDIDO_SELECCIONADO, fe, fr, nuevoSt, nuevaGuia);
 }
 </script>
  

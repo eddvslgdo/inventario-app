@@ -221,18 +221,47 @@ function filtrarEstado(estado, btn) {
     FILTRO_ACTUAL_PEDIDOS = estado;
     aplicarFiltrosCombinados();
 }
+// --- EN frontend/js/pedidos.js.html ---
+
 function aplicarFiltrosCombinados() {
+    // 1. Obtener valores de los inputs
     var input = document.getElementById("buscadorPedidos");
     var texto = input ? input.value.toLowerCase() : "";
+    
+    var fDesdeInput = document.getElementById("filtroFechaDesde").value;
+    var fHastaInput = document.getElementById("filtroFechaHasta").value;
+
+    // Convertir a objetos Date para comparar (ponemos horas a 00:00:00)
+    var fechaDesde = fDesdeInput ? new Date(fDesdeInput + "T00:00:00") : null;
+    var fechaHasta = fHastaInput ? new Date(fHastaInput + "T23:59:59") : null;
+
     var filtrados = LISTA_PEDIDOS_CACHE.filter(function(p) {
+        // A. Filtro Estado
         var cumpleEstado = true;
         if(FILTRO_ACTUAL_PEDIDOS === 'Pendiente') cumpleEstado = (p.estatus === 'Pendiente' || !p.estatus);
         else if (FILTRO_ACTUAL_PEDIDOS === 'Enviado') cumpleEstado = (p.estatus.indexOf('Enviado') !== -1 || p.estatus.indexOf('Camino') !== -1 || p.estatus.indexOf('Entregado') !== -1 || p.estatus.indexOf('Proceso') !== -1);
         
+        // B. Filtro Texto
         var todo = (p.id + " " + p.cliente + " " + p.empresa + " " + p.guia).toLowerCase();
         var cumpleTexto = !texto || todo.indexOf(texto) !== -1;
-        return cumpleEstado && cumpleTexto;
+
+        // C. Filtro Fechas (NUEVO)
+        var cumpleFecha = true;
+        if (fechaDesde || fechaHasta) {
+            // La fecha viene del backend como string ISO o similar. Intentamos parsearla.
+            // Asumimos que p.fecha es algo como "2023-10-25T..." o "2023-10-25"
+            var fechaPedido = new Date(p.fecha);
+            
+            // Si la fecha es inválida, no la filtramos (o la ocultamos, depende tu lógica)
+            if (!isNaN(fechaPedido.getTime())) {
+                if (fechaDesde && fechaPedido < fechaDesde) cumpleFecha = false;
+                if (fechaHasta && fechaPedido > fechaHasta) cumpleFecha = false;
+            }
+        }
+
+        return cumpleEstado && cumpleTexto && cumpleFecha;
     });
+
     renderizarTablaPedidos(filtrados);
 }
 
@@ -266,6 +295,8 @@ function verDetallePedido(id) {
     .obtenerDetallePedidoCompleto(id);
 }
 
+// En frontend/js/pedidos.js.html
+
 function renderModalDetalle(data) {
   var modalPadre = document.querySelector("#modalDetallePedido .modal-content");
   if(!modalPadre) return;
@@ -276,7 +307,20 @@ function renderModalDetalle(data) {
   var fechaEstVal = cab.fechaEst ? cab.fechaEst.split("T")[0] : "";
   var fechaRealVal = cab.fechaReal ? cab.fechaReal.split("T")[0] : "";
 
-  // ITEMS
+  // 1. LÓGICA DE LA GUÍA (Input vs Texto)
+  let htmlGuia = "";
+  // Si ya tiene guía guardada, mostramos solo texto (Badge azul)
+  if (cab.guia && cab.guia !== "---" && cab.guia !== "") {
+      htmlGuia = `<span style="background:#eff6ff; color:#2563eb; padding:4px 10px; border-radius:6px; font-weight:bold; font-family:monospace; font-size:1rem;">
+                    ${cab.guia}
+                  </span>`;
+  } else {
+      // Si NO tiene guía, mostramos INPUT para escribirla
+      htmlGuia = `<input type="text" id="inputNuevaGuia" placeholder="Ingresar Guía..." 
+                   style="border:1px solid #d63031; padding:5px; border-radius:4px; width:100%; font-family:monospace; color:#d63031;">`;
+  }
+
+  // 2. LÓGICA DE ITEMS (Agregando Piezas)
   var itemsHtml = "";
   if(data.items && data.items.length > 0) {
       itemsHtml = data.items.map(function(i) {
@@ -284,31 +328,28 @@ function renderModalDetalle(data) {
           <div class="prod-item">
              <div>
                 <div style="font-weight:700; color:#334155;">${i.producto}</div>
-                <div style="font-size:0.8rem; color:#64748b;">${i.presentacion} • Lote: <span style="font-family:monospace; color:#333;">${i.lote}</span></div>
+                <div style="font-size:0.8rem; color:#64748b;">
+                   ${i.presentacion} • Lote: <span style="font-family:monospace; color:#333;">${i.lote}</span>
+                </div>
              </div>
-             <div style="font-weight:700; color:#2563eb;">${i.volumen} L</div>
+             <div style="text-align:right;">
+                <div style="font-weight:700; color:#2563eb;">${i.volumen} L</div>
+                <div style="font-size:0.75rem; color:#64748b; font-weight:600;">(${i.piezas || 0} pzas)</div>
+             </div>
           </div>`;
       }).join("");
   } else { itemsHtml = "<div style='color:#999; font-style:italic; padding:10px;'>Sin detalles</div>"; }
 
-  // EMPRESA: Usamos la del Cache si la del servidor viene vacía
+  // ... (Resto de variables displayEmpresa, displayEmail, colorSt igual al original) ...
   var displayEmpresa = (cab.empresa && cab.empresa.length > 1) ? cab.empresa : EMPRESA_SELECCIONADA_CACHE;
   if(!displayEmpresa || displayEmpresa === "") displayEmpresa = "Particular";
-  
-  // CORREO
   var displayEmail = (cab.email && cab.email !== "---") ? cab.email : "<span style='color:#94a3b8; font-style:italic;'>No registrado</span>";
-
-  // ESTATUS
-  var colorSt = "#f59e0b"; // Naranja
+  var colorSt = "#f59e0b"; 
   var textoStatus = cab.estatus;
-  
   if(cab.estatus.indexOf("Entregado") !== -1) { colorSt = "#10b981"; } 
-  if(cab.estatus.indexOf("Camino") !== -1 || cab.estatus.indexOf("Enviado") !== -1) { 
-      colorSt = "#3b82f6"; // Azul
-      textoStatus = "En Proceso"; 
-  }
+  if(cab.estatus.indexOf("Camino") !== -1 || cab.estatus.indexOf("Enviado") !== -1) { colorSt = "#3b82f6"; textoStatus = "En Proceso"; }
 
-  // --- HTML DEFINITIVO DEL MODAL ---
+  // --- HTML ACTUALIZADO ---
   modalPadre.innerHTML = `
     ${ESTILOS_MODAL_PREMIUM}
     
@@ -324,22 +365,12 @@ function renderModalDetalle(data) {
     </div>
     
     <div class="clean-body">
-       
        <div class="clean-grid">
           <div class="clean-col">
               <div class="info-card">
                  <div class="card-label">👤 DATOS DEL CLIENTE</div>
-                 
-                 <div class="data-item">
-                    <span class="data-icon">😊</span> 
-                    <span class="data-bold">${cab.cliente}</span>
-                 </div>
-                 
-                 <div class="data-item">
-                    <span class="data-icon">🏢</span> 
-                    <span style="font-weight:600; color:#475569;">${displayEmpresa}</span>
-                 </div>
-
+                 <div class="data-item"><span class="data-icon">😊</span> <span class="data-bold">${cab.cliente}</span></div>
+                 <div class="data-item"><span class="data-icon">🏢</span> <span style="font-weight:600; color:#475569;">${displayEmpresa}</span></div>
                  <div class="data-item"><span class="data-icon">📞</span> ${cab.telefono||"--"}</div>
                  <div class="data-item"><span class="data-icon">✉️</span> ${displayEmail}</div>
               </div>
@@ -348,35 +379,24 @@ function renderModalDetalle(data) {
           <div class="clean-col">
               <div class="info-card">
                  <div class="card-label">🚚 DETALLES DE ENVÍO</div>
-                 
-                 <div class="data-item">
-                    <span class="data-icon">📦</span> 
-                    <span class="data-bold">${cab.paqueteria}</span>
-                 </div>
+                 <div class="data-item"><span class="data-icon">📦</span> <span class="data-bold">${cab.paqueteria}</span></div>
                  
                  <div class="data-item">
                     <span class="data-icon">🎫</span> 
-                    <span style="background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:6px; font-weight:bold; font-family:monospace;">
-                       ${cab.guia||"SIN GUÍA"}
-                    </span>
+                    ${htmlGuia}
                  </div>
                  
-                 <div class="data-item" style="margin-top:10px;">
-                    <span class="data-icon">📍</span> 
-                    <span style="line-height:1.4;">${cab.direccion}</span>
-                 </div>
+                 <div class="data-item" style="margin-top:10px;"><span class="data-icon">📍</span> <span style="line-height:1.4;">${cab.direccion}</span></div>
               </div>
           </div>
        </div>
 
        <div class="info-card" style="margin-bottom:20px;">
           <div class="card-label">🛒 CONTENIDO</div>
-          ${itemsHtml}
-       </div>
+          ${itemsHtml} </div>
 
        <div class="info-card" style="background:${esFinalizado?'#f0fdf4':'#fff'}; border-color:${esFinalizado?'#bbf7d0':'#e2e8f0'}; margin-bottom:0;">
           <div class="card-label" style="color:${esFinalizado?'#15803d':'#0f172a'};">📅 ACTUALIZACIÓN</div>
-          
           <div class="clean-grid" style="margin-bottom:0; gap:15px;">
              <div class="clean-col">
                 <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:5px;">Fecha Estimada</label>
@@ -388,7 +408,6 @@ function renderModalDetalle(data) {
              </div>
           </div>
        </div>
-
     </div>
 
     <div class="clean-footer">
@@ -398,11 +417,22 @@ function renderModalDetalle(data) {
   `;
 }
 
+// En frontend/js/pedidos.js.html
+
 function guardarCambiosPedido() {
    var fe = document.getElementById("fechaEst").value;
    var fr = document.getElementById("fechaReal").value;
+   
+   // --- CAMBIO: Capturar nueva guía si existe el input ---
+   var inputGuia = document.getElementById("inputNuevaGuia");
+   var nuevaGuia = "";
+   if (inputGuia) {
+       nuevaGuia = inputGuia.value.trim();
+   }
+   // ----------------------------------------------------
+
    var nuevoSt = "Pendiente";
-   if (fe) nuevoSt = "En Camino"; // Se guarda "En Camino" internamente para compatibilidad
+   if (fe) nuevoSt = "En Camino"; 
    if (fr) nuevoSt = "Entregado";
 
    var btn = document.querySelector(".btn-save");
@@ -418,5 +448,6 @@ function guardarCambiosPedido() {
         if(typeof mostrarToast === 'function') mostrarToast("Error: " + err.message, "error");
         if(btn) { btn.innerText = "Guardar Cambios"; btn.disabled = false; }
      })
-     .actualizarPedido(ID_PEDIDO_SELECCIONADO, fe, fr, nuevoSt);
+     // --- CAMBIO: Enviamos nuevaGuia como último parámetro ---
+     .actualizarPedido(ID_PEDIDO_SELECCIONADO, fe, fr, nuevoSt, nuevaGuia);
 }

@@ -344,11 +344,13 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
     const sPed = obtenerHojaOCrear('PEDIDOS', ['ID_PEDIDO', 'FECHA', 'ID_CLIENTE', 'NOMBRE', 'DIRECCION', 'TELEFONO', 'PAQUETERIA', 'GUIA', 'TIPO', 'COSTO', 'ESTATUS', 'F_EST', 'F_REAL', 'LINK']);
     sPed.appendRow([idPedido, fechaHoy, datosPedido.idCliente, datosPedido.nombreCliente, datosPedido.direccion, datosPedido.telefono, datosPedido.paqueteria, datosPedido.guia, datosPedido.tipoEnvio, datosPedido.costoEnvio, 'Pendiente', '', '', '']);
 
-    const sInv = obtenerHojaOCrear('INVENTARIO', []), sSal = obtenerHojaOCrear('REGISTROS_SALIDA', []), sDet = obtenerHojaOCrear('DETALLE_PEDIDOS', ['ID_PEDIDO', 'PRODUCTO', 'PRESENTACION', 'LOTE', 'VOLUMEN']);
+    // <--- CAMBIO 1: Agregamos 'PIEZAS' a los encabezados de la hoja DETALLE_PEDIDOS
+    const sInv = obtenerHojaOCrear('INVENTARIO', []), sSal = obtenerHojaOCrear('REGISTROS_SALIDA', []), sDet = obtenerHojaOCrear('DETALLE_PEDIDOS', ['ID_PEDIDO', 'PRODUCTO', 'PRESENTACION', 'LOTE', 'VOLUMEN', 'PIEZAS']);
     const dataInv = sInv.getDataRange().getValues();
 
     itemsProcesar.forEach(item => {
-      sDet.appendRow([idPedido, item.nombre_producto, item.nombre_presentacion || '---', item.lote, Number(item.volumen_L)]);
+      // <--- CAMBIO 2: Agregamos Number(item.piezas || 0) a la fila que se va a guardar
+      sDet.appendRow([idPedido, item.nombre_producto, item.nombre_presentacion || '---', item.lote, Number(item.volumen_L), Number(item.piezas || 0)]);
 
       let restante = item.volumen_L;
       for (let i = 1; i < dataInv.length; i++) {
@@ -442,19 +444,31 @@ function obtenerDetallePedidoCompleto(idPedido) {
       if(String(dD[i][0]).trim() === id) {
         let pName = dD[i][1];
         if(pName.includes("Selecciona") || pName === "undefined") pName = "⚠️ Error Datos";
-        items.push({ producto: pName, presentacion: dD[i][2], lote: dD[i][3], volumen: dD[i][4] });
+        items.push({ producto: pName, presentacion: dD[i][2], lote: dD[i][3], volumen: dD[i][4], piezas: dD[i][5] || 0 });
       }
     }
   }
   return { cabecera: cab, items: items };
 }
 
-function actualizarPedido(id, fe, fr, st) {
+function actualizarPedido(id, fe, fr, st, guia) { 
   const s = obtenerHojaSegura('PEDIDOS');
   const d = s.getDataRange().getValues();
   for(let i=1; i<d.length; i++) {
     if(String(d[i][0]).trim() === String(id).trim()) {
-      s.getRange(i+1, 11).setValue(st); s.getRange(i+1, 13).setValue(fe); s.getRange(i+1, 14).setValue(fr); return "OK";
+      
+      // 1. Actualizar Estatus y Fechas (Código original)
+      s.getRange(i+1, 11).setValue(st);
+      s.getRange(i+1, 13).setValue(fe); 
+      s.getRange(i+1, 14).setValue(fr); 
+      
+      // 2. --- NUEVO: Actualizar Guía si se envió ---
+      if (guia && guia.trim() !== "") {
+          s.getRange(i+1, 8).setValue(guia); // Columna H es la 8
+      }
+      // -------------------------------------------
+      
+      return "OK";
     }
   }
 }

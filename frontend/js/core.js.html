@@ -5,7 +5,7 @@ window.cambiarVista = function (vistaId) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
   const vista = document.getElementById(vistaId);
-  if (vista) vista.style.display = 'block';
+  if (vista) vista.style.display = 'flex';
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
     if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(vistaId)) {
@@ -67,6 +67,8 @@ function llenarSelects(data) {
 }
 
 // --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
+// --- EN frontend/js/core.js.html ---
+
 function llenarSelectClientes() {
   const sel = document.getElementById("log_cliente_select");
   if (!sel) return;
@@ -79,15 +81,23 @@ function llenarSelectClientes() {
         const opt = document.createElement("option");
         opt.value = c.id;
         
-        // LOGICA DE VISUALIZACIÓN: NOMBRE / DIRECCIÓN
-        // Si la dirección es muy larga, la cortamos para que quepa en el select
+        // 1. Limpiamos y preparamos los datos
+        let nombre = c.nombre || "Sin Nombre";
+        let empresa = (c.empresa && c.empresa.trim() !== "") ? `[${c.empresa}]` : "";
         let dirCorta = c.direccion || "Sin dirección";
-        if (dirCorta.length > 40) {
-            dirCorta = dirCorta.substring(0, 40) + "...";
+        
+        // Cortamos la dirección si es muy larga para que no deforme el select
+        if (dirCorta.length > 35) {
+            dirCorta = dirCorta.substring(0, 35) + "...";
         }
         
-        // Así se verá: "Eduardo / Azahares 26..."
-        opt.text = `${c.nombre} / ${dirCorta}`;
+        // 2. Concatenamos: Nombre [Empresa] - Dirección
+        // Ej: "Eduardo Jesus [Polaquimia] - Azahares 26..."
+        let textoFinal = nombre;
+        if (empresa !== "") textoFinal += ` ${empresa}`;
+        textoFinal += ` - ${dirCorta}`;
+        
+        opt.text = textoFinal;
         
         sel.appendChild(opt);
       });
