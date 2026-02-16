@@ -644,3 +644,122 @@ function obtenerMaterialesCaducados() {
   }
   return caducados;
 }
+
+// ==========================================
+// FASE 3 (MEJORADA): DRIVE + PLANTILLA
+// ==========================================
+
+// ¡IMPORTANTE! PEGA AQUÍ EL ID DE TU CARPETA "REPORTES_BAJAS" DE DRIVE
+const ID_CARPETA_BAJAS_DRIVE = "151nk1FvsdYP8eRf8wo7dTfU8PXYEABcY"; 
+
+function procesarBajaOficial(itemsBaja) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(45000); 
+    
+    // --- PASO 1: VERIFICAR ID DE DRIVE ---
+    if(!ID_CARPETA_BAJAS_DRIVE || ID_CARPETA_BAJAS_DRIVE.includes("drive.google.com") || ID_CARPETA_BAJAS_DRIVE.includes("/")) {
+       throw new Error("Paso 1: El ID de la carpeta de Drive es inválido. Asegúrate de poner solo las letras y números del final del link.");
+    }
+    
+    // --- PASO 2: BUSCAR LA PLANTILLA ---
+    const sTemplate = obtenerHojaSegura('TEMPLATE_BAJAS');
+    if (!sTemplate) throw new Error("Paso 2: No se encontró la pestaña 'TEMPLATE_BAJAS'. Revisa que esté escrita exactamente así en tu Excel.");
+
+    const sInv = obtenerHojaSegura('INVENTARIO');
+    const sSal = obtenerHojaSegura('REGISTROS_SALIDA');
+    const dataInv = sInv.getDataRange().getValues();
+    const fechaHoy = new Date();
+    const timestampFile = Utilities.formatDate(fechaHoy, Session.getScriptTimeZone(), "yyyyMMdd_HHmm");
+
+    // --- PASO 3: DESCONTAR DEL INVENTARIO ---
+    itemsBaja.forEach(item => {
+      let restante = Number(item.volumen);
+      for (let i = 1; i < dataInv.length; i++) {
+        if (restante <= 0.001) break;
+        const invProd = String(dataInv[i][0]).trim();
+        const invLote = String(dataInv[i][6]).trim().toUpperCase();
+        const invUbic = String(dataInv[i][2]).trim();
+
+        if (invProd === String(item.producto_id).trim() && invLote === String(item.lote).trim().toUpperCase() && invUbic === String(item.ubicacion_id).trim()) {
+          const stock = Number(dataInv[i][3]);
+          if (stock > 0) {
+             const restar = Math.min(stock, restante);
+             sInv.getRange(i + 1, 4).setValue(stock - restar);
+             restante -= restar;
+          }
+        }
+      }
+      sSal.appendRow([
+        item.producto_id, item.producto, item.presentacion_id, item.presentacion,
+        item.volumen, 0, item.ubicacion_id, item.lote,
+        "DESINCORPORACIÓN", Session.getActiveUser().getEmail(), fechaHoy, `BAJA-${timestampFile}`
+      ]);
+    });
+
+    // --- PASO 4: CONECTAR CON CARPETA DE DRIVE ---
+    let folderDestino;
+    try {
+       folderDestino = DriveApp.getFolderById(ID_CARPETA_BAJAS_DRIVE);
+    } catch(e) {
+       throw new Error("Paso 4: No se encontró la carpeta en Drive. Revisa el ID y los permisos. (" + e.message + ")");
+    }
+
+    // --- PASO 5: CREAR EXCEL NUEVO Y COPIAR PLANTILLA ---
+    let newDoc, newDocId;
+    const docName = `Reporte_Baja_${timestampFile}`;
+    try {
+        newDoc = SpreadsheetApp.create(docName);
+        newDocId = newDoc.getId();
+        sTemplate.copyTo(newDoc).setName("Reporte");
+        newDoc.deleteSheet(newDoc.getSheets()[0]); // Borra la Hoja 1 por defecto
+    } catch(e) {
+        throw new Error("Paso 5: Falló al crear el Excel o copiar la plantilla. (" + e.message + ")");
+    }
+
+    // --- PASO 6: RELLENAR LOS DATOS ---
+    try {
+        const targetSheet = newDoc.getSheetByName("Reporte");
+        itemsBaja.forEach(item => {
+            targetSheet.appendRow([
+               item.lote, item.producto, "", "ENVASE PET DE " + item.presentacion, Number(item.volumen), "", "", "", "", "", "", "", "", "", "", "" 
+            ]);
+        });
+        SpreadsheetApp.flush(); // Guarda los cambios
+    } catch(e) {
+        throw new Error("Paso 6: Falló al escribir los datos en el nuevo archivo. (" + e.message + ")");
+    }
+
+    // --- PASO 7: MOVER EL EXCEL A LA CARPETA Y DAR PERMISOS ---
+    let excelFile;
+    try {
+        excelFile = DriveApp.getFileById(newDocId);
+        excelFile.moveTo(folderDestino); 
+        excelFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(e) {
+        throw new Error("Paso 7: No se pudo mover el archivo a la carpeta o darle permisos públicos. (" + e.message + ")");
+    }
+    
+    // --- PASO 8: GENERAR EL PDF ---
+    let pdfFile;
+    try {
+        const pdfBlob = excelFile.getAs(MimeType.PDF).setName(`${docName}_SNAPSHOT.pdf`);
+        pdfFile = folderDestino.createFile(pdfBlob);
+        pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(e) {
+        throw new Error("Paso 8: Se creó el Excel, pero falló al crear el PDF. (" + e.message + ")");
+    }
+
+    // --- ÉXITO ---
+    return { 
+      success: true, 
+      urlExcel: excelFile.getUrl(), 
+      urlPDF: pdfFile.getUrl() 
+    };
+
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}

@@ -1018,9 +1018,40 @@
             ➡️ Preparar Baja Seleccionada
           </button>
         </div>
+
+        <div
+          id="area-cola-bajas"
+          style="
+            margin-top: 25px;
+            display: none;
+            background: #fff5f5;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #ffcccc;
+          "
+        >
+          <h4 style="margin: 0 0 10px 0; color: #c0392b">
+            📋 Lotes a Desincorporar (<span id="contadorColaBajas">0</span>)
+          </h4>
+
+          <div style="overflow-x: auto; margin-bottom: 15px">
+            <table
+              style="width: 100%; border-collapse: collapse; font-size: 0.85rem"
+            >
+              <tbody id="tablaColaBajasBody"></tbody>
+            </table>
+          </div>
+
+          <button
+            onclick="confirmarBajaFinal()"
+            class="btn-field"
+            style="width: 100%; background: #333; color: white; border: none"
+          >
+            📄 CONFIRMAR Y GENERAR REPORTES
+          </button>
+        </div>
       </div>
     </div>
-
     <div id="modalProducto" class="modal-overlay" style="display: none">
       <div class="modal-content">
         <h3>Nuevo Producto</h3>
@@ -1824,10 +1855,16 @@
 
     <div id="toast-container"></div>
     <?!= include('frontend/js.loader'); ?>
+
     <script>
-      // --- LÓGICA DE BAJAS POR CADUCIDAD (FASE 1) ---
+      // ==========================================
+      // LÓGICA DE BAJAS POR CADUCIDAD (FASES 1 Y 2)
+      // ==========================================
 
       let CACHE_CADUCADOS = [];
+      let COLA_BAJAS = [];
+
+      // --- FASE 1: CARGA Y VISUALIZACIÓN ---
 
       function cargarCaducados() {
         const loading = document.getElementById("loading-bajas");
@@ -1889,6 +1926,8 @@
         checkboxes.forEach((chk) => (chk.checked = source.checked));
       }
 
+      // --- FASE 2: EL CARRITO DE BAJAS ---
+
       function prepararBaja() {
         const checkboxes = document.querySelectorAll(".chk-baja:checked");
         if (checkboxes.length === 0) {
@@ -1899,19 +1938,129 @@
           );
         }
 
-        let seleccionados = [];
         checkboxes.forEach((chk) => {
           const idx = chk.getAttribute("data-index");
-          seleccionados.push(CACHE_CADUCADOS[idx]);
+          const item = CACHE_CADUCADOS[idx];
+
+          // Verificamos que no se haya agregado ya para evitar duplicados
+          const existe = COLA_BAJAS.find(
+            (i) => i.lote === item.lote && i.ubicacion_id === item.ubicacion_id,
+          );
+          if (!existe) {
+            COLA_BAJAS.push(item);
+          }
         });
 
-        // Fase 1: Solo validamos que funciona la selección
-        console.log("A Desincorporar:", seleccionados);
-        Swal.fire(
-          "Fase 1 Completada",
-          `Has seleccionado ${seleccionados.length} lote(s). En la Fase 2 crearemos el "carrito" para confirmar la salida.`,
-          "info",
-        );
+        renderColaBajas();
+
+        // Desmarcar las casillas para limpiar la vista superior
+        const chkAll = document.getElementById("chkAllBajas");
+        if (chkAll) chkAll.checked = false;
+        checkboxes.forEach((chk) => (chk.checked = false));
+
+        mostrarToast("Agregados a la lista de desincorporación 👇", "success");
+      }
+
+      function renderColaBajas() {
+        const area = document.getElementById("area-cola-bajas");
+        const tbody = document.getElementById("tablaColaBajasBody");
+        const contador = document.getElementById("contadorColaBajas");
+
+        if (contador) contador.innerText = COLA_BAJAS.length;
+
+        if (COLA_BAJAS.length === 0) {
+          if (area) area.style.display = "none";
+          return;
+        }
+
+        if (area) area.style.display = "block";
+        if (tbody) {
+          tbody.innerHTML = "";
+          COLA_BAJAS.forEach((item, i) => {
+            const tr = document.createElement("tr");
+            tr.style.borderBottom = "1px solid #eee";
+
+            tr.innerHTML = `
+              <td style="width: 60%; padding: 10px 2px; vertical-align: middle;">
+                 <div style="font-weight:600; font-size:0.9rem; color:#333;">
+                    ${item.producto} <span style="font-weight:normal; color:#666; font-size:0.8rem;">(${item.presentacion})</span>
+                 </div>
+                 <div style="display:flex; gap:6px; align-items:center; margin-top:6px;">
+                   <span style="font-size:0.75rem; font-family:monospace; color:#d63031; background:#fff5f5; border:1px solid #ffcccc; padding:2px 6px; border-radius:4px;">${item.lote}</span>
+                   <span style="font-size:0.7rem; color:#888; background:#f8f9fa; padding:2px 6px; border-radius:4px;">📍 ${item.ubicacion}</span>
+                 </div>
+              </td>
+              <td style="width: 25%; padding: 10px 2px; text-align: right; vertical-align: middle;">
+                 <div style="font-weight:800; font-size:1.2rem; color:#007aff;">${item.volumen} L</div>
+              </td>
+              <td style="width: 15%; padding: 10px 0; text-align: right; vertical-align: middle;">
+                 <button onclick="eliminarDeBajas(${i})" style="border:none; background:transparent; cursor:pointer; font-size:1.3rem; color:#dc3545;" title="Quitar de la lista">🗑️</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      }
+
+      function eliminarDeBajas(index) {
+        COLA_BAJAS.splice(index, 1);
+        renderColaBajas();
+        mostrarToast("Lote removido de la lista.", "info");
+      }
+
+      function confirmarBajaFinal() {
+        if (COLA_BAJAS.length === 0)
+          return Swal.fire("Error", "La lista está vacía", "error");
+
+        Swal.fire({
+          title: "¿Confirmar Desincorporación?",
+          text: `Se darán de baja ${COLA_BAJAS.length} lote(s). Esto descontará el stock inmediatamente y creará un archivo Excel/PDF en tu cuenta.`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#d63031",
+          cancelButtonColor: "#6c757d",
+          confirmButtonText: "Sí, Ejecutar Baja",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Usamos la misma función del loader global para que se vea cargando
+            if (typeof mostrarCargando === "function")
+              mostrarCargando("Generando reportes y descontando stock...");
+
+            google.script.run
+              .withSuccessHandler(function (res) {
+                if (typeof ocultarCargando === "function") ocultarCargando();
+
+                if (res && res.success) {
+                  Swal.fire({
+                    title: "¡Baja Exitosa!",
+                    html: `
+                             <p style="margin-bottom:20px; color:#555;">El inventario ha sido actualizado correctamente.</p>
+                             <div style="display:flex; gap:10px; justify-content:center;">
+                                <a href="${res.urlExcel}" target="_blank" style="flex:1; padding:12px; background:#10b981; color:white; border-radius:8px; text-decoration:none; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1);">📊 Ver Hoja / Excel</a>
+                                <a href="${res.urlPDF}" target="_blank" style="flex:1; padding:12px; background:#ef4444; color:white; border-radius:8px; text-decoration:none; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1);">📄 Bajar PDF</a>
+                             </div>
+                          `,
+                    icon: "success",
+                    showConfirmButton: false, // Quitamos el OK, que le den clic a los botones
+                    showCloseButton: true,
+                  }).then(() => {
+                    COLA_BAJAS = [];
+                    renderColaBajas();
+                    cargarCaducados(); // Recargar la tabla de arriba
+                    if (typeof cargarDashboardProductos === "function")
+                      cargarDashboardProductos();
+                  });
+                } else {
+                  Swal.fire("Error", res.error, "error");
+                }
+              })
+              .withFailureHandler(function (err) {
+                if (typeof ocultarCargando === "function") ocultarCargando();
+                Swal.fire("Error", err.message, "error");
+              })
+              .procesarBajaOficial(COLA_BAJAS);
+          }
+        });
       }
     </script>
   </body>
