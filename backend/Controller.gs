@@ -561,10 +561,30 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
 }
 
 function _fmtF(f) {
-  if(!f) return ""; if(f.match(/^\d{4}-\d{2}-\d{2}$/)) return f;
-  if(f.includes('-')) { let p = f.split('-'); return p[0].length===4 ? f : `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`; }
-  if(f.includes('/')) { let p = f.split('/'); return `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`; }
-  return "";
+  try {
+    if(!f) return "";
+    let s = String(f).trim();
+    
+    if(s.includes('-')) {
+      let p = s.split('-');
+      // Solo intenta procesar si realmente tiene 3 partes (día, mes, año)
+      if(p.length >= 3) {
+          return p[0].length === 4 ? s.substring(0,10) : `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`;
+      }
+    }
+    
+    if(s.includes('/')) {
+      let p = s.split('/');
+      // Solo intenta procesar si realmente tiene 3 partes (día, mes, año)
+      if(p.length >= 3) {
+          return `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`;
+      }
+    }
+    
+    return ""; // Si es un texto raro que no parece fecha, devuelve vacío
+  } catch(e) {
+    return ""; // Si ocurre cualquier error, no rompe el programa
+  }
 }
 function formatearFechaInput(f) { return _fmtF(f); }
 
@@ -655,8 +675,8 @@ const ID_CARPETA_BAJAS_DRIVE = "151nk1FvsdYP8eRf8wo7dTfU8PXYEABcY";
 function procesarBajaOficial(itemsBaja) {
   const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(45000); 
-    
+    lock.waitLock(45000);
+
     // --- PASO 1: VERIFICAR ID DE DRIVE ---
     if(!ID_CARPETA_BAJAS_DRIVE || ID_CARPETA_BAJAS_DRIVE.includes("drive.google.com") || ID_CARPETA_BAJAS_DRIVE.includes("/")) {
        throw new Error("Paso 1: El ID de la carpeta de Drive es inválido. Asegúrate de poner solo las letras y números del final del link.");
@@ -707,59 +727,199 @@ function procesarBajaOficial(itemsBaja) {
 
     // --- PASO 5: CREAR EXCEL NUEVO Y COPIAR PLANTILLA ---
     let newDoc, newDocId;
-    const docName = `Reporte_Baja_${timestampFile}`;
+    
+    // NOMBRE DEL ARCHIVO ACTUALIZADO
+    const docName = `Listado de Materiales para desincorporación_${timestampFile}`;
+    
     try {
         newDoc = SpreadsheetApp.create(docName);
         newDocId = newDoc.getId();
         sTemplate.copyTo(newDoc).setName("Reporte");
-        newDoc.deleteSheet(newDoc.getSheets()[0]); // Borra la Hoja 1 por defecto
+        newDoc.deleteSheet(newDoc.getSheets()[0]); 
     } catch(e) {
         throw new Error("Paso 5: Falló al crear el Excel o copiar la plantilla. (" + e.message + ")");
     }
 
-    // --- PASO 6: RELLENAR LOS DATOS ---
+    // --- PASO 6: RELLENAR DATOS Y FORMATO DINÁMICO ---
+    const targetSheet = newDoc.getSheetByName("Reporte");
+    let rowTotal = 0;
+    
     try {
-        const targetSheet = newDoc.getSheetByName("Reporte");
-        itemsBaja.forEach(item => {
-            targetSheet.appendRow([
-               item.lote, item.producto, "", "ENVASE PET DE " + item.presentacion, Number(item.volumen), "", "", "", "", "", "", "", "", "", "", "" 
-            ]);
+        // Encontramos la primera fila vacía (asumiendo que los encabezados terminan en la fila 3)
+        const startRow = targetSheet.getLastRow() + 1; 
+        let totalVolumen = 0;
+
+        // Escribimos los datos respetando las columnas (A-E)
+        itemsBaja.forEach((item, index) => {
+            const currentRow = startRow + index;
+            targetSheet.getRange(currentRow, 1).setValue(item.lote);
+            targetSheet.getRange(currentRow, 2).setValue(item.producto);
+            targetSheet.getRange(currentRow, 3).setValue(""); // Nombre químico
+            targetSheet.getRange(currentRow, 4).setValue("ENVASE PET DE " + item.presentacion);
+            targetSheet.getRange(currentRow, 5).setValue(Number(item.volumen));
+            
+            totalVolumen += Number(item.volumen);
         });
-        SpreadsheetApp.flush(); // Guarda los cambios
+
+        const endRow = startRow + itemsBaja.length - 1;
+
+        // COPIAR FORMATO: Si hay más de 1 item, copiamos el formato de la fila inicial hacia abajo
+        if (itemsBaja.length > 1) {
+            const maxCols = targetSheet.getMaxColumns();
+            const firstRowRange = targetSheet.getRange(startRow, 1, 1, maxCols);
+            const targetRange = targetSheet.getRange(startRow + 1, 1, itemsBaja.length - 1, maxCols);
+            firstRowRange.copyTo(targetRange, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+        }
+
+        // LIMPIEZA Y TOTALES: Dejamos 1 fila en blanco, quitamos formato y ponemos totales
+        rowTotal = endRow + 2; 
+        
+        // Quita bordes y fondos de las 2 filas debajo de la tabla para un aspecto limpio
+        targetSheet.getRange(rowTotal - 1, 1, 2, targetSheet.getMaxColumns()).clearFormat();
+        
+        // Inserta "TOTAL" y la suma en negritas
+        targetSheet.getRange(rowTotal, 4).setValue("TOTAL").setFontWeight("bold").setHorizontalAlignment("right");
+        targetSheet.getRange(rowTotal, 5).setValue(totalVolumen).setFontWeight("bold");
+
+        SpreadsheetApp.flush(); 
     } catch(e) {
         throw new Error("Paso 6: Falló al escribir los datos en el nuevo archivo. (" + e.message + ")");
     }
 
-    // --- PASO 7: MOVER EL EXCEL A LA CARPETA Y DAR PERMISOS ---
-    let excelFile;
+    // --- PASO 7: GENERAR PDF (CON TRUCO DE HOJA TEMPORAL) ---
+    let excelFile = DriveApp.getFileById(newDocId);
+    let pdfFile;
+    
+    // Clonamos la hoja para "destruirla" visualmente sin afectar el Excel
+    const pdfSheet = targetSheet.copyTo(newDoc);
+    pdfSheet.setName("TMP_PDF");
+    targetSheet.hideSheet(); // Ocultamos la original, el PDF solo tomará la visible
+    
     try {
-        excelFile = DriveApp.getFileById(newDocId);
+        // En la hoja temporal, ocultamos de la columna F en adelante
+        const totalCols = pdfSheet.getMaxColumns();
+        if (totalCols > 5) pdfSheet.hideColumns(6, totalCols - 5);
+        
+        // Ocultamos las filas vacías que sobran hacia abajo para no imprimir páginas en blanco
+        const totalRows = pdfSheet.getMaxRows();
+        if (totalRows > rowTotal) pdfSheet.hideRows(rowTotal + 1, totalRows - rowTotal);
+        
+        SpreadsheetApp.flush();
+        
+        // Generamos el PDF basado en la hoja temporal
+        const pdfBlob = excelFile.getAs(MimeType.PDF).setName(`${docName}.pdf`);
+        pdfFile = folderDestino.createFile(pdfBlob);
+        pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        
+    } catch (e) {
+        throw new Error("Paso 7: Falló al generar el PDF. (" + e.message + ")");
+    } finally {
+        // CRÍTICO: Restauramos el archivo Excel a su estado normal SIEMPRE
+        targetSheet.showSheet();
+        newDoc.deleteSheet(pdfSheet);
+        SpreadsheetApp.flush();
+    }
+
+    // --- PASO 8: MOVER EXCEL Y DAR PERMISOS ---
+    try {
         excelFile.moveTo(folderDestino); 
         excelFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     } catch(e) {
-        throw new Error("Paso 7: No se pudo mover el archivo a la carpeta o darle permisos públicos. (" + e.message + ")");
+        throw new Error("Paso 8: Falló al organizar el archivo Excel final. (" + e.message + ")");
     }
     
-    // --- PASO 8: GENERAR EL PDF ---
-    let pdfFile;
-    try {
-        const pdfBlob = excelFile.getAs(MimeType.PDF).setName(`${docName}_SNAPSHOT.pdf`);
-        pdfFile = folderDestino.createFile(pdfBlob);
-        pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch(e) {
-        throw new Error("Paso 8: Se creó el Excel, pero falló al crear el PDF. (" + e.message + ")");
-    }
-
     // --- ÉXITO ---
     return { 
       success: true, 
       urlExcel: excelFile.getUrl(), 
       urlPDF: pdfFile.getUrl() 
     };
-
   } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
+  }
+}
+
+// ==========================================
+// 8. GESTIÓN DE DOCUMENTOS EN DRIVE (PEDIDOS)
+// ==========================================
+
+// REEMPLAZA ESTO CON EL ID DE TU CARPETA MAESTRA EN DRIVE
+const ID_CARPETA_PADRE_PEDIDOS = "119ZLT4_yRFpkhndI5sPQF6lZCXA0FFUm"; 
+
+function obtenerOCrearCarpetaPedido(idPedido) {
+  const sPed = obtenerHojaSegura('PEDIDOS');
+  const d = sPed.getDataRange().getValues();
+  let rowIndex = -1;
+
+  // Buscar la fila del pedido
+  for(let i=1; i<d.length; i++) {
+    if(String(d[i][0]).trim() === String(idPedido).trim()) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  if (rowIndex === -1) throw new Error("Pedido no encontrado en la base de datos.");
+
+  let folderPadre;
+  try {
+     folderPadre = DriveApp.getFolderById(ID_CARPETA_PADRE_PEDIDOS);
+  } catch(e) {
+     throw new Error("No se encontró la carpeta principal en Drive. Verifica el ID.");
+  }
+
+  let folderDestino;
+  let carpetas = folderPadre.getFoldersByName(idPedido);
+  
+  if (carpetas.hasNext()) {
+    folderDestino = carpetas.next();
+  } else {
+    // Si no existe, la crea
+    folderDestino = folderPadre.createFolder(idPedido);
+    folderDestino.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    // CORRECCIÓN: Lo guardamos en la columna 15 (O) para no chocar con las fechas
+    sPed.getRange(rowIndex, 15).setValue(folderDestino.getUrl());
+  }
+
+  return folderDestino;
+}
+
+function subirArchivoPedido(idPedido, nombreArchivo, base64Data, mimeType) {
+  try {
+    const folder = obtenerOCrearCarpetaPedido(idPedido);
+    
+    // Decodificar el archivo y crearlo en Drive
+    const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, nombreArchivo);
+    const file = folder.createFile(blob);
+    
+    return { success: true, url: file.getUrl(), nombre: file.getName(), urlCarpeta: folder.getUrl() };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function obtenerArchivosPedido(idPedido) {
+  try {
+    const folderPadre = DriveApp.getFolderById(ID_CARPETA_PADRE_PEDIDOS);
+    let carpetas = folderPadre.getFoldersByName(idPedido);
+    
+    // Si no hay carpeta aún, regresamos vacío
+    if (!carpetas.hasNext()) return { success: true, archivos: [], urlCarpeta: null };
+
+    const folder = carpetas.next();
+    const files = folder.getFiles();
+    let lista = [];
+    
+    while (files.hasNext()) {
+      let f = files.next();
+      lista.push({ nombre: f.getName(), url: f.getUrl() });
+    }
+    
+    return { success: true, archivos: lista, urlCarpeta: folder.getUrl() };
+  } catch (e) {
+    return { success: false, error: e.message };
   }
 }

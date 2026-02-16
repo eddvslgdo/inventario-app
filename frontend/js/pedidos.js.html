@@ -309,18 +309,13 @@ function renderModalDetalle(data) {
 
   // 1. LÓGICA DE LA GUÍA (Input vs Texto)
   let htmlGuia = "";
-  // Si ya tiene guía guardada, mostramos solo texto (Badge azul)
   if (cab.guia && cab.guia !== "---" && cab.guia !== "") {
-      htmlGuia = `<span style="background:#eff6ff; color:#2563eb; padding:4px 10px; border-radius:6px; font-weight:bold; font-family:monospace; font-size:1rem;">
-                    ${cab.guia}
-                  </span>`;
+      htmlGuia = `<span style="background:#eff6ff; color:#2563eb; padding:4px 10px; border-radius:6px; font-weight:bold; font-family:monospace; font-size:1rem;">${cab.guia}</span>`;
   } else {
-      // Si NO tiene guía, mostramos INPUT para escribirla
-      htmlGuia = `<input type="text" id="inputNuevaGuia" placeholder="Ingresar Guía..." 
-                   style="border:1px solid #d63031; padding:5px; border-radius:4px; width:100%; font-family:monospace; color:#d63031;">`;
+      htmlGuia = `<input type="text" id="inputNuevaGuia" placeholder="Ingresar Guía..." style="border:1px solid #d63031; padding:5px; border-radius:4px; width:100%; font-family:monospace; color:#d63031;">`;
   }
 
-  // 2. LÓGICA DE ITEMS (Agregando Piezas)
+  // 2. LÓGICA DE ITEMS
   var itemsHtml = "";
   if(data.items && data.items.length > 0) {
       itemsHtml = data.items.map(function(i) {
@@ -328,9 +323,7 @@ function renderModalDetalle(data) {
           <div class="prod-item">
              <div>
                 <div style="font-weight:700; color:#334155;">${i.producto}</div>
-                <div style="font-size:0.8rem; color:#64748b;">
-                   ${i.presentacion} • Lote: <span style="font-family:monospace; color:#333;">${i.lote}</span>
-                </div>
+                <div style="font-size:0.8rem; color:#64748b;">${i.presentacion} • Lote: <span style="font-family:monospace; color:#333;">${i.lote}</span></div>
              </div>
              <div style="text-align:right;">
                 <div style="font-weight:700; color:#2563eb;">${i.volumen} L</div>
@@ -340,7 +333,6 @@ function renderModalDetalle(data) {
       }).join("");
   } else { itemsHtml = "<div style='color:#999; font-style:italic; padding:10px;'>Sin detalles</div>"; }
 
-  // ... (Resto de variables displayEmpresa, displayEmail, colorSt igual al original) ...
   var displayEmpresa = (cab.empresa && cab.empresa.length > 1) ? cab.empresa : EMPRESA_SELECCIONADA_CACHE;
   if(!displayEmpresa || displayEmpresa === "") displayEmpresa = "Particular";
   var displayEmail = (cab.email && cab.email !== "---") ? cab.email : "<span style='color:#94a3b8; font-style:italic;'>No registrado</span>";
@@ -349,10 +341,8 @@ function renderModalDetalle(data) {
   if(cab.estatus.indexOf("Entregado") !== -1) { colorSt = "#10b981"; } 
   if(cab.estatus.indexOf("Camino") !== -1 || cab.estatus.indexOf("Enviado") !== -1) { colorSt = "#3b82f6"; textoStatus = "En Proceso"; }
 
-  // --- HTML ACTUALIZADO ---
   modalPadre.innerHTML = `
     ${ESTILOS_MODAL_PREMIUM}
-    
     <div class="clean-header">
        <div class="clean-title-group">
           <span>PEDIDO #${cab.id}</span>
@@ -375,17 +365,11 @@ function renderModalDetalle(data) {
                  <div class="data-item"><span class="data-icon">✉️</span> ${displayEmail}</div>
               </div>
           </div>
-
           <div class="clean-col">
               <div class="info-card">
                  <div class="card-label">🚚 DETALLES DE ENVÍO</div>
                  <div class="data-item"><span class="data-icon">📦</span> <span class="data-bold">${cab.paqueteria}</span></div>
-                 
-                 <div class="data-item">
-                    <span class="data-icon">🎫</span> 
-                    ${htmlGuia}
-                 </div>
-                 
+                 <div class="data-item"><span class="data-icon">🎫</span> ${htmlGuia}</div>
                  <div class="data-item" style="margin-top:10px;"><span class="data-icon">📍</span> <span style="line-height:1.4;">${cab.direccion}</span></div>
               </div>
           </div>
@@ -393,7 +377,21 @@ function renderModalDetalle(data) {
 
        <div class="info-card" style="margin-bottom:20px;">
           <div class="card-label">🛒 CONTENIDO</div>
-          ${itemsHtml} </div>
+          ${itemsHtml} 
+       </div>
+
+       <div class="info-card" style="margin-bottom:20px; background:#f8fafc; border-color:#e2e8f0;">
+          <div class="card-label">📂 DOCUMENTOS DEL PEDIDO</div>
+          
+          <div id="contenedor-archivos-pedido" style="min-height: 40px; margin-bottom: 15px;">
+             <div style="color:#94a3b8; font-size:0.85rem; text-align:center;">Cargando documentos...</div>
+          </div>
+          
+          <div style="display:flex; gap:10px; align-items:center; background:white; padding:10px; border-radius:8px; border:1px dashed #cbd5e1;">
+             <input type="file" id="inputArchivoPedido" style="font-size:0.85rem; flex:1;" />
+             <button onclick="procesarSubidaArchivo('${cab.id}', this)" class="btn-manage" style="background:#2563eb; color:white; border:none; padding:8px 15px;">⬆️ Subir Archivo</button>
+          </div>
+       </div>
 
        <div class="info-card" style="background:${esFinalizado?'#f0fdf4':'#fff'}; border-color:${esFinalizado?'#bbf7d0':'#e2e8f0'}; margin-bottom:0;">
           <div class="card-label" style="color:${esFinalizado?'#15803d':'#0f172a'};">📅 ACTUALIZACIÓN</div>
@@ -415,21 +413,95 @@ function renderModalDetalle(data) {
        ${!esFinalizado ? `<button onclick="guardarCambiosPedido()" class="btn-action-modal btn-save">Guardar Cambios</button>` : ''}
     </div>
   `;
+
+  // Cargar los archivos justo después de renderizar el modal
+  cargarArchivosPedidoUI(cab.id);
 }
 
-// En frontend/js/pedidos.js.html
+// --- LÓGICA DE ARCHIVOS (NUEVO) ---
+
+function cargarArchivosPedidoUI(idPedido) {
+  google.script.run.withSuccessHandler(function(res) {
+      var div = document.getElementById("contenedor-archivos-pedido");
+      if(!div) return;
+      if(!res.success) {
+          div.innerHTML = "<span style='color:red; font-size:0.85rem;'>Error al cargar: " + res.error + "</span>";
+          return;
+      }
+      
+      let html = "";
+      if (res.urlCarpeta) {
+          html += `<div style="margin-bottom:10px; text-align:right;">
+                      <a href="${res.urlCarpeta}" target="_blank" style="font-size:0.8rem; color:#0f172a; text-decoration:none; font-weight:bold; background:#e2e8f0; padding:4px 10px; border-radius:6px;">📁 Abrir Carpeta en Drive</a>
+                   </div>`;
+      }
+      
+      if (res.archivos.length === 0) {
+          html += "<div style='color:#94a3b8; font-size:0.85rem; font-style:italic; text-align:center; padding:10px;'>No hay documentos adjuntos.</div>";
+      } else {
+          res.archivos.forEach(f => {
+              html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:white; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                          <span style="font-size:0.85rem; color:#334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80%;" title="${f.nombre}">📄 ${f.nombre}</span>
+                          <a href="${f.url}" target="_blank" style="font-size:0.8rem; color:#10b981; font-weight:bold; text-decoration:none;">Ver ➡️</a>
+                       </div>`;
+          });
+      }
+      div.innerHTML = html;
+  }).obtenerArchivosPedido(idPedido);
+}
+
+function procesarSubidaArchivo(idPedido, btnElement) {
+  const input = document.getElementById("inputArchivoPedido");
+  if (!input.files || input.files.length === 0) {
+      return Swal.fire("Atención", "Selecciona un archivo primero.", "warning");
+  }
+  
+  const file = input.files[0];
+  const reader = new FileReader();
+  
+  const originalText = btnElement.innerText;
+  btnElement.innerText = "Subiendo ⏳...";
+  btnElement.disabled = true;
+
+  // Convertimos el archivo a Base64 para poder enviarlo a Google Apps Script
+  reader.onload = function(e) {
+      const dataUrl = e.target.result;
+      const base64Data = dataUrl.split(',')[1];
+      const mimeType = dataUrl.split(';')[0].split(':')[1];
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btnElement.innerText = originalText;
+          btnElement.disabled = false;
+          input.value = ""; // Limpiar el input
+          
+          if(res.success) {
+              mostrarToast("Archivo guardado en Drive ✅", "success");
+              cargarArchivosPedidoUI(idPedido); // Refrescar la lista de archivos
+          } else {
+              Swal.fire("Error", res.error, "error");
+          }
+      })
+      .withFailureHandler(function(err) {
+          btnElement.innerText = originalText;
+          btnElement.disabled = false;
+          Swal.fire("Error de Conexión", err.message, "error");
+      })
+      .subirArchivoPedido(idPedido, file.name, base64Data, mimeType);
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+// --- GUARDAR CAMBIOS ---
 
 function guardarCambiosPedido() {
    var fe = document.getElementById("fechaEst").value;
    var fr = document.getElementById("fechaReal").value;
    
-   // --- CAMBIO: Capturar nueva guía si existe el input ---
    var inputGuia = document.getElementById("inputNuevaGuia");
    var nuevaGuia = "";
-   if (inputGuia) {
-       nuevaGuia = inputGuia.value.trim();
-   }
-   // ----------------------------------------------------
+   if (inputGuia) nuevaGuia = inputGuia.value.trim();
 
    var nuevoSt = "Pendiente";
    if (fe) nuevoSt = "En Camino"; 
@@ -448,6 +520,5 @@ function guardarCambiosPedido() {
         if(typeof mostrarToast === 'function') mostrarToast("Error: " + err.message, "error");
         if(btn) { btn.innerText = "Guardar Cambios"; btn.disabled = false; }
      })
-     // --- CAMBIO: Enviamos nuevaGuia como último parámetro ---
      .actualizarPedido(ID_PEDIDO_SELECCIONADO, fe, fr, nuevoSt, nuevaGuia);
 }
