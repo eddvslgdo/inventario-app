@@ -415,42 +415,6 @@ function obtenerHistorialPedidos() {
   return pedidos;
 }
 
-function obtenerDetallePedidoCompleto(idPedido) {
-  const sPed = obtenerHojaSegura('PEDIDOS'), sDet = obtenerHojaSegura('DETALLE_PEDIDOS'), sCli = obtenerHojaSegura('CLIENTES');
-  const id = String(idPedido).trim();
-  const dP = sPed.getDataRange().getDisplayValues();
-  let cab = null, items = [];
-
-  for(let i=1; i<dP.length; i++) {
-    if(String(dP[i][0]).trim() === id) {
-      let r = dP[i], email = "---";
-      if(sCli) {
-        const dC = sCli.getDataRange().getDisplayValues();
-        for(let k=1; k<dC.length; k++) if(String(dC[k][0]).trim() === String(r[2]).trim()) { email = dC[k][5]; break; }
-      }
-      cab = {
-        id: r[0], cliente: r[3], direccion: r[4], telefono: r[5], email: email,
-        paqueteria: r[6], guia: r[7], costoEnvio: r[9] ? r[9].replace(/[^0-9.]/g, '') : 0,
-        estatus: r[10], fechaEst: _fmtF(r[12]), fechaReal: _fmtF(r[13])
-      };
-      break;
-    }
-  }
-  if(!cab) throw new Error("Pedido no encontrado");
-
-  if(sDet) {
-    const dD = sDet.getDataRange().getDisplayValues();
-    for(let i=1; i<dD.length; i++) {
-      if(String(dD[i][0]).trim() === id) {
-        let pName = dD[i][1];
-        if(pName.includes("Selecciona") || pName === "undefined") pName = "⚠️ Error Datos";
-        items.push({ producto: pName, presentacion: dD[i][2], lote: dD[i][3], volumen: dD[i][4], piezas: dD[i][5] || 0 });
-      }
-    }
-  }
-  return { cabecera: cab, items: items };
-}
-
 function actualizarPedido(id, fe, fr, st, guia) { 
   const s = obtenerHojaSegura('PEDIDOS');
   const d = s.getDataRange().getValues();
@@ -565,27 +529,25 @@ function _fmtF(f) {
     if(!f) return "";
     let s = String(f).trim();
     
+    // FILTRO ANTI-URL: Si encuentra un enlace en el Excel por error, lo ignora.
+    if (s.toLowerCase().startsWith('http') || s.toLowerCase().includes('drive.google')) {
+       return "";
+    }
+    
     if(s.includes('-')) {
       let p = s.split('-');
-      // Solo intenta procesar si realmente tiene 3 partes (día, mes, año)
-      if(p.length >= 3) {
-          return p[0].length === 4 ? s.substring(0,10) : `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`;
-      }
+      if(p.length >= 3) return p[0].length === 4 ? s.substring(0,10) : `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`;
     }
-    
     if(s.includes('/')) {
       let p = s.split('/');
-      // Solo intenta procesar si realmente tiene 3 partes (día, mes, año)
-      if(p.length >= 3) {
-          return `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`;
-      }
+      if(p.length >= 3) return `${p[2].split(' ')[0]}-${p[1]}-${p[0]}`;
     }
-    
-    return ""; // Si es un texto raro que no parece fecha, devuelve vacío
-  } catch(e) {
-    return ""; // Si ocurre cualquier error, no rompe el programa
+    return ""; 
+  } catch(e) { 
+    return ""; // A prueba de balas
   }
 }
+
 function formatearFechaInput(f) { return _fmtF(f); }
 
 function EJECUTAR_DIAGNOSTICO_DEBUG() {
@@ -841,6 +803,60 @@ function procesarBajaOficial(itemsBaja) {
   }
 }
 
+function obtenerDetallePedidoCompleto(idPedido) {
+  const sPed = obtenerHojaSegura('PEDIDOS'), sDet = obtenerHojaSegura('DETALLE_PEDIDOS'), sCli = obtenerHojaSegura('CLIENTES');
+  const id = String(idPedido).trim();
+  const dP = sPed.getDataRange().getDisplayValues();
+  let cab = null, items = [];
+  for(let i=1; i<dP.length; i++) {
+    if(String(dP[i][0]).trim() === id) {
+      let r = dP[i], email = "---";
+      if(sCli) {
+        const dC = sCli.getDataRange().getDisplayValues();
+        for(let k=1; k<dC.length; k++) if(String(dC[k][0]).trim() === String(r[2]).trim()) { email = dC[k][5]; break; }
+      }
+      cab = {
+        id: r[0], cliente: r[3], direccion: r[4], telefono: r[5], email: email,
+        paqueteria: r[6], guia: r[7], costoEnvio: r[9] ? r[9].replace(/[^0-9.]/g, '') : 0,
+        estatus: r[10], 
+        fechaEst: _fmtF(r[11]), // Columna L (Índice 11)
+        fechaReal: _fmtF(r[12]) // Columna M (Índice 12)
+      };
+      break;
+    }
+  }
+  if(!cab) throw new Error("Pedido no encontrado");
+
+  if(sDet) {
+    const dD = sDet.getDataRange().getDisplayValues();
+    for(let i=1; i<dD.length; i++) {
+      if(String(dD[i][0]).trim() === id) {
+        let pName = dD[i][1];
+        if(pName.includes("Selecciona") || pName === "undefined") pName = "⚠️ Error Datos";
+        items.push({ producto: pName, presentacion: dD[i][2], lote: dD[i][3], volumen: dD[i][4], piezas: dD[i][5] || 0 });
+      }
+    }
+  }
+  return { cabecera: cab, items: items };
+}
+
+function actualizarPedido(id, fe, fr, st, guia) { 
+  const s = obtenerHojaSegura('PEDIDOS');
+  const d = s.getDataRange().getValues();
+  for(let i=1; i<d.length; i++) {
+    if(String(d[i][0]).trim() === String(id).trim()) {
+      s.getRange(i+1, 11).setValue(st);   // Estatus -> Col K
+      s.getRange(i+1, 12).setValue(fe);   // Fecha Est -> Col L
+      s.getRange(i+1, 13).setValue(fr);   // Fecha Real -> Col M
+      
+      if (guia && guia.trim() !== "") {
+          s.getRange(i+1, 8).setValue(guia); // Guía -> Col H
+      }
+      return "OK";
+    }
+  }
+}
+
 // ==========================================
 // 8. GESTIÓN DE DOCUMENTOS EN DRIVE (PEDIDOS)
 // ==========================================
@@ -852,37 +868,76 @@ function obtenerOCrearCarpetaPedido(idPedido) {
   const sPed = obtenerHojaSegura('PEDIDOS');
   const d = sPed.getDataRange().getValues();
   let rowIndex = -1;
+  let rowData = null;
 
-  // Buscar la fila del pedido
   for(let i=1; i<d.length; i++) {
     if(String(d[i][0]).trim() === String(idPedido).trim()) {
       rowIndex = i + 1;
+      rowData = d[i];
       break;
     }
   }
 
   if (rowIndex === -1) throw new Error("Pedido no encontrado en la base de datos.");
 
+  // Leer columna N (índice 13) para ver si ya tiene carpeta
+  let linkGuardado = rowData[13]; 
+  if (linkGuardado && String(linkGuardado).includes("drive.google.com")) {
+     try {
+         let folderId = String(linkGuardado).split('/').pop().split('?')[0];
+         return DriveApp.getFolderById(folderId); 
+     } catch(e) {}
+  }
+
   let folderPadre;
   try {
      folderPadre = DriveApp.getFolderById(ID_CARPETA_PADRE_PEDIDOS);
   } catch(e) {
-     throw new Error("No se encontró la carpeta principal en Drive. Verifica el ID.");
+     throw new Error("No se encontró la carpeta principal en Drive.");
   }
 
-  let folderDestino;
-  let carpetas = folderPadre.getFoldersByName(idPedido);
+  let fechaPed = rowData[1];
+  let fechaStr = Utilities.formatDate(fechaPed instanceof Date ? fechaPed : new Date(), Session.getScriptTimeZone(), "dd-MM-yyyy");
   
-  if (carpetas.hasNext()) {
-    folderDestino = carpetas.next();
-  } else {
-    // Si no existe, la crea
-    folderDestino = folderPadre.createFolder(idPedido);
-    folderDestino.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    
-    // CORRECCIÓN: Lo guardamos en la columna 15 (O) para no chocar con las fechas
-    sPed.getRange(rowIndex, 15).setValue(folderDestino.getUrl());
+  let idCliente = rowData[2];
+  let nombreCliente = rowData[3] || "CLIENTE";
+  let empresa = "";
+  
+  const sCli = obtenerHojaSegura('CLIENTES');
+  if(sCli) {
+      const dC = sCli.getDataRange().getValues();
+      for(let k=1; k<dC.length; k++) {
+          if(dC[k][0] == idCliente && dC[k][2]) {
+              empresa = "_" + dC[k][2];
+              break;
+          }
+      }
   }
+
+  let producto = "VARIOS";
+  const sDet = obtenerHojaSegura('DETALLE_PEDIDOS');
+  if(sDet) {
+      const dD = sDet.getDataRange().getValues();
+      for(let k=1; k<dD.length; k++) {
+          if(dD[k][0] == idPedido) {
+              producto = dD[k][1]; 
+              break;
+          }
+      }
+  }
+
+  let clnNom = String(nombreCliente).replace(/[^a-zA-Z0-9 ]/g, "").trim();
+  let clnEmp = String(empresa).replace(/[^a-zA-Z0-9_ ]/g, "").trim();
+  let clnProd = String(producto).replace(/[^a-zA-Z0-9 ]/g, "").trim();
+  
+  // Nombre Dinámico
+  let nombreCarpetaFinal = `ENVIO_${clnNom}${clnEmp}_${clnProd}_${fechaStr}`.toUpperCase();
+
+  let folderDestino = folderPadre.createFolder(nombreCarpetaFinal);
+  folderDestino.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  
+  // Guardar enlace en la Columna N (14)
+  sPed.getRange(rowIndex, 14).setValue(folderDestino.getUrl());
 
   return folderDestino;
 }
@@ -890,11 +945,8 @@ function obtenerOCrearCarpetaPedido(idPedido) {
 function subirArchivoPedido(idPedido, nombreArchivo, base64Data, mimeType) {
   try {
     const folder = obtenerOCrearCarpetaPedido(idPedido);
-    
-    // Decodificar el archivo y crearlo en Drive
     const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, nombreArchivo);
     const file = folder.createFile(blob);
-    
     return { success: true, url: file.getUrl(), nombre: file.getName(), urlCarpeta: folder.getUrl() };
   } catch (e) {
     return { success: false, error: e.message };
@@ -903,16 +955,26 @@ function subirArchivoPedido(idPedido, nombreArchivo, base64Data, mimeType) {
 
 function obtenerArchivosPedido(idPedido) {
   try {
-    const folderPadre = DriveApp.getFolderById(ID_CARPETA_PADRE_PEDIDOS);
-    let carpetas = folderPadre.getFoldersByName(idPedido);
-    
-    // Si no hay carpeta aún, regresamos vacío
-    if (!carpetas.hasNext()) return { success: true, archivos: [], urlCarpeta: null };
+    const sPed = obtenerHojaSegura('PEDIDOS');
+    const d = sPed.getDataRange().getValues();
+    let linkGuardado = null;
 
-    const folder = carpetas.next();
+    for(let i=1; i<d.length; i++) {
+      if(String(d[i][0]).trim() === String(idPedido).trim()) {
+        linkGuardado = d[i][13]; // Columna N
+        break;
+      }
+    }
+
+    if (!linkGuardado || !String(linkGuardado).includes("drive.google.com")) {
+        return { success: true, archivos: [], urlCarpeta: null };
+    }
+
+    let folderId = String(linkGuardado).split('/').pop().split('?')[0];
+    let folder = DriveApp.getFolderById(folderId);
+    
     const files = folder.getFiles();
     let lista = [];
-    
     while (files.hasNext()) {
       let f = files.next();
       lista.push({ nombre: f.getName(), url: f.getUrl() });
