@@ -577,3 +577,70 @@ function EJECUTAR_DIAGNOSTICO_DEBUG() {
   });
   sD.getRange(1,1,rep.length,3).setValues(rep);
 }
+
+// ==========================================
+// 7. MÓDULO DE DESINCORPORACIÓN (BAJAS)
+// ==========================================
+
+function obtenerMaterialesCaducados() {
+  const sInv = obtenerHojaSegura('INVENTARIO');
+  if (!sInv || sInv.getLastRow() < 2) return [];
+
+  const mapProd = {}, mapPres = {}, mapUbic = {};
+  const sP = obtenerHojaSegura('PRODUCTOS');
+  const sPr = obtenerHojaSegura('PRESENTACIONES');
+  const sU = obtenerHojaSegura('UBICACIONES');
+
+  if (sP) sP.getDataRange().getValues().slice(1).forEach(r => mapProd[String(r[0]).trim()] = r[1]);
+  if (sPr) sPr.getDataRange().getValues().slice(1).forEach(r => mapPres[String(r[0]).trim()] = r[1]);
+  if (sU) sU.getDataRange().getValues().slice(1).forEach(r => mapUbic[String(r[0]).trim()] = r[1]);
+
+  const dataInv = sInv.getDataRange().getValues();
+  let caducados = [];
+  
+  // Establecemos "hoy" a la medianoche para una comparación justa
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0); 
+
+  for (let i = 1; i < dataInv.length; i++) {
+    const stock = Number(dataInv[i][3]);
+    
+    if (stock > 0.001) {
+      const caducidad = dataInv[i][4]; // Columna E (Caducidad)
+      let fechaCad = null;
+
+      // Transformar la fecha para poder compararla
+      if (caducidad instanceof Date) {
+        fechaCad = caducidad;
+      } else if (typeof caducidad === 'string') {
+        if (caducidad.includes('-')) {
+          const partes = caducidad.split('T')[0].split('-'); // YYYY-MM-DD
+          if (partes.length === 3) fechaCad = new Date(partes[0], partes[1] - 1, partes[2]);
+        } else if (caducidad.includes('/')) {
+          const partes = caducidad.split('/'); // DD/MM/YYYY
+          if (partes.length === 3) fechaCad = new Date(partes[2], partes[1] - 1, partes[0]);
+        }
+      }
+
+      // Si tiene fecha válida y ya pasó (es menor a hoy)
+      if (fechaCad && fechaCad < hoy) {
+        const pId = String(dataInv[i][0]).trim();
+        const prId = String(dataInv[i][1]).trim();
+        const uId = String(dataInv[i][2]).trim();
+
+        caducados.push({
+          producto_id: pId,
+          producto: mapProd[pId] || pId,
+          presentacion_id: prId,
+          presentacion: mapPres[prId] || prId,
+          ubicacion_id: uId,
+          ubicacion: mapUbic[uId] || uId,
+          lote: String(dataInv[i][6]).trim(),
+          volumen: stock,
+          caducidadStr: _fmtFechaDisplay(caducidad)
+        });
+      }
+    }
+  }
+  return caducados;
+}

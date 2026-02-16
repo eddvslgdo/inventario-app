@@ -17,6 +17,7 @@ window.cambiarVista = function (vistaId) {
   if (vistaId === 'vista-productos' && typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
   if (vistaId === 'vista-salidas' && typeof recargarSelectores === 'function') recargarSelectores();
   if (vistaId === 'vista-pedidos' && typeof cargarDashboardPedidos === 'function') cargarDashboardPedidos();
+  if (vistaId === 'vista-bajas' && typeof cargarCaducados === 'function') cargarCaducados();
 };
 
 function recargarSelectores() {
