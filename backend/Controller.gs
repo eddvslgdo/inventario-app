@@ -808,23 +808,43 @@ function obtenerDetallePedidoCompleto(idPedido) {
   const id = String(idPedido).trim();
   const dP = sPed.getDataRange().getDisplayValues();
   let cab = null, items = [];
+  
   for(let i=1; i<dP.length; i++) {
     if(String(dP[i][0]).trim() === id) {
-      let r = dP[i], email = "---";
+      let r = dP[i];
+      let email = "---";
+      let empresa = ""; // <--- ¡AQUÍ ESTÁ LA CORRECCIÓN!
+      
+      // Buscamos al cliente en el catálogo para traer su Empresa y Email
       if(sCli) {
         const dC = sCli.getDataRange().getDisplayValues();
-        for(let k=1; k<dC.length; k++) if(String(dC[k][0]).trim() === String(r[2]).trim()) { email = dC[k][5]; break; }
+        for(let k=1; k<dC.length; k++) {
+          if(String(dC[k][0]).trim() === String(r[2]).trim()) { 
+             empresa = dC[k][2]; // Columna C (Empresa)
+             email = dC[k][5];   // Columna F (Email)
+             break; 
+          }
+        }
       }
+      
       cab = {
-        id: r[0], cliente: r[3], direccion: r[4], telefono: r[5], email: email,
-        paqueteria: r[6], guia: r[7], costoEnvio: r[9] ? r[9].replace(/[^0-9.]/g, '') : 0,
+        id: r[0], 
+        cliente: r[3], 
+        direccion: r[4], 
+        telefono: r[5], 
+        email: email,
+        empresa: empresa, // <--- Ahora sí enviamos la empresa al Frontend
+        paqueteria: r[6], 
+        guia: r[7], 
+        costoEnvio: r[9] ? r[9].replace(/[^0-9.]/g, '') : 0,
         estatus: r[10], 
-        fechaEst: _fmtF(r[11]), // Columna L (Índice 11)
-        fechaReal: _fmtF(r[12]) // Columna M (Índice 12)
+        fechaEst: _fmtF(r[11]), 
+        fechaReal: _fmtF(r[12]) 
       };
       break;
     }
   }
+  
   if(!cab) throw new Error("Pedido no encontrado");
 
   if(sDet) {
@@ -983,5 +1003,65 @@ function obtenerArchivosPedido(idPedido) {
     return { success: true, archivos: lista, urlCarpeta: folder.getUrl() };
   } catch (e) {
     return { success: false, error: e.message };
+  }
+}
+
+// ==========================================
+// 9. GESTIÓN DE UBICACIONES (EDITAR Y BORRAR)
+// ==========================================
+
+function actualizarNombreUbicacion(id, nuevoNombre) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const sUbic = obtenerHojaSegura('UBICACIONES');
+    const data = sUbic.getDataRange().getValues();
+    
+    // Buscar la ubicación por ID y actualizar el nombre
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === String(id).trim()) {
+        sUbic.getRange(i + 1, 2).setValue(nuevoNombre);
+        return { success: true };
+      }
+    }
+    throw new Error("Ubicación no encontrada.");
+  } catch(e) {
+    throw new Error(e.message);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function borrarUbicacion(id) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    
+    // 1. VALIDACIÓN DE SEGURIDAD: Comprobar que no tenga inventario
+    const sInv = obtenerHojaSegura('INVENTARIO');
+    if (sInv && sInv.getLastRow() > 1) {
+      const invData = sInv.getDataRange().getValues();
+      for (let i = 1; i < invData.length; i++) {
+        // Si el producto está en esta ubicación y tiene más de 0 litros, bloqueamos el borrado
+        if (String(invData[i][2]).trim() === String(id).trim() && Number(invData[i][3]) > 0.001) {
+          throw new Error("No se puede borrar: Aún hay productos con stock en esta ubicación.");
+        }
+      }
+    }
+    
+    // 2. BORRAR LA UBICACIÓN
+    const sUbic = obtenerHojaSegura('UBICACIONES');
+    const data = sUbic.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === String(id).trim()) {
+        sUbic.deleteRow(i + 1); // Elimina la fila completa del Excel
+        return { success: true };
+      }
+    }
+    throw new Error("Ubicación no encontrada.");
+  } catch(e) {
+    throw new Error(e.message);
+  } finally {
+    lock.releaseLock();
   }
 }

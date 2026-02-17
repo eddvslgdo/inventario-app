@@ -1458,6 +1458,180 @@
   border-color: rgba(0,0,0,0.05);
   box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Pequeña sombra para resaltar */
 }
+
+/* =========================================================
+   FIX: SCROLL INTERNO PARA MODALES EN PANTALLAS PEQUEÑAS 
+   ========================================================= */
+.modal-content {
+    /* Limita la altura máxima al 88% de la pantalla actual */
+    max-height: 88vh !important; 
+    
+    /* Activa el scroll vertical automático forzando a ignorar cualquier otro estilo */
+    overflow-y: auto !important; 
+}
+
+/* Opcional: Darle un diseño bonito y moderno a la barrita de scroll */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+.modal-content::-webkit-scrollbar-track {
+    background: #f8f9fa; 
+    border-radius: 8px;
+}
+.modal-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1; 
+    border-radius: 8px;
+}
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; 
+}
+
+/* =========================================================
+   ADAPTACIÓN MÓVIL (APP NATIVA) PARA LA VISTA DE ENVÍOS 
+   ========================================================= */
+@media only screen and (max-width: 768px) {
+    
+    /* 1. Ajuste de la Barra de Herramientas (Filtros y Buscador) */
+    .toolbar-container {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 15px;
+        gap: 12px;
+    }
+    .search-box-styled, .date-group-styled, .filter-tabs {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .input-date-minimal {
+        min-width: 0 !important;
+        width: 100% !important;
+        text-align: center;
+    }
+
+    /* 2. Transformar la Tabla de Envíos en Tarjetas Verticales */
+    #tablaPedidosMain thead {
+        display: none; /* Ocultamos los encabezados (estorban en móvil) */
+    }
+    
+    #tablaPedidosBody tr {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        margin-bottom: 16px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+        border: 1px solid #e2e8f0;
+        padding: 16px;
+        position: relative; /* Para posicionar elementos absolutos dentro */
+    }
+
+    #tablaPedidosBody td {
+        border: none;
+        padding: 4px 0;
+        display: flex;
+        align-items: center;
+        text-align: left;
+    }
+
+    /* Celda 1: ID de Pedido y Fecha */
+    #tablaPedidosBody td:nth-child(1) {
+        border-bottom: 1px dashed #e2e8f0;
+        padding-bottom: 10px;
+        margin-bottom: 8px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    #tablaPedidosBody td:nth-child(1) .id-badge {
+        font-size: 1.05rem;
+    }
+
+    /* Celda 4: Estatus (Lo movemos a la esquina superior derecha) */
+    #tablaPedidosBody td:nth-child(4) {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        padding: 0;
+    }
+
+    /* Celda 2: Info del Cliente */
+    #tablaPedidosBody td:nth-child(2) {
+        justify-content: flex-start;
+    }
+
+    /* Celda 3: Resumen de Productos y Guía */
+    #tablaPedidosBody td:nth-child(3) {
+        flex-direction: column;
+        align-items: flex-start;
+        background: #f8fafc;
+        padding: 12px;
+        border-radius: 8px;
+        margin: 12px 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Celda 5: Botón de "Gestionar" */
+    #tablaPedidosBody td:nth-child(5) {
+        justify-content: center;
+        margin-top: 5px;
+        padding-top: 10px;
+    }
+    
+    /* Hacemos el botón gigante para tocarlo fácil con el pulgar */
+    #tablaPedidosBody td:nth-child(5) .btn-manage {
+        width: 100%;
+        justify-content: center;
+        padding: 14px;
+        font-size: 1.05rem;
+        background: #f0f9ff;
+        color: #2563eb;
+        border-color: #bfdbfe;
+        box-shadow: 0 2px 4px rgba(37,99,235,0.1);
+    }
+}
+
+/* =========================================================
+   FIX: MODALES PERFECTOS EN MÓVILES (iOS / SAFARI / CHROME)
+   ========================================================= */
+@media only screen and (max-width: 768px) {
+    #modalDetallePedido .modal-content {
+        /* Convertimos el modal en una caja flexible */
+        display: flex !important;
+        flex-direction: column !important;
+        
+        /* Ajustamos el margen para que no se salga por arriba ni por abajo */
+        max-height: 85vh !important; 
+        margin: 5vh auto !important;
+    }
+
+    .clean-header {
+        /* La cabecera nunca se encoge */
+        flex-shrink: 0 !important;
+        padding: 15px !important;
+    }
+
+    .clean-body {
+        /* El cuerpo toma todo el espacio sobrante y hace scroll interno */
+        flex: 1 1 auto !important;
+        overflow-y: auto !important;
+        max-height: none !important; /* Quitamos el límite fijo que tenía */
+        padding: 15px !important;
+    }
+
+    .clean-footer {
+        /* El pie (botones) nunca se encoge y se queda pegado abajo */
+        flex-shrink: 0 !important;
+        padding: 15px !important;
+        display: flex;
+        flex-direction: column; /* Apila los botones uno sobre otro */
+        gap: 10px;
+    }
+
+    .clean-footer .btn-action-modal {
+        width: 100% !important; /* Botones anchos y fáciles de tocar */
+        margin: 0 !important;
+    }
+}
 </style>
 
 

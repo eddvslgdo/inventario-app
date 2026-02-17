@@ -769,14 +769,22 @@ function aplicarFiltrosCombinados() {
         if(FILTRO_ACTUAL_PEDIDOS === 'Pendiente') cumpleEstado = (p.estatus === 'Pendiente' || !p.estatus);
         else if (FILTRO_ACTUAL_PEDIDOS === 'Enviado') cumpleEstado = (p.estatus.indexOf('Enviado') !== -1 || p.estatus.indexOf('Camino') !== -1 || p.estatus.indexOf('Entregado') !== -1 || p.estatus.indexOf('Proceso') !== -1);
         
-        // 2. Texto
-        var todo = (p.id + " " + p.cliente + " " + p.empresa + " " + p.guia).toLowerCase();
+        // 2. Texto (BÚSQUEDA MEJORADA)
+        // Agrupamos todos los campos posibles en un solo arreglo, evitando valores nulos, y los unimos en un texto gigante.
+        var todo = [
+            p.id || "",
+            p.cliente || "",
+            p.empresa || "",
+            p.guia || "",
+            p.resumenProductos || ""
+        ].join(" ").toLowerCase();
+        
         var cumpleTexto = !texto || todo.indexOf(texto) !== -1;
 
-        // 3. Fechas (CON EL TRADUCTOR)
+        // 3. Fechas 
         var cumpleFecha = true;
         if (fDesdeInput || fHastaInput) {
-            var fechaPedStr = parseDateYMD(p.fecha); // Transforma 13/2/2026 a 2026-02-13
+            var fechaPedStr = parseDateYMD(p.fecha); 
             if (fechaPedStr) {
                 if (fDesdeInput && fechaPedStr < fDesdeInput) cumpleFecha = false;
                 if (fHastaInput && fechaPedStr > fHastaInput) cumpleFecha = false;
