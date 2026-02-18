@@ -48,29 +48,57 @@ function _fmtFechaDisplay(valor) {
   }
   return String(valor).trim();
 }
-
-// ==========================================
-// 1. CATÁLOGOS
-// ==========================================
 // ==========================================
 // 1. CATÁLOGOS
 // ==========================================
 function obtenerCatalogos() {
-  const sProd = obtenerHojaOCrear("PRODUCTOS", [
-    "ID",
-    "NOMBRE",
-    "DESCRIPCION",
-    "UNIDAD",
-  ]);
-  const sPres = obtenerHojaOCrear("PRESENTACIONES", [
-    "ID",
-    "NOMBRE",
-    "VOLUMEN",
-  ]);
-  const sUbic = obtenerHojaOCrear("UBICACIONES", ["ID", "NOMBRE"]);
-  const sInv = obtenerHojaOCrear("INVENTARIO", []); // Cargar inventario para ver stock
-
+  const sProd = obtenerHojaOCrear('PRODUCTOS', ['ID', 'NOMBRE', 'DESCRIPCION', 'UNIDAD']);
+  const sPres = obtenerHojaOCrear('PRESENTACIONES', ['ID', 'NOMBRE', 'VOLUMEN']);
+  const sUbic = obtenerHojaOCrear('UBICACIONES', ['ID', 'NOMBRE']);
+  const sInv = obtenerHojaOCrear('INVENTARIO', []); 
+  
   const leer = (s, esPres) => {
+    if (!s || s.getLastRow() < 2) return [];
+    return s.getDataRange().getValues().slice(1).map(r => ({
+      id: String(r[0]).trim(), 
+      nombre: r[1], 
+      volumen: esPres ? (Number(r[2]) || 0) : 0,
+      unidad: esPres ? "" : (r[3] || "L") // <--- Aquí ya lee si es L, Kg o Pza
+    })).filter(i => i.id);
+  };
+
+  let productos = leer(sProd);
+  const presentaciones = leer(sPres, true);
+  const ubicaciones = leer(sUbic);
+
+  // --- Calcular stock total por producto ---
+  let stockPorProducto = {};
+  if (sInv && sInv.getLastRow() > 1) {
+     const dataInv = sInv.getDataRange().getValues();
+     for(let i=1; i<dataInv.length; i++) {
+        const pId = String(dataInv[i][0]).trim();
+        const stock = Number(dataInv[i][3]) || 0;
+        if (!stockPorProducto[pId]) stockPorProducto[pId] = 0;
+        stockPorProducto[pId] += stock;
+     }
+  }
+
+  // Adjuntar el stock a cada producto
+  productos = productos.map(p => {
+     p.stockTotal = stockPorProducto[p.id] || 0;
+     return p;
+  });
+
+  return { productos: productos, presentaciones: presentaciones, ubicaciones: ubicaciones };
+}
+
+// ==========================================
+// 1. CATÁLOGOS
+// ==========================================
+// ==========================================
+// 1. CATÁLOGOS
+// ==========================================
+const leer = (s, esPres) => {
     if (!s || s.getLastRow() < 2) return [];
     return s
       .getDataRange()
@@ -80,39 +108,10 @@ function obtenerCatalogos() {
         id: String(r[0]).trim(),
         nombre: r[1],
         volumen: esPres ? Number(r[2]) || 0 : 0,
+        unidad: esPres ? "" : (r[3] || "L") // <--- AHORA LEE LA UNIDAD (L, Kg, Pza)
       }))
       .filter((i) => i.id);
   };
-
-  let productos = leer(sProd);
-  const presentaciones = leer(sPres, true);
-  const ubicaciones = leer(sUbic);
-
-  // --- NUEVO: Calcular stock total por producto ---
-  let stockPorProducto = {};
-  if (sInv && sInv.getLastRow() > 1) {
-    const dataInv = sInv.getDataRange().getValues();
-    for (let i = 1; i < dataInv.length; i++) {
-      const pId = String(dataInv[i][0]).trim();
-      const stock = Number(dataInv[i][3]) || 0;
-      if (!stockPorProducto[pId]) stockPorProducto[pId] = 0;
-      stockPorProducto[pId] += stock;
-    }
-  }
-
-  // Adjuntar el stock a cada producto
-  productos = productos.map((p) => {
-    p.stockTotal = stockPorProducto[p.id] || 0;
-    return p;
-  });
-  // ------------------------------------------------
-
-  return {
-    productos: productos,
-    presentaciones: presentaciones,
-    ubicaciones: ubicaciones,
-  };
-}
 
 function obtenerListaClientes() {
   const s = obtenerHojaOCrear("CLIENTES", [
@@ -143,56 +142,37 @@ function obtenerListaClientes() {
 // 2. GESTIÓN DE INVENTARIO (CONSOLIDACIÓN)
 // ==========================================
 function obtenerDatosUbicaciones() {
-  const sInv = obtenerHojaOCrear("INVENTARIO", [
-    "ID_PROD",
-    "ID_PRES",
-    "ID_UBIC",
-    "STOCK",
-    "CADUCIDAD",
-    "ELABORACION",
-    "LOTE",
-    "F_ENTRADA",
-    "PROVEEDOR",
-  ]);
+  const sInv = obtenerHojaOCrear("INVENTARIO", ["ID_PROD", "ID_PRES", "ID_UBIC", "STOCK", "CADUCIDAD", "ELABORACION", "LOTE", "F_ENTRADA", "PROVEEDOR"]);
   const sUbic = obtenerHojaOCrear("UBICACIONES", []);
   const sProd = obtenerHojaOCrear("PRODUCTOS", []);
   const sPres = obtenerHojaOCrear("PRESENTACIONES", []);
 
-  const mapProd = {},
-    mapPres = {},
-    mapPresVol = {};
-  if (sProd.getLastRow() > 1)
-    sProd
-      .getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => (mapProd[String(r[0]).trim()] = r[1]));
-  if (sPres.getLastRow() > 1)
-    sPres
-      .getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => {
-        const id = String(r[0]).trim();
-        mapPres[id] = r[1];
-        mapPresVol[id] = Number(r[2]) || 0;
-      });
+  const mapProd = {}, mapPres = {}, mapPresVol = {};
+
+  if (sProd.getLastRow() > 1) {
+    sProd.getDataRange().getValues().slice(1).forEach((r) => {
+      mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: r[3] || 'L' };
+    });
+  }
+
+  if (sPres.getLastRow() > 1) {
+    sPres.getDataRange().getValues().slice(1).forEach((r) => {
+      const id = String(r[0]).trim();
+      mapPres[id] = r[1];
+      mapPresVol[id] = Number(r[2]) || 0;
+    });
+  }
 
   let ubicaciones = [];
   if (sUbic.getLastRow() > 1) {
-    sUbic
-      .getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => {
-        if (r[0])
-          ubicaciones.push({
-            id: String(r[0]).trim(),
-            nombre: r[1] || "S/N",
-            items: [],
-            totalVolumen: 0,
-          });
+    sUbic.getDataRange().getValues().slice(1).forEach((r) => {
+      if (r[0]) ubicaciones.push({
+        id: String(r[0]).trim(),
+        nombre: r[1] || "S/N",
+        items: [],
+        totales: { L: 0, Kg: 0, Pza: 0 } // SEPARAMOS LOS TOTALES
       });
+    });
   }
 
   if (sInv.getLastRow() > 1) {
@@ -203,12 +183,7 @@ function obtenerDatosUbicaciones() {
         const uId = String(dInv[i][2]).trim();
         let ubic = ubicaciones.find((u) => u.id === uId);
         if (!ubic) {
-          ubic = {
-            id: uId,
-            nombre: "Ubic: " + uId,
-            items: [],
-            totalVolumen: 0,
-          };
+          ubic = { id: uId, nombre: "Ubic: " + uId, items: [], totales: { L: 0, Kg: 0, Pza: 0 } };
           ubicaciones.push(ubic);
         }
 
@@ -217,33 +192,33 @@ function obtenerDatosUbicaciones() {
         const lote = String(dInv[i][6]).trim();
         const caducidadStr = _fmtFechaDisplay(dInv[i][4]);
 
-        const nProd = mapProd[pId] || pId;
+        const prodData = mapProd[pId] || { nombre: pId, unidad: 'L' };
+        const nProd = prodData.nombre;
+        
+        // Estandarizamos la unidad a L, Kg o Pza
+        let unidadRaw = String(prodData.unidad).toLowerCase();
+        let uLower = 'L';
+        if(unidadRaw.includes('unid') || unidadRaw.includes('pza') || unidadRaw.includes('pieza')) uLower = 'Pza';
+        else if (unidadRaw.includes('kg') || unidadRaw.includes('kilo')) uLower = 'Kg';
+
         const nPres = mapPres[prId] || prId;
 
         let itemExistente = ubic.items.find(
-          (it) =>
-            it.raw_producto_id === pId &&
-            it.raw_presentacion_id === prId &&
-            it.lote === lote &&
-            it.caducidad === caducidadStr,
+          (it) => it.raw_producto_id === pId && it.raw_presentacion_id === prId && it.lote === lote && it.caducidad === caducidadStr
         );
 
         if (itemExistente) {
           itemExistente.volumen += stock;
         } else {
           ubic.items.push({
-            raw_producto_id: pId,
-            producto: nProd,
-            raw_presentacion_id: prId,
-            presentacion: nPres,
-            lote: lote,
-            volumen: stock,
-            volumen_nominal: mapPresVol[prId] || 0,
-            caducidad: caducidadStr,
-            nombre_completo: `${nProd} (${nPres})`,
+            raw_producto_id: pId, producto: nProd, raw_presentacion_id: prId, presentacion: nPres,
+            lote: lote, volumen: stock, volumen_nominal: mapPresVol[prId] || 0,
+            caducidad: caducidadStr, nombre_completo: `${nProd} (${nPres})`, unidad: uLower // Guardamos la unidad del item
           });
         }
-        ubic.totalVolumen += stock;
+        // Sumamos a la canasta que corresponde
+        if (!ubic.totales[uLower]) ubic.totales[uLower] = 0;
+        ubic.totales[uLower] += stock;
       }
     }
   }

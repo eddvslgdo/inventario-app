@@ -146,6 +146,9 @@ function confirmarPedidoCompleto() {
 // --- D. UTILIDADES Y LÓGICA DE LIMPIEZA ---
 
 function reiniciarFormularioSalidas() {
+  var selProdSearch = document.getElementById("sal_producto_search");
+  if(selProdSearch) selProdSearch.value = ""; 
+  
   var selProd = document.getElementById("sal_producto");
   if(selProd) selProd.value = ""; 
   
@@ -177,9 +180,8 @@ function alSeleccionarCliente() {
 }
 
 function construirItemSalida() {
-  var volTotal = calcularTotalSalida(); 
-  var esInvalido = (volTotal == 0); 
-  if (esInvalido) { mostrarToast("Cantidad incorrecta (0 L)", "error"); return null; }
+  var calculo = calcularTotalSalida();
+  if (calculo.total == 0) { mostrarToast("Cantidad incorrecta", "error"); return null; }
   
   var elLote = document.getElementById("sal_lote");
   var lote = elLote ? elLote.value.trim() : "";
@@ -191,19 +193,16 @@ function construirItemSalida() {
   
   if (pzas - maxPzas > 0) { mostrarToast("⚠️ Stock insuficiente", "error"); return null; }
 
-  // --- CORRECCIÓN: NO LEER LOS VALORES DE LOS CAMPOS DISABLED ---
-  // Cuando un campo está 'disabled', a veces no envía el valor correctamente o el usuario no ve el nombre.
-  // Pero aquí los leemos directo del DOM, así que está bien.
-  // Lo importante es que el ID del producto viene del SELECT principal que NO está disabled.
-
   return {
     producto_id: document.getElementById("sal_producto").value,
-    nombre_producto: getTextoSelect("sal_producto"),
+    // AHORA LEE EL NOMBRE DEL NUEVO BUSCADOR
+    nombre_producto: document.getElementById("sal_producto_search").value, 
     presentacion_id: document.getElementById("sal_presentacion").value,
     nombre_presentacion: getTextoSelect("sal_presentacion"),
     ubicacion_id: document.getElementById("sal_ubicacion").value,
     nombre_ubicacion: getTextoSelect("sal_ubicacion"),
-    volumen_L: volTotal,
+    volumen_L: calculo.total,
+    unidad_medida: calculo.unidad,
     piezas: pzas,
     lote: lote,
     caducidad: inputCant.getAttribute("data-caducidad") || "---"
@@ -213,17 +212,43 @@ function construirItemSalida() {
 function calcularTotalSalida() {
   if (typeof calcTotalGenerico === 'function') {
       var total = calcTotalGenerico("sal_presentacion", "sal_cantidad");
+
+      // Buscamos la unidad real en la memoria
+      var unidad = "L";
+      var selProd = document.getElementById("sal_producto");
+      if(window.CACHE_CATALOGOS && selProd && selProd.value) {
+          var prodData = window.CACHE_CATALOGOS.productos.find(x => x.id === selProd.value);
+          if(prodData && prodData.unidad) {
+              let uLower = prodData.unidad.trim().toLowerCase();
+              if(uLower === 'unid' || uLower === 'pza' || uLower === 'pieza' || uLower === 'unidad') unidad = 'Pza';
+              else if(uLower === 'kg' || uLower === 'kilo') unidad = 'Kg';
+          }
+      }
+
       var elTotal = document.getElementById("sal_infoTotal");
-      if (elTotal) elTotal.innerText = total.toFixed(2) + " L";
-      return total;
+      if (elTotal) {
+         if(unidad === 'Pza') {
+             elTotal.innerText = Math.round(total) + " " + unidad; // Sin decimales
+         } else {
+             elTotal.innerText = total.toFixed(2) + " " + unidad; // Con decimales
+         }
+      }
+      return { total: total, unidad: unidad };
   }
-  return 0;
+  return { total: 0, unidad: "L" };
 }
 
 function limpiarCamposSalidaParcial() {
   var inputCant = document.getElementById("sal_cantidad");
   if(inputCant) { inputCant.value = ""; inputCant.placeholder = "Cantidad"; inputCant.removeAttribute("data-max-pzas"); }
-  document.getElementById("sal_infoTotal").innerText = "0 L";
+  
+  // MAGIA: En vez de forzar un "0 L", llamamos a la calculadora para que respete la unidad actual
+  if(typeof calcularTotalSalida === 'function') {
+      calcularTotalSalida();
+  } else {
+      var elTotal = document.getElementById("sal_infoTotal");
+      if(elTotal) elTotal.innerText = "0";
+  }
   
   var elLote = document.getElementById("sal_lote"); 
   if(elLote) { elLote.value = ""; elLote.readOnly = false; elLote.style.backgroundColor = "white"; }
@@ -285,6 +310,18 @@ function renderizarTablaDisponibilidad(lista) {
   
   div.innerHTML = ""; 
   div.style.display = "block";
+
+  // 1. Detectar unidad del producto seleccionado para la tabla
+  var unidad = "L";
+  var selProd = document.getElementById("sal_producto");
+  if(window.CACHE_CATALOGOS && selProd && selProd.value) {
+      var prodData = window.CACHE_CATALOGOS.productos.find(x => x.id === selProd.value);
+      if (prodData && prodData.unidad) {
+          let uLower = prodData.unidad.trim().toLowerCase();
+          if(uLower === 'unid' || uLower === 'unidad' || uLower === 'pza' || uLower === 'pieza') unidad = 'Pza';
+          else if (uLower === 'kg' || uLower === 'kilo') unidad = 'Kg';
+      }
+  }
   
   var table = document.createElement("table");
   table.style.cssText = "width:100%; font-size:0.85rem; border-collapse:collapse; border:1px solid #eee; background:white; border-radius:8px;";
@@ -304,14 +341,16 @@ function renderizarTablaDisponibilidad(lista) {
           if (stockNum > 0.001) {
              var tr = document.createElement("tr");
              tr.id = "fila-lote-" + idx; tr.style.cursor = "pointer"; tr.style.borderBottom = "1px solid #eee";
-             
              tr.style.opacity = "1";
              tr.style.pointerEvents = "auto";
 
              var fechaCad = l.caducidad || "---";
              tr.onclick = function() { seleccionarLote(l.lote, l.presentacion_id, l.ubicacion_id, l.stock, idx, fechaCad); };
              
-             tr.innerHTML = `<td style="padding:8px; font-weight:bold;">${l.lote}</td><td style="padding:8px; color:#d35400;">${fechaCad}</td><td style="padding:8px;">${l.nombre_ubicacion||l.ubicacion_id}</td><td style="padding:8px; text-align:right; color:#27ae60; font-weight:bold;">${l.stock} L</td>`;
+             // 2. Formatear la cantidad a mostrar (sin decimales si es Pza)
+             var stockDisplay = (unidad === 'Pza') ? Math.round(stockNum) : stockNum.toFixed(2);
+
+             tr.innerHTML = `<td style="padding:8px; font-weight:bold;">${l.lote}</td><td style="padding:8px; color:#d35400;">${fechaCad}</td><td style="padding:8px;">${l.nombre_ubicacion||l.ubicacion_id}</td><td style="padding:8px; text-align:right; color:#27ae60; font-weight:bold;">${stockDisplay} ${unidad}</td>`;
              table.appendChild(tr);
              filasAgregadas++;
           }

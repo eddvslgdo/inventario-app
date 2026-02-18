@@ -449,23 +449,18 @@
           <small style="color: #555">Recepción de mercancía a almacén</small>
         </div>
 
-        <div class="form-group">
+<div class="form-group">
           <label>Producto</label>
           <div style="display: flex; gap: 10px">
-            <select id="producto" class="input-modern">
-              <option>Cargando...</option>
-            </select>
+            <input type="text" id="producto_search" list="lista-productos-datalist" class="input-modern" placeholder="Escribe para buscar o agregar..." onchange="seleccionarProductoDesdeBusqueda()" autocomplete="off" />
+            <datalist id="lista-productos-datalist"></datalist>
+            <input type="hidden" id="producto" />
+            
             <button
               type="button"
               onclick="abrirModal()"
               class="btn-field"
-              style="
-                width: 50px;
-                background: #007aff;
-                color: white;
-                border: none;
-                font-size: 1.5rem;
-              "
+              style="width: 50px; background: #007aff; color: white; border: none; font-size: 1.5rem;"
             >
               +
             </button>
@@ -566,7 +561,8 @@
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 25px">
-          <button
+<button
+            id="btn-entrada-directa"
             onclick="guardarEntradaDirecta()"
             class="btn-field"
             style="flex: 1; background: #007aff; color: white; border: none"
@@ -644,11 +640,11 @@
           <div style="font-size: 2rem">🚚</div>
         </div>
 
-        <div class="form-group">
+<div class="form-group">
           <label>Producto a Enviar</label>
-          <select id="sal_producto" class="input-modern">
-            <option>Selecciona...</option>
-          </select>
+          <input type="text" id="sal_producto_search" list="lista-productos-salida-datalist" class="input-modern" placeholder="Buscar producto (solo con stock)..." onchange="seleccionarProductoSalidaDesdeBusqueda()" autocomplete="off" />
+          <datalist id="lista-productos-salida-datalist"></datalist>
+          <input type="hidden" id="sal_producto" />
         </div>
 
         <div
@@ -759,39 +755,30 @@
       </div>
     </div>
 
-    <div id="vista-ubicaciones" class="vista" style="display: none">
-      <div class="card" style="max-width: 800px">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-          "
-        >
-          <h2 style="margin: 0">Mapa de Almacén</h2>
+<div id="vista-ubicaciones" class="vista" style="display: none">
+      <div style="max-width: 1100px; margin: 0 auto; width: 100%;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: white; padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #eef2f6;">
+          <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b;">📍 Mapa de Almacén</h2>
           <button
             onclick="abrirModalGenerico('modalUbicacion')"
             class="btn-field"
-            style="
-              width: auto;
-              padding: 0 20px;
-              margin: 0;
-              background: #ff9500;
-              color: white;
-              border: none;
-            "
+            style="width: auto; padding: 0 20px; margin: 0; background: #f59e0b; color: white; border: none; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);"
           >
             + Nueva Ubicación
           </button>
         </div>
+
         <div
           id="loading-ubicaciones"
-          style="text-align: center; margin: 20px; color: #666"
+          style="text-align: center; margin: 40px; color: #64748b"
         >
-          Cargando inventario...
+          <div class="modern-spinner"></div>
+          <p style="margin-top: 15px;">Sincronizando almacén...</p>
         </div>
-        <div id="grid-ubicaciones" class="grid-layout"></div>
+        
+        <div id="grid-ubicaciones" class="grid-layout" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px;"></div>
+      
       </div>
     </div>
 

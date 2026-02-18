@@ -1,41 +1,44 @@
 // ==========================================
-// LÓGICA DE ENTRADAS (CON ANIMACIÓN EN MASIVA)
+// LÓGICA DE ENTRADAS (PRO)
 // ==========================================
 
 function calcularTotalEntrada() {
   var total = 0;
-  if (typeof calcTotalGenerico === 'function') {
-      total = calcTotalGenerico("presentacion", "cantidad");
-  } else {
-      var p = document.getElementById("presentacion");
-      var c = document.getElementById("cantidad");
-      if(p && c) {
-          var vol = parseFloat(p.options[p.selectedIndex].getAttribute("data-volumen") || 0);
-          total = vol * (parseFloat(c.value) || 0);
-      }
+  var p = document.getElementById("presentacion");
+  var c = document.getElementById("cantidad");
+  
+  if(p && c && p.selectedIndex >= 0) {
+      var vol = parseFloat(p.options[p.selectedIndex].getAttribute("data-volumen") || 0);
+      total = vol * (parseFloat(c.value) || 0);
+  }
+  
+  // Buscar unidad real (L o Kg)
+  var unidad = "L";
+  var prodId = document.getElementById("producto").value;
+  if(window.CACHE_CATALOGOS && prodId) {
+      var prodData = window.CACHE_CATALOGOS.productos.find(x => x.id === prodId);
+      if(prodData && prodData.unidad) unidad = prodData.unidad;
   }
   
   var el = document.getElementById("infoTotal");
-  if(el) el.innerText = total.toFixed(2) + " L";
-  return total;
+  if(el) el.innerText = total.toFixed(2) + " " + unidad;
+  return { total: total, unidad: unidad };
 }
 
 function guardarEntradaDirecta() {
   var item = construirObjetoEntrada();
   if (!item) return;
   
-  if(typeof mostrarCargando === 'function') mostrarCargando("Guardando entrada...");
+  Swal.fire({ title: 'Procesando...', text: 'Registrando entrada en almacén...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
   
   google.script.run
-    .withSuccessHandler(function(response) {
-      if(typeof ocultarCargando === 'function') ocultarCargando();
-      mostrarToast("Entrada Guardada Correctamente ✅", "success");
+    .withSuccessHandler(function() {
+      Swal.fire("¡Éxito!", "Entrada registrada correctamente.", "success");
       limpiarFormularioEntrada();
       if(typeof recargarSelectores === 'function') recargarSelectores();
     })
     .withFailureHandler(function(err) {
-      if(typeof ocultarCargando === 'function') ocultarCargando();
-      mostrarToast("Error: " + err.message, "error");
+      Swal.fire("Error", err.message, "error");
     })
     .registrarEntradaUnica(item);
 }
@@ -49,45 +52,57 @@ function agregarColaEntrada() {
       renderizarColaEntrada();
   }
   
-  var ids = ["cantidad", "lote"];
-  ids.forEach(function(id) { var e = document.getElementById(id); if(e) e.value = ""; });
+  // Bloquear botón directo
+  var btnDir = document.getElementById("btn-entrada-directa");
+  if(btnDir) { btnDir.disabled = true; btnDir.style.opacity = '0.5'; }
+  
+  // Limpieza parcial
+  ["cantidad", "lote", "producto_search", "producto"].forEach(function(id) { 
+      var e = document.getElementById(id); if(e) e.value = ""; 
+  });
   
   var info = document.getElementById("infoTotal");
   if(info) info.innerText = "0 L";
   
-  var lot = document.getElementById("lote");
-  if(lot) lot.focus();
+  mostrarToast("Agregado a la lista de ingreso", "success");
+}
+
+function eliminarEnt(index) {
+  COLA_ENTRADAS.splice(index, 1);
+  renderizarColaEntrada();
   
-  mostrarToast("Agregado a la lista", "success");
+  // Desbloquear si está vacío
+  if(COLA_ENTRADAS.length === 0) {
+      var btnDir = document.getElementById("btn-entrada-directa");
+      if(btnDir) { btnDir.disabled = false; btnDir.style.opacity = '1'; }
+  }
 }
 
 function construirObjetoEntrada() {
-  var vol = calcularTotalEntrada();
-
-  if (!(vol > 0)) { 
-    mostrarToast("Cantidad inválida (0 L)", "error");
-    return null;
-  }
+  var calculo = calcularTotalEntrada();
+  if (!(calculo.total > 0)) { mostrarToast("Cantidad inválida", "error"); return null; }
   
   var elLote = document.getElementById("lote");
   var lote = elLote ? elLote.value.trim() : "";
+  if (!lote) { mostrarToast("Falta el Lote", "error"); if(elLote) elLote.focus(); return null; }
   
-  if (!lote || lote === "") {
-    mostrarToast("Falta el Lote", "error");
-    if(elLote) elLote.focus();
-    return null;
-  }
+  var pId = document.getElementById("producto").value;
+  var pName = document.getElementById("producto_search").value;
+  if (!pId) { mostrarToast("Selecciona un producto válido", "warning"); return null; }
   
-  var elElab = document.getElementById("elaboracion");
-  var fab = (elElab && elElab.value) ? elElab.value : "";
+  var fab = document.getElementById("elaboracion") ? document.getElementById("elaboracion").value : "";
   
   return {
-    producto_id: document.getElementById("producto").value,
-    nombre_producto: getTextoSelect("producto"),
+    producto_id: pId,
+    nombre_producto: pName,
     presentacion_id: document.getElementById("presentacion").value,
     nombre_presentacion: getTextoSelect("presentacion"),
+    
     ubicacion_id: document.getElementById("ubicacion").value,
-    volumen_L: vol,
+    nombre_ubicacion: getTextoSelect("ubicacion"), // <--- ¡ESTA ES LA LÍNEA MÁGICA QUE FALTABA!
+    
+    volumen_L: calculo.total,
+    unidad_medida: calculo.unidad,
     piezas: document.getElementById("cantidad").value,
     lote: lote,
     proveedor: document.getElementById("proveedor").value,
@@ -97,16 +112,18 @@ function construirObjetoEntrada() {
 }
 
 function limpiarFormularioEntrada() {
-  var ids = ["cantidad", "lote", "proveedor", "elaboracion", "producto", "presentacion", "ubicacion"];
-  ids.forEach(function(id) { var e = document.getElementById(id); if(e) e.value = ""; });
+  ["cantidad", "lote", "proveedor", "elaboracion", "producto", "producto_search", "presentacion", "ubicacion"].forEach(id => { 
+      var e = document.getElementById(id); if(e) e.value = ""; 
+  });
   var info = document.getElementById("infoTotal");
   if(info) info.innerText = "0 L";
+  
+  var btnDir = document.getElementById("btn-entrada-directa");
+  if(btnDir) { btnDir.disabled = false; btnDir.style.opacity = '1'; }
 }
 
 function procesarEntradas() {
   if (typeof COLA_ENTRADAS === 'undefined' || COLA_ENTRADAS.length === 0) return;
-  
-  // Preparamos el modal de confirmación
   var lbl = document.getElementById("lblCantMasiva");
   if(lbl) lbl.innerText = COLA_ENTRADAS.length + " partidas";
   abrirModalGenerico("modalConfirmarMasivo");
@@ -118,39 +135,24 @@ function renderizarColaEntrada() {
   }
 }
 
-// --- FUNCIÓN MODIFICADA CON ANIMACIÓN ---
 function ejecutarGuardadoMasivo() {
   if (typeof COLA_ENTRADAS === 'undefined' || COLA_ENTRADAS.length === 0) return;
-
-  // 1. Ocultar el modal de confirmación para que no estorbe
   cerrarModalGenerico("modalConfirmarMasivo");
 
-  // 2. ACTIVAR LA PANTALLA DE CARGA (Overlay blanco con spinner)
-  var loader = document.getElementById("global-loader");
-  if(loader) loader.style.display = "flex";
+  Swal.fire({ title: 'Procesando...', text: 'Ingresando lotes al almacén...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
   google.script.run
-    .withSuccessHandler(function(response) {
-       // 3. APAGAR PANTALLA DE CARGA
-       if(loader) loader.style.display = "none";
-
-       // Limpiar todo tras éxito
+    .withSuccessHandler(function() {
        COLA_ENTRADAS = []; 
        renderizarColaEntrada();
-       mostrarToast("¡Carga Masiva Exitosa! ✅", "success");
-       
-       // Recargar dashboard si aplica
+       limpiarFormularioEntrada();
+       Swal.fire("¡Éxito!", "Ingreso Masivo completado.", "success");
        if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
+       if(typeof recargarSelectores === 'function') recargarSelectores();
     })
     .withFailureHandler(function(err) {
-       // 3. APAGAR PANTALLA DE CARGA (Incluso si falla)
-       if(loader) loader.style.display = "none";
-       
-       mostrarToast("Error: " + err.message, "error");
-       // Volvemos a abrir el modal por si quiere reintentar
+       Swal.fire("Error", err.message, "error");
        abrirModalGenerico("modalConfirmarMasivo");
     })
     .registrarEntradaMasiva(COLA_ENTRADAS);
 }
-
-console.log("✅ FRONTEND: Lógica de Entradas cargada correctamente");

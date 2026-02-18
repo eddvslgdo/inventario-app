@@ -183,6 +183,7 @@ function cargarDashboardUbicaciones() {
     })
     .obtenerDatosUbicaciones();
 }
+
 function renderizarGridUbicaciones(lista) {
   var grid = document.getElementById("grid-ubicaciones");
   grid.innerHTML = "";
@@ -197,7 +198,6 @@ function renderizarGridUbicaciones(lista) {
     var card = document.createElement("div");
     card.className = "card-ubicacion";
     
-    // --- CABECERA (Nombre + Botones Editar/Borrar) ---
     var headerHtml = `
       <div class="card-header-ubic">
         <h4 class="card-title">${u.nombre}</h4>
@@ -208,30 +208,37 @@ function renderizarGridUbicaciones(lista) {
       </div>
     `;
 
-    // --- CUERPO (Clicable para ver detalle) ---
-    // Usamos un div separado para el onclick, así los botones de arriba no abren el detalle
+    // GENERAMOS LOS BADGES POR UNIDAD
+    let badgesHtml = "";
+    if (u.totales) {
+        if (u.totales.L > 0) badgesHtml += `<span class="ubic-badge" style="background:#e3f2fd; color:#007aff;">${u.totales.L.toFixed(2)} L</span>`;
+        if (u.totales.Kg > 0) badgesHtml += `<span class="ubic-badge" style="background:#fdf4e3; color:#d97706;">${u.totales.Kg.toFixed(2)} Kg</span>`;
+        if (u.totales.Pza > 0) badgesHtml += `<span class="ubic-badge" style="background:#f3e5f5; color:#9b59b6;">${Math.round(u.totales.Pza)} Pza</span>`;
+    }
+
     var bodyHtml = `
       <div class="card-body-ubic" onclick="verDetalleUbicacion('${u.id}')">
-         <div class="ubic-badge">${Number(u.totalVolumen).toFixed(2)} L</div>
+         <div style="margin-bottom:12px; display:flex; gap:6px; flex-wrap:wrap;">${badgesHtml}</div>
     `;
 
     if(u.items && u.items.length > 0) {
        bodyHtml += `<ul class="item-list">`;
        for(var j=0; j<Math.min(u.items.length, 3); j++){
-          bodyHtml += `<li><b>${u.items[j].producto}</b>: ${u.items[j].volumen} L</li>`;
+          let it = u.items[j];
+          let volDisplay = (it.unidad === 'Pza') ? Math.round(it.volumen) : it.volumen.toFixed(2);
+          bodyHtml += `<li><b>${it.producto}</b>: ${volDisplay} ${it.unidad}</li>`;
        }
        if(u.items.length > 3) bodyHtml += `<li style="color:#007aff; font-size:0.8rem;">+ ${u.items.length - 3} productos más...</li>`;
        bodyHtml += `</ul>`;
     } else {
        bodyHtml += `<div style="font-size:0.8rem; color:#999; font-style:italic; margin-top:5px;">(Vacío)</div>`;
     }
-    bodyHtml += `</div>`; // Cierra card-body-ubic
+    bodyHtml += `</div>`;
 
     card.innerHTML = headerHtml + bodyHtml;
     grid.appendChild(card);
   }
 }
-
 // --- 2. GESTIÓN (CREAR, EDITAR, BORRAR) ---
 
 function guardarUbicacion() {
@@ -309,24 +316,51 @@ function verDetalleUbicacion(idUbic) {
       if(!ubic.items || ubic.items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">Esta ubicación está vacía.<br><small>Usa "Entradas" para agregar stock aquí.</small></td></tr>';
       } else {
+        
+        // 1. ORDENAMOS EL INVENTARIO: Primero 'L', luego 'Kg', luego 'Pza'
+        const orden = { 'L': 1, 'Kg': 2, 'Pza': 3 };
+        ubic.items.sort((a, b) => {
+            let oA = orden[a.unidad] || 99;
+            let oB = orden[b.unidad] || 99;
+            if (oA !== oB) return oA - oB;
+            return a.producto.localeCompare(b.producto); // Si son iguales, ordena alfabético
+        });
+
+        let unidadActual = "";
+
+        // 2. DIBUJAMOS LA TABLA
         for(var k=0; k<ubic.items.length; k++){
            var item = ubic.items[k];
+
+           // INYECCIÓN DE SEPARADORES VISUALES
+           if (item.unidad !== unidadActual) {
+               unidadActual = item.unidad;
+               let lbl = "📦 PIEZAS (INDIVISIBLES)"; let colorSep = "#f3e5f5"; let textCol = "#8e24aa";
+               if (unidadActual === 'L') { lbl = "💧 VOLUMEN (LÍQUIDOS)"; colorSep = "#e3f2fd"; textCol = "#0277bd"; }
+               if (unidadActual === 'Kg') { lbl = "⚖️ MASA (SÓLIDOS)"; colorSep = "#fff8e1"; textCol = "#f57f17"; }
+               
+               var trSep = document.createElement("tr");
+               trSep.innerHTML = `<td colspan="5" style="background:${colorSep}; color:${textCol}; font-size:0.75rem; font-weight:800; padding:6px 12px; letter-spacing:1px; border-top: 2px solid ${textCol}30;">${lbl}</td>`;
+               tbody.appendChild(trSep);
+           }
+
+           // DIBUJAR FILA NORMAL
            var tr = document.createElement("tr");
            tr.style.borderBottom = "1px solid #eee";
+           tr.style.background = "#fff";
            
-           // Aseguramos que volumen_nominal exista
            var volUnit = item.volumen_nominal || 0; 
+           let volDisplay = (item.unidad === 'Pza') ? Math.round(item.volumen) : Number(item.volumen).toFixed(2);
 
            var row = '<td style="padding:12px;"><b>' + item.producto + '</b><br><small style="color:#666;">' + item.presentacion + '</small></td>';
            row += '<td style="padding:12px; color:#d63031; font-family:monospace; font-size:0.9rem;">' + item.lote + '</td>';
            row += '<td style="padding:12px; font-size:0.9rem;">' + (item.caducidad||'--') + '</td>';
-           row += '<td style="padding:12px; text-align:right;"><b>' + item.volumen + ' L</b></td>';
+           row += '<td style="padding:12px; text-align:right;"><b>' + volDisplay + ' ' + item.unidad + '</b></td>';
            row += '<td style="padding:12px; text-align:center;">';
            
-           // Botones de acción en tabla
            row += `<div style="display:flex; gap:5px; justify-content:center;">`;
            row += `<button class="btn-action btn-move" title="Transferir" onclick="abrirTransferencia('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit})">🔄</button>`;
-           row += `<button class="btn-action btn-transf" title="Transformar" onclick="abrirTransformacion('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit})">🛠️</button>`;
+           row += `<button class="btn-action btn-transf" title="Transformar" onclick="abrirTransformacion('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit}, '${item.unidad}')">🛠️</button>`;
            row += `</div></td>`;
            
            tr.innerHTML = row;
@@ -339,63 +373,77 @@ function verDetalleUbicacion(idUbic) {
 
 // --- 4. TRANSFERENCIA INTELIGENTE (MAX BUTTON) ---
 
-function abrirTransferencia(pId, pNom, lote, stock, uId, presId, volUnit) {
-  // Guardamos volUnit. Si viene 0 o null, intentamos buscarlo, si no, alertamos.
-  volUnit = Number(volUnit);
-  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit };
-  
-  document.getElementById("txtProductoTransf").innerText = pNom;
-  document.getElementById("txtLoteTransf").innerText = "Lote: " + lote;
-  document.getElementById("cantTransferir").value = "";
-  
-  // Reseteamos textos
-  document.getElementById("lblRestante").innerText = stock + " L";
-  document.getElementById("lblRestante").style.color = "#333";
-  document.getElementById("lblEquivalencia").innerText = "0 L";
-  
-  // CÁLCULO DEL MÁXIMO
-  // Si no tenemos volumen unitario, no podemos calcular piezas
-  var maxPzas = 0;
-  var textoMax = "(Sin volumen ref)";
-  
-  if (volUnit > 0) {
-      maxPzas = Math.floor(stock / volUnit);
-      textoMax = "(Máx: " + maxPzas + " pzas)";
+function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unidadOrigen) {
+  // 1. REGLA: Prohibido transformar piezas
+  if (unidadOrigen === 'Pza') {
+      return Swal.fire("Acción no permitida", "Los productos contabilizados por Pieza no se pueden transformar/reetiquetar. Utiliza la opción de 'Transferir'.", "warning");
   }
 
-  // Insertar/Actualizar el botón de Máximo
-  var label = document.querySelector("#modalTransferencia label");
-  var btnMax = document.getElementById("btnMaxTransf");
-  if (!btnMax) {
-      // Creamos el botón si no existe
-      label.insertAdjacentHTML('beforeend', ` <span id="btnMaxTransf" style="color:#007aff; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`);
-      btnMax = document.getElementById("btnMaxTransf"); // Recargar referencia
+  volUnit = Number(volUnit);
+  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit, unidad: unidadOrigen };
+  
+  document.getElementById("lblTransfOrigen").innerText = pNom;
+  document.getElementById("lblTransfLote").innerText = lote;
+  document.getElementById("cantTransfPiezas").value = "";
+  document.getElementById("lblTransfLitros").innerText = `0 ${unidadOrigen}`;
+  
+  // 2. FILTRAR SELECT DE PRODUCTOS (L solo con L, Kg solo con Kg)
+  let selProd = document.getElementById("selTransfNuevoProd");
+  if (selProd && window.CACHE_CATALOGOS) {
+      selProd.innerHTML = '<option value="">Selecciona...</option>';
+      let filtradosProd = window.CACHE_CATALOGOS.productos.filter(p => {
+          let uLow = (p.unidad || 'L').toLowerCase();
+          let pUni = 'L'; // Por defecto L
+          if (uLow.includes('kg') || uLow.includes('kilo')) pUni = 'Kg';
+          else if (uLow.includes('unid') || uLow.includes('pza') || uLow.includes('pieza')) pUni = 'Pza';
+          
+          return pUni === unidadOrigen; // Solo deja pasar los idénticos
+      });
+      
+      filtradosProd.forEach(p => {
+          let opt = document.createElement("option");
+          opt.value = p.id; opt.text = p.nombre; selProd.appendChild(opt);
+      });
+  }
+
+  // 3. FILTRAR SELECT DE PRESENTACIONES (Oculta las cajas si es L, y los litros si es Kg)
+  let selPres = document.getElementById("selTransfNuevaPres");
+  if (selPres && window.CACHE_CATALOGOS) {
+      selPres.innerHTML = '<option value="">Selecciona...</option>';
+      let presFiltradas = window.CACHE_CATALOGOS.presentaciones.filter(p => {
+          let n = p.nombre.toLowerCase();
+          let pUni = 'Extraño';
+          if (n.includes('kg') || n.includes('kilo') || n.includes('gramo') || n.includes('saco')) pUni = 'Kg';
+          else if (/\bl\b/.test(n) || /[0-9]l\b/.test(n) || n.includes('ml') || n.includes('litro') || n.includes('galón') || n.includes('tambo')) pUni = 'L';
+          else if (n.includes('pza') || n.includes('pieza') || n.includes('caja') || n.includes('unid')) pUni = 'Pza';
+          
+          return pUni === unidadOrigen || pUni === 'Extraño'; // Permite pasar los extraños para no bloquear al usuario por error
+      });
+      
+      presFiltradas.forEach(p => {
+          let opt = document.createElement("option");
+          opt.value = p.id; opt.text = p.nombre; opt.setAttribute("data-volumen", p.volumen || 0);
+          selPres.appendChild(opt);
+      });
   }
   
-  // Configurar el botón
-  if(btnMax) {
-      btnMax.innerText = textoMax;
-      btnMax.onclick = function() {
-          if (volUnit <= 0) { Swal.fire("Error", "No se detectó el volumen por pieza de este producto.", "error"); return; }
-          document.getElementById("cantTransferir").value = maxPzas;
-          calcularSimulacionTransferencia(); // Recalcular visuales
+  var maxPzas = (volUnit > 0) ? Math.floor(stock / volUnit) : 0;
+  var btnMax2 = document.getElementById("btnMaxTransf2");
+  if (!btnMax2) {
+      var label = document.querySelector("#modalTransformacion label");
+      if(label) label.insertAdjacentHTML('beforeend', ` <span id="btnMaxTransf2" style="color:#9b59b6; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`);
+      btnMax2 = document.getElementById("btnMaxTransf2");
+  }
+  if(btnMax2) {
+      btnMax2.innerText = "(Máx: " + maxPzas + ")";
+      btnMax2.onclick = function() {
+          if (volUnit <= 0) return;
+          document.getElementById("cantTransfPiezas").value = maxPzas;
+          calcTransf();
       };
   }
 
-  // Llenar Select Destino
-  var selDest = document.getElementById("selDestinoTransf");
-  if(selDest) {
-      selDest.innerHTML = '<option value="">Selecciona destino...</option>';
-      for(var i=0; i<CACHE_UBICACIONES.length; i++) {
-          var u = CACHE_UBICACIONES[i];
-          if(String(u.id) !== String(uId)) {
-              var opt = document.createElement("option");
-              opt.value = u.id; opt.text = u.nombre; selDest.appendChild(opt);
-          }
-      }
-  }
-  
-  if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalTransferencia");
+  if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalTransformacion");
 }
 
 function calcularSimulacionTransferencia() {
@@ -445,28 +493,43 @@ function confirmarTransferencia() {
 
 // --- 5. TRANSFORMACIÓN (También actualizada) ---
 
-function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit) {
+function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unidadOrigen) {
+  // 1. REGLA DE NEGOCIO: Prohibido transformar piezas
+  if (unidadOrigen === 'Pza') {
+      return Swal.fire("Acción no permitida", "Los productos contabilizados por Pieza no se pueden transformar/reetiquetar. Utiliza la opción de 'Transferir'.", "warning");
+  }
+
   volUnit = Number(volUnit);
-  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit };
+  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit, unidad: unidadOrigen };
   
   document.getElementById("lblTransfOrigen").innerText = pNom;
   document.getElementById("lblTransfLote").innerText = lote;
   document.getElementById("cantTransfPiezas").value = "";
-  document.getElementById("lblTransfLitros").innerText = "0 L";
+  document.getElementById("lblTransfLitros").innerText = `0 ${unidadOrigen}`;
   
-  // Botón Máximo Transformación
-  var label = document.querySelector("#modalTransformacion label");
-  var btnMax2 = document.getElementById("btnMaxTransf2");
+  // 2. FILTRAR EL SELECT PARA QUE SOLO MUESTRE LA MISMA UNIDAD (L con L, Kg con Kg)
+  let selProd = document.getElementById("selTransfNuevoProd");
+  if (selProd && window.CACHE_CATALOGOS) {
+      selProd.innerHTML = '<option value="">Selecciona...</option>';
+      let filtrados = window.CACHE_CATALOGOS.productos.filter(p => {
+          let uLow = (p.unidad || 'L').toLowerCase();
+          let pUni = (uLow.includes('kg') || uLow.includes('kilo')) ? 'Kg' : 'L'; // Sabemos que no es Pza
+          return pUni === unidadOrigen; 
+      });
+      
+      filtrados.forEach(p => {
+          let opt = document.createElement("option");
+          opt.value = p.id; opt.text = p.nombre; selProd.appendChild(opt);
+      });
+  }
   
-  // Calculamos máximo
   var maxPzas = (volUnit > 0) ? Math.floor(stock / volUnit) : 0;
-  
+  var btnMax2 = document.getElementById("btnMaxTransf2");
   if (!btnMax2) {
-      // Truco para insertar después del label "A tomar (Piezas):"
+      var label = document.querySelector("#modalTransformacion label");
       if(label) label.insertAdjacentHTML('beforeend', ` <span id="btnMaxTransf2" style="color:#9b59b6; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`);
       btnMax2 = document.getElementById("btnMaxTransf2");
   }
-  
   if(btnMax2) {
       btnMax2.innerText = "(Máx: " + maxPzas + ")";
       btnMax2.onclick = function() {
@@ -480,16 +543,16 @@ function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit) {
 }
 
 function calcTransf() {
+  if(!TEMP_ACCION) return;
   var pzas = parseFloat(document.getElementById("cantTransfPiezas").value) || 0;
   var lts = pzas * TEMP_ACCION.volUnit;
   
   var elLit = document.getElementById("lblTransfLitros"); 
   if(elLit) {
-      elLit.innerText = lts.toFixed(2) + " L";
+      elLit.innerText = lts.toFixed(2) + " " + TEMP_ACCION.unidad;
       elLit.style.color = (lts > TEMP_ACCION.stock + 0.001) ? "red" : "#9b59b6";
   }
   
-  // Proyección destino
   var selD = document.getElementById("selTransfNuevaPres");
   var volD = 0;
   if(selD && selD.selectedIndex>=0) volD=parseFloat(selD.options[selD.selectedIndex].getAttribute("data-volumen"))||0;

@@ -18,8 +18,8 @@ window.cambiarVista = function (vistaId) {
 
   // --- 4. LÓGICA DE CARGA Y LIMPIEZA POR PESTAÑA ---
 
-  if (vistaId === 'vista-operacion') {
-      // Limpieza total de ENTRADAS (Borra tabla, carrito y formulario)
+if (vistaId === 'vista-operacion') {
+      if (typeof recargarSelectores === 'function') recargarSelectores(); // <--- Auto actualiza al entrar
       if (typeof COLA_ENTRADAS !== 'undefined') {
           COLA_ENTRADAS = [];
           if (typeof renderizarColaEntrada === 'function') renderizarColaEntrada();
@@ -62,8 +62,31 @@ function recargarSelectores() {
       }).obtenerListaClientes();
   }
 }
-
 function llenarSelects(data) {
+  window.CACHE_CATALOGOS = data; 
+
+  // 1. Llenar Autocomplete de ENTRADAS (Todos los productos)
+  let dlEnt = document.getElementById("lista-productos-datalist");
+  if(dlEnt) {
+     dlEnt.innerHTML = "";
+     data.productos.forEach(p => {
+         let opt = document.createElement("option");
+         opt.value = p.nombre;
+         dlEnt.appendChild(opt);
+     });
+  }
+
+  // 2. Llenar Autocomplete de SALIDAS (SOLO LOS QUE TIENEN STOCK > 0)
+  let dlSal = document.getElementById("lista-productos-salida-datalist");
+  if(dlSal) {
+     dlSal.innerHTML = "";
+     const productosConStock = data.productos.filter(p => p.stockTotal > 0.001);
+     productosConStock.forEach(p => {
+         let opt = document.createElement("option");
+         opt.value = p.nombre;
+         dlSal.appendChild(opt);
+     });
+  }
   // 1. Entradas: Muestra TODOS los productos
   poblarSelect("producto", data.productos);
   poblarSelect("ubicacion", data.ubicaciones);
@@ -170,4 +193,143 @@ function getTextoSelect(id) {
   return s && s.options.length > 0 && s.selectedIndex >= 0
     ? s.options[s.selectedIndex].text
     : "";
+}
+
+// --- 1. BUSCADOR INTELIGENTE ACTUALIZADO ---
+function seleccionarProductoDesdeBusqueda() {
+    let searchVal = document.getElementById('producto_search').value.trim();
+    let hiddenId = document.getElementById('producto');
+    
+    // Si el usuario borra el texto, limpiamos la memoria y restauramos TODAS las presentaciones
+    if(searchVal === "") {
+        hiddenId.value = "";
+        filtrarPresentacionesPorUnidad(""); // Restaura la lista completa
+        if(typeof calcularTotalEntrada === 'function') calcularTotalEntrada();
+        return;
+    }
+
+    if(!window.CACHE_CATALOGOS) return;
+    
+    let prod = window.CACHE_CATALOGOS.productos.find(p => p.nombre.toUpperCase() === searchVal.toUpperCase());
+    
+    if(prod) {
+        hiddenId.value = prod.id; 
+        document.getElementById('producto_search').value = prod.nombre; 
+        
+        // MAGIA: Filtramos la lista de presentaciones basándonos en la unidad del producto
+        filtrarPresentacionesPorUnidad(prod.unidad);
+
+        if(typeof calcularTotalEntrada === 'function') calcularTotalEntrada(); 
+    } else {
+        hiddenId.value = "";
+        Swal.fire({
+            title: 'Producto no encontrado',
+            text: `El producto "${searchVal}" no existe. ¿Deseas registrarlo?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#007aff',
+            confirmButtonText: 'Sí, crear nuevo'
+        }).then((res) => {
+            if(res.isConfirmed) {
+                document.getElementById("nuevoNombre").value = searchVal.toUpperCase();
+                abrirModalGenerico('modalProducto'); 
+            }
+        });
+        filtrarPresentacionesPorUnidad(""); // Restaura lista
+        if(typeof calcularTotalEntrada === 'function') calcularTotalEntrada();
+    }
+}
+
+// --- 2. NUEVO: FILTRO DINÁMICO DE PRESENTACIONES ---
+function filtrarPresentacionesPorUnidad(unidad) {
+    const select = document.getElementById("presentacion");
+    if (!select || !window.CACHE_CATALOGOS) return;
+
+    // Limpiamos el menú desplegable
+    select.innerHTML = '<option value="">Selecciona...</option>';
+    let presCache = window.CACHE_CATALOGOS.presentaciones;
+
+    // Si no hay unidad (ej. borraron el texto), mostramos todas
+    if (!unidad || unidad === "") {
+        presCache.forEach(p => {
+            let opt = document.createElement("option");
+            opt.value = p.id; opt.text = p.nombre; opt.setAttribute("data-volumen", p.volumen || 0);
+            select.appendChild(opt);
+        });
+        return;
+    }
+
+    let uniStr = String(unidad).toLowerCase().trim();
+    let compatibles = [];
+
+    // Escaneamos cada presentación para ver si coincide con L, Kg o Piezas
+    presCache.forEach(p => {
+        let n = p.nombre.toLowerCase();
+        let pasaFiltro = false;
+
+        if (uniStr === 'kg' || uniStr === 'kilogramos') {
+            if (n.includes('kg') || n.includes('kilo') || n.includes('gramo') || n.includes('saco')) pasaFiltro = true;
+        } 
+        else if (uniStr === 'l' || uniStr === 'litros') {
+            // Busca 'l' sola, '1l', 'ml', 'litro', 'galon', 'tambo'
+            if (/\bl\b/.test(n) || /[0-9]l\b/.test(n) || n.includes('ml') || n.includes('litro') || n.includes('galón') || n.includes('tambo')) pasaFiltro = true;
+        } 
+        else if (uniStr === 'unid' || uniStr === 'pza' || uniStr === 'unidad') {
+            if (n.includes('pza') || n.includes('pieza') || n.includes('caja') || n.includes('unid')) pasaFiltro = true;
+        } 
+        else {
+            pasaFiltro = true; // Si es una unidad extraña, mostramos todo para no bloquear
+        }
+
+        if (pasaFiltro) compatibles.push(p);
+    });
+
+    // SISTEMA ANTI-BLOQUEO: Si el filtro fue tan estricto que borró absolutamente todo, 
+    // mejor mostramos la lista completa para permitirle al usuario trabajar.
+    let listaMostrar = compatibles.length > 0 ? compatibles : presCache;
+
+    // Inyectamos las opciones sobrevivientes
+    listaMostrar.forEach(item => {
+        let opt = document.createElement("option");
+        opt.value = item.id;
+        opt.text = item.nombre;
+        opt.setAttribute("data-volumen", item.volumen || 0);
+        select.appendChild(opt);
+    });
+}
+
+// --- LOGICA DEL BUSCADOR DE SALIDAS ---
+function seleccionarProductoSalidaDesdeBusqueda() {
+    let searchVal = document.getElementById('sal_producto_search').value.trim();
+    let hiddenId = document.getElementById('sal_producto');
+    let divDisp = document.getElementById("div-disponibilidad");
+    
+    // Si borran el texto, escondemos la tabla de sugerencias
+    if(searchVal === "") {
+        hiddenId.value = "";
+        if (typeof limpiarCamposSalidaParcial === 'function') limpiarCamposSalidaParcial();
+        if (divDisp) { divDisp.innerHTML = ""; divDisp.style.display = "none"; }
+        return;
+    }
+
+    if(!window.CACHE_CATALOGOS) return;
+    
+    // Buscamos validando que de verdad tenga stock
+    let prod = window.CACHE_CATALOGOS.productos.find(p => p.nombre.toUpperCase() === searchVal.toUpperCase() && p.stockTotal > 0.001);
+    
+    if(prod) {
+        hiddenId.value = prod.id; 
+        document.getElementById('sal_producto_search').value = prod.nombre; 
+        
+        // ¡Si existe y tiene stock, mandamos a dibujar la tabla FIFO!
+        if(typeof aplicarFIFO === 'function') aplicarFIFO(); 
+    } else {
+        // Si escribe algo raro o sin stock, bloqueamos
+        hiddenId.value = "";
+        Swal.fire("Atención", "Este producto no existe o actualmente no tiene stock en el almacén.", "warning");
+        document.getElementById('sal_producto_search').value = "";
+        
+        if (typeof limpiarCamposSalidaParcial === 'function') limpiarCamposSalidaParcial();
+        if (divDisp) { divDisp.innerHTML = ""; divDisp.style.display = "none"; }
+    }
 }
