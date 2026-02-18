@@ -1819,6 +1819,455 @@ tr.fila-bloqueada {
     font-size: 1.1rem;
 }
 
+/* =========================================================
+   DISEÑO PROFESIONAL COMPACTO (PRODUCTOS V3)
+   ========================================================= */
+
+.inventory-group {
+    margin-bottom: 12px;
+}
+
+/* Encabezados de Acordeón */
+.group-accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    border-left-width: 4px;
+    cursor: pointer;
+    background: white;
+    transition: background-color 0.2s;
+    user-select: none;
+}
+.group-accordion-header:hover { filter: brightness(0.97); }
+
+.group-title-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.group-chevron {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+.group-total-badge {
+    background: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    border: 1px solid;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+/* Contenedor y Tarjetas Compactas */
+.group-accordion-content {
+    padding: 10px 0 10px 10px; /* Indentación visual sutil */
+}
+
+.product-card-compact {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    transition: border-color 0.2s;
+}
+.product-card-compact:hover { border-color: #cbd5e1; }
+
+.card-indicator {
+    position: absolute;
+    left: 0; top: 0; bottom: 0; width: 3px;
+}
+
+.card-header-compact {
+    padding: 12px 16px 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.info-main .prod-title {
+    margin: 0 0 2px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.info-main .prod-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.info-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.prod-stock {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+.prod-stock span { font-size: 0.75rem; color: #64748b; font-weight: 600; }
+
+.btn-detalles-compact {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Tabla de Detalles Interna */
+.card-body-compact {
+    border-top: 1px solid #f1f5f9;
+    background: #f8fafc;
+    padding: 12px 16px;
+}
+.table-compact {
+    width: 100%;
+    border-collapse: collapse;
+}
+.table-compact th {
+    text-align: left;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.table-compact td {
+    padding: 8px 0;
+    font-size: 0.85rem;
+    color: #334155;
+    border-bottom: 1px dashed #e2e8f0;
+}
+.table-compact tr:last-child td { border-bottom: none; }
+
+.td-ubic { font-weight: 600; color: #475569; }
+.td-pres { color: #334155; }
+.lote-tag {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+.alias-tag {
+    display: inline-block;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-top: 2px;
+}
+.td-cad { font-size: 0.8rem; color: #64748b; }
+.td-cant { text-align: right; font-weight: 700; color: #0f172a; }
+
+/* --- RESPONSIVE MOBILE --- */
+@media only screen and (max-width: 600px) {
+    .card-header-compact {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .info-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .table-compact thead { display: none; }
+    .table-compact tr {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        padding: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+    .table-compact td {
+        display: flex;
+        justify-content: space-between;
+        border: none;
+        padding: 4px 0;
+    }
+    .table-compact td::before { color:#94a3b8; font-size:0.75rem; font-weight:600; }
+    
+    .table-compact td:nth-child(1)::before { content: "Ubicación:"; }
+    .table-compact td:nth-child(2) { flex-direction: column; align-items: flex-end; }
+    .table-compact td:nth-child(2)::before { content: "Presentación:"; width:100%; text-align:left; margin-bottom:2px;}
+    .table-compact td:nth-child(3)::before { content: "Lote:"; }
+    .table-compact td:nth-child(4)::before { content: "Caducidad:"; }
+    .table-compact td:nth-child(5) { 
+        border-top: 1px dashed #e2e8f0; 
+        margin-top: 4px; 
+        padding-top: 8px; 
+        font-size: 1rem;
+    }
+    .table-compact td:nth-child(5)::before { content: "Stock:"; margin-top:2px; }
+}
+
+/* =========================================================
+   CABECERA DE INVENTARIO (REDDISEÑO)
+   ========================================================= */
+.page-header-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 5px 15px rgba(0,0,0,0.02);
+    border: 1px solid #e2e8f0;
+    overflow: hidden; /* Para que los hijos respeten el borde redondeado */
+}
+
+/* --- NIVEL 1: Título y Exportar --- */
+.header-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #f8fafc;
+}
+.title-block {
+    display: flex; align-items: center; gap: 10px;
+}
+.title-icon { font-size: 1.8rem; }
+
+.btn-export-modern {
+    background: #059669; /* Verde esmeralda profesional */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+    transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 8px;
+}
+.btn-export-modern:hover { background: #047857; transform: translateY(-1px); }
+.btn-export-modern:active { transform: translateY(0); }
+
+
+/* --- NIVEL 2: Barra de Herramientas --- */
+.toolbar-row {
+    padding: 12px 20px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: white;
+}
+
+/* Buscador Moderno */
+.search-modern-wrapper {
+    flex: 2; /* Toma más espacio */
+    position: relative;
+    min-width: 250px;
+}
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+.input-modern-search {
+    width: 100%;
+    padding: 10px 12px 10px 36px; /* Espacio para el icono */
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #334155;
+    background: #f8fafc;
+    transition: all 0.2s;
+    outline: none;
+    box-sizing: border-box; /* IMPORTANTE PARA INPUTS AL 100% */
+}
+.input-modern-search:focus {
+    background: white;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Filtros Toggle */
+.filters-wrapper {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+    min-width: 280px;
+    justify-content: flex-end;
+}
+
+.btn-filter-toggle {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 6px;
+    user-select: none;
+}
+.btn-filter-toggle:hover { background: #f1f5f9; }
+
+/* Estados Activos de los Filtros */
+.btn-filter-toggle.btn-stock.active {
+    background: #fffbeb; border-color: #f59e0b; color: #d97706;
+    box-shadow: 0 1px 2px rgba(245, 158, 11, 0.1);
+}
+.btn-filter-toggle.btn-cad.active {
+    background: #fef2f2; border-color: #ef4444; color: #b91c1c;
+    box-shadow: 0 1px 2px rgba(239, 68, 68, 0.1);
+}
+
+@media only screen and (max-width: 600px) {
+    .header-title-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .btn-export-modern { width: 100%; justify-content: center; }
+    .toolbar-row { flex-direction: column; }
+    .search-modern-wrapper, .filters-wrapper { width: 100%; min-width: 0; }
+    .filters-wrapper { justify-content: space-between; }
+    .btn-filter-toggle { flex: 1; justify-content: center; }
+}
+
+/* =========================================================
+   BARRA DE HERRAMIENTAS DE INVENTARIO (PERFECT PIXEL)
+   ========================================================= */
+.inventory-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center; /* ESTO CENTRA TODO VERTICALMENTE A LA PERFECCIÓN */
+    padding: 15px 25px;
+    flex-wrap: nowrap;
+    overflow-x: auto; 
+}
+
+/* --- Botones de Filtro --- */
+.toolbar-filters {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.toolbar-btn {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease; /* LA ANIMACIÓN FLUIDA ESTÁ AQUÍ */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px; /* ALTURA FIJA ESTRICTA */
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    white-space: nowrap;
+}
+.toolbar-btn:hover { background: #f8fafc; }
+
+/* Estados Activos (Cuando haces clic) */
+.toolbar-btn.btn-stock .icon { color: #f59e0b; font-size: 1rem; transition: transform 0.2s; }
+.toolbar-btn.btn-stock.active {
+    background: #fffbeb;
+    border-color: #f59e0b;
+    color: #d97706;
+    box-shadow: inset 0 0 0 1px #f59e0b;
+}
+
+.toolbar-btn.btn-cad .icon { color: #d97706; font-size: 1rem; transition: transform 0.2s; }
+.toolbar-btn.btn-cad.active {
+    background: #fef2f2;
+    border-color: #ef4444;
+    color: #b91c1c;
+    box-shadow: inset 0 0 0 1px #ef4444;
+}
+
+/* Efecto de presionar */
+.toolbar-btn:active { transform: scale(0.97); }
+
+/* --- Buscador --- */
+.toolbar-search {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 40px; /* MISMA ALTURA FIJA ESTRICTA */
+}
+.toolbar-search .search-icon {
+    position: absolute;
+    left: 14px;
+    color: #64748b;
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+.search-input-box {
+    margin: 0;
+    border: 1px solid #e2e8f0;
+    height: 100%; /* Se adapta a los 40px del padre */
+    width: 100%;
+    padding: 0 15px 0 40px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    color: #334155;
+    background: #ffffff;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.01);
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.search-input-box:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* --- Botón Excel --- */
+.toolbar-btn-export {
+    background: #22c55e;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    height: 40px; /* MISMA ALTURA FIJA ESTRICTA */
+    font-size: 0.9rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(34, 197, 94, 0.25);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+.toolbar-btn-export:hover { background: #16a34a; transform: translateY(-1px); }
+.toolbar-btn-export:active { transform: translateY(0); }
+.toolbar-btn-export .icon { font-size: 1.05rem; }
+
 </style>
 
 

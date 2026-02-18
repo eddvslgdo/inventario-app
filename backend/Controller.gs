@@ -52,53 +52,21 @@ function _fmtFechaDisplay(valor) {
 // 1. CATÁLOGOS
 // ==========================================
 function obtenerCatalogos() {
-  const sProd = obtenerHojaOCrear('PRODUCTOS', ['ID', 'NOMBRE', 'DESCRIPCION', 'UNIDAD']);
-  const sPres = obtenerHojaOCrear('PRESENTACIONES', ['ID', 'NOMBRE', 'VOLUMEN']);
-  const sUbic = obtenerHojaOCrear('UBICACIONES', ['ID', 'NOMBRE']);
-  const sInv = obtenerHojaOCrear('INVENTARIO', []); 
-  
+  const sProd = obtenerHojaOCrear("PRODUCTOS", [
+    "ID",
+    "NOMBRE",
+    "DESCRIPCION",
+    "UNIDAD",
+  ]);
+  const sPres = obtenerHojaOCrear("PRESENTACIONES", [
+    "ID",
+    "NOMBRE",
+    "VOLUMEN",
+  ]);
+  const sUbic = obtenerHojaOCrear("UBICACIONES", ["ID", "NOMBRE"]);
+  const sInv = obtenerHojaOCrear("INVENTARIO", []);
+
   const leer = (s, esPres) => {
-    if (!s || s.getLastRow() < 2) return [];
-    return s.getDataRange().getValues().slice(1).map(r => ({
-      id: String(r[0]).trim(), 
-      nombre: r[1], 
-      volumen: esPres ? (Number(r[2]) || 0) : 0,
-      unidad: esPres ? "" : (r[3] || "L") // <--- Aquí ya lee si es L, Kg o Pza
-    })).filter(i => i.id);
-  };
-
-  let productos = leer(sProd);
-  const presentaciones = leer(sPres, true);
-  const ubicaciones = leer(sUbic);
-
-  // --- Calcular stock total por producto ---
-  let stockPorProducto = {};
-  if (sInv && sInv.getLastRow() > 1) {
-     const dataInv = sInv.getDataRange().getValues();
-     for(let i=1; i<dataInv.length; i++) {
-        const pId = String(dataInv[i][0]).trim();
-        const stock = Number(dataInv[i][3]) || 0;
-        if (!stockPorProducto[pId]) stockPorProducto[pId] = 0;
-        stockPorProducto[pId] += stock;
-     }
-  }
-
-  // Adjuntar el stock a cada producto
-  productos = productos.map(p => {
-     p.stockTotal = stockPorProducto[p.id] || 0;
-     return p;
-  });
-
-  return { productos: productos, presentaciones: presentaciones, ubicaciones: ubicaciones };
-}
-
-// ==========================================
-// 1. CATÁLOGOS
-// ==========================================
-// ==========================================
-// 1. CATÁLOGOS
-// ==========================================
-const leer = (s, esPres) => {
     if (!s || s.getLastRow() < 2) return [];
     return s
       .getDataRange()
@@ -108,10 +76,60 @@ const leer = (s, esPres) => {
         id: String(r[0]).trim(),
         nombre: r[1],
         volumen: esPres ? Number(r[2]) || 0 : 0,
-        unidad: esPres ? "" : (r[3] || "L") // <--- AHORA LEE LA UNIDAD (L, Kg, Pza)
+        unidad: esPres ? "" : r[3] || "L", // <--- Aquí ya lee si es L, Kg o Pza
       }))
       .filter((i) => i.id);
   };
+
+  let productos = leer(sProd);
+  const presentaciones = leer(sPres, true);
+  const ubicaciones = leer(sUbic);
+
+  // --- Calcular stock total por producto ---
+  let stockPorProducto = {};
+  if (sInv && sInv.getLastRow() > 1) {
+    const dataInv = sInv.getDataRange().getValues();
+    for (let i = 1; i < dataInv.length; i++) {
+      const pId = String(dataInv[i][0]).trim();
+      const stock = Number(dataInv[i][3]) || 0;
+      if (!stockPorProducto[pId]) stockPorProducto[pId] = 0;
+      stockPorProducto[pId] += stock;
+    }
+  }
+
+  // Adjuntar el stock a cada producto
+  productos = productos.map((p) => {
+    p.stockTotal = stockPorProducto[p.id] || 0;
+    return p;
+  });
+
+  return {
+    productos: productos,
+    presentaciones: presentaciones,
+    ubicaciones: ubicaciones,
+  };
+}
+
+// ==========================================
+// 1. CATÁLOGOS
+// ==========================================
+// ==========================================
+// 1. CATÁLOGOS
+// ==========================================
+const leer = (s, esPres) => {
+  if (!s || s.getLastRow() < 2) return [];
+  return s
+    .getDataRange()
+    .getValues()
+    .slice(1)
+    .map((r) => ({
+      id: String(r[0]).trim(),
+      nombre: r[1],
+      volumen: esPres ? Number(r[2]) || 0 : 0,
+      unidad: esPres ? "" : r[3] || "L", // <--- AHORA LEE LA UNIDAD (L, Kg, Pza)
+    }))
+    .filter((i) => i.id);
+};
 
 function obtenerListaClientes() {
   const s = obtenerHojaOCrear("CLIENTES", [
@@ -142,37 +160,62 @@ function obtenerListaClientes() {
 // 2. GESTIÓN DE INVENTARIO (CONSOLIDACIÓN)
 // ==========================================
 function obtenerDatosUbicaciones() {
-  const sInv = obtenerHojaOCrear("INVENTARIO", ["ID_PROD", "ID_PRES", "ID_UBIC", "STOCK", "CADUCIDAD", "ELABORACION", "LOTE", "F_ENTRADA", "PROVEEDOR"]);
+  const sInv = obtenerHojaOCrear("INVENTARIO", [
+    "ID_PROD",
+    "ID_PRES",
+    "ID_UBIC",
+    "STOCK",
+    "CADUCIDAD",
+    "ELABORACION",
+    "LOTE",
+    "F_ENTRADA",
+    "PROVEEDOR",
+  ]);
   const sUbic = obtenerHojaOCrear("UBICACIONES", []);
   const sProd = obtenerHojaOCrear("PRODUCTOS", []);
   const sPres = obtenerHojaOCrear("PRESENTACIONES", []);
 
-  const mapProd = {}, mapPres = {}, mapPresVol = {};
+  const mapProd = {},
+    mapPres = {},
+    mapPresVol = {};
 
   if (sProd.getLastRow() > 1) {
-    sProd.getDataRange().getValues().slice(1).forEach((r) => {
-      mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: r[3] || 'L' };
-    });
+    sProd
+      .getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => {
+        mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: r[3] || "L" };
+      });
   }
 
   if (sPres.getLastRow() > 1) {
-    sPres.getDataRange().getValues().slice(1).forEach((r) => {
-      const id = String(r[0]).trim();
-      mapPres[id] = r[1];
-      mapPresVol[id] = Number(r[2]) || 0;
-    });
+    sPres
+      .getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => {
+        const id = String(r[0]).trim();
+        mapPres[id] = r[1];
+        mapPresVol[id] = Number(r[2]) || 0;
+      });
   }
 
   let ubicaciones = [];
   if (sUbic.getLastRow() > 1) {
-    sUbic.getDataRange().getValues().slice(1).forEach((r) => {
-      if (r[0]) ubicaciones.push({
-        id: String(r[0]).trim(),
-        nombre: r[1] || "S/N",
-        items: [],
-        totales: { L: 0, Kg: 0, Pza: 0 } // SEPARAMOS LOS TOTALES
+    sUbic
+      .getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => {
+        if (r[0])
+          ubicaciones.push({
+            id: String(r[0]).trim(),
+            nombre: r[1] || "S/N",
+            items: [],
+            totales: { L: 0, Kg: 0, Pza: 0 }, // SEPARAMOS LOS TOTALES
+          });
       });
-    });
   }
 
   if (sInv.getLastRow() > 1) {
@@ -183,7 +226,12 @@ function obtenerDatosUbicaciones() {
         const uId = String(dInv[i][2]).trim();
         let ubic = ubicaciones.find((u) => u.id === uId);
         if (!ubic) {
-          ubic = { id: uId, nombre: "Ubic: " + uId, items: [], totales: { L: 0, Kg: 0, Pza: 0 } };
+          ubic = {
+            id: uId,
+            nombre: "Ubic: " + uId,
+            items: [],
+            totales: { L: 0, Kg: 0, Pza: 0 },
+          };
           ubicaciones.push(ubic);
         }
 
@@ -192,28 +240,45 @@ function obtenerDatosUbicaciones() {
         const lote = String(dInv[i][6]).trim();
         const caducidadStr = _fmtFechaDisplay(dInv[i][4]);
 
-        const prodData = mapProd[pId] || { nombre: pId, unidad: 'L' };
+        const prodData = mapProd[pId] || { nombre: pId, unidad: "L" };
         const nProd = prodData.nombre;
-        
+
         // Estandarizamos la unidad a L, Kg o Pza
         let unidadRaw = String(prodData.unidad).toLowerCase();
-        let uLower = 'L';
-        if(unidadRaw.includes('unid') || unidadRaw.includes('pza') || unidadRaw.includes('pieza')) uLower = 'Pza';
-        else if (unidadRaw.includes('kg') || unidadRaw.includes('kilo')) uLower = 'Kg';
+        let uLower = "L";
+        if (
+          unidadRaw.includes("unid") ||
+          unidadRaw.includes("pza") ||
+          unidadRaw.includes("pieza")
+        )
+          uLower = "Pza";
+        else if (unidadRaw.includes("kg") || unidadRaw.includes("kilo"))
+          uLower = "Kg";
 
         const nPres = mapPres[prId] || prId;
 
         let itemExistente = ubic.items.find(
-          (it) => it.raw_producto_id === pId && it.raw_presentacion_id === prId && it.lote === lote && it.caducidad === caducidadStr
+          (it) =>
+            it.raw_producto_id === pId &&
+            it.raw_presentacion_id === prId &&
+            it.lote === lote &&
+            it.caducidad === caducidadStr,
         );
 
         if (itemExistente) {
           itemExistente.volumen += stock;
         } else {
           ubic.items.push({
-            raw_producto_id: pId, producto: nProd, raw_presentacion_id: prId, presentacion: nPres,
-            lote: lote, volumen: stock, volumen_nominal: mapPresVol[prId] || 0,
-            caducidad: caducidadStr, nombre_completo: `${nProd} (${nPres})`, unidad: uLower // Guardamos la unidad del item
+            raw_producto_id: pId,
+            producto: nProd,
+            raw_presentacion_id: prId,
+            presentacion: nPres,
+            lote: lote,
+            volumen: stock,
+            volumen_nominal: mapPresVol[prId] || 0,
+            caducidad: caducidadStr,
+            nombre_completo: `${nProd} (${nPres})`,
+            unidad: uLower, // Guardamos la unidad del item
           });
         }
         // Sumamos a la canasta que corresponde
@@ -229,16 +294,32 @@ function obtenerDatosProductos() {
   const sInv = obtenerHojaOCrear("INVENTARIO", []);
   if (sInv.getLastRow() < 2) return [];
 
-  const mapProd = {}, mapUbic = {}, mapPres = {};
-  const sP = obtenerHojaOCrear("PRODUCTOS", []), sU = obtenerHojaOCrear("UBICACIONES", []), sPr = obtenerHojaOCrear("PRESENTACIONES", []);
+  const mapProd = {},
+    mapUbic = {},
+    mapPres = {};
+  const sP = obtenerHojaOCrear("PRODUCTOS", []),
+    sU = obtenerHojaOCrear("UBICACIONES", []),
+    sPr = obtenerHojaOCrear("PRESENTACIONES", []);
 
   if (sP.getLastRow() > 1) {
-    sP.getDataRange().getValues().slice(1).forEach((r) => {
-      mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: r[3] || 'L' };
-    });
+    sP.getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => {
+        mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: r[3] || "L" };
+      });
   }
-  if (sU.getLastRow() > 1) sU.getDataRange().getValues().slice(1).forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
-  if (sPr.getLastRow() > 1) sPr.getDataRange().getValues().slice(1).forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
+  if (sU.getLastRow() > 1)
+    sU.getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
+  if (sPr.getLastRow() > 1)
+    sPr
+      .getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
 
   const dataInv = sInv.getDataRange().getValues();
   let productosMap = {};
@@ -247,52 +328,61 @@ function obtenerDatosProductos() {
     const stock = Number(dataInv[i][3]);
     if (stock > 0.001) {
       const pId = String(dataInv[i][0]).trim();
-      const prodObj = mapProd[pId] || { nombre: pId, unidad: 'L' };
+      const prodObj = mapProd[pId] || { nombre: pId, unidad: "L" };
       const rawName = prodObj.nombre;
-      
+
       // MAGIA PADRE/HIJO: Si el nombre es "BAYADY1 (PERFECT DUO)"
       let baseName = rawName;
       let subName = "";
       let match = rawName.match(/(.*)\(([^)]+)\)$/);
       if (match) {
-          subName = match[1].trim();  // Ej: BAYADY1
-          baseName = match[2].trim(); // Ej: PERFECT DUO
+        subName = match[1].trim(); // Ej: BAYADY1
+        baseName = match[2].trim(); // Ej: PERFECT DUO
       }
 
       if (!productosMap[baseName]) {
-        productosMap[baseName] = { id: pId, nombre: baseName, unidad: prodObj.unidad, totalVolumen: 0, lotes: [] };
+        productosMap[baseName] = {
+          id: pId,
+          nombre: baseName,
+          unidad: prodObj.unidad,
+          totalVolumen: 0,
+          lotes: [],
+        };
       }
       productosMap[baseName].totalVolumen += stock;
 
       const uId = String(dataInv[i][2]).trim();
       const prId = String(dataInv[i][1]).trim();
       const uName = mapUbic[uId] || uId;
-      
-      let presName = mapPres[prId] || prId;
-      // Inyectamos visualmente el alias para que sepas qué es
-      if (subName !== "") presName = `[Alias: ${subName}] ${presName}`;
 
+let presName = mapPres[prId] || prId;
       const cadStr = _fmtFechaDisplay(dataInv[i][4]);
       
       let loteExistente = productosMap[baseName].lotes.find(
-        (l) => l.lote === String(dataInv[i][6]).trim() && l.ubicacion === uName && l.presentacion === presName && l.caducidad === cadStr
+        (l) => l.lote === String(dataInv[i][6]).trim() && l.ubicacion === uName && l.presentacion === presName && l.caducidad === cadStr && l.alias === subName
       );
-
       if (loteExistente) {
         loteExistente.volumen += stock;
       } else {
-        productosMap[baseName].lotes.push({ lote: String(dataInv[i][6]).trim(), volumen: stock, ubicacion: uName, presentacion: presName, caducidad: cadStr });
+        productosMap[baseName].lotes.push({ 
+            lote: String(dataInv[i][6]).trim(), 
+            volumen: stock, 
+            ubicacion: uName, 
+            presentacion: presName, 
+            alias: subName, // <--- Pasamos el alias limpio aquí
+            caducidad: cadStr 
+        });
       }
     }
   }
 
   // Ajustamos la unidad visual para el frontend
-  return Object.values(productosMap).map(p => {
-      let uLower = String(p.unidad).toLowerCase();
-      if(uLower.includes('unid') || uLower.includes('pza')) p.unidad = 'Pza';
-      else if(uLower.includes('kg') || uLower.includes('kilo')) p.unidad = 'Kg';
-      else p.unidad = 'L';
-      return p;
+  return Object.values(productosMap).map((p) => {
+    let uLower = String(p.unidad).toLowerCase();
+    if (uLower.includes("unid") || uLower.includes("pza")) p.unidad = "Pza";
+    else if (uLower.includes("kg") || uLower.includes("kilo")) p.unidad = "Kg";
+    else p.unidad = "L";
+    return p;
   });
 }
 
@@ -301,33 +391,40 @@ function obtenerDatosProductos() {
 // ==========================================
 function registrarNuevoProducto(datos) {
   const lock = LockService.getScriptLock();
-  
+
   try {
     lock.waitLock(10000); // Bloqueo de concurrencia para evitar registros simultáneos
-    const sheet = obtenerHojaOCrear('PRODUCTOS', ['ID', 'NOMBRE', 'DESCRIPCION', 'UNIDAD']);
+    const sheet = obtenerHojaOCrear("PRODUCTOS", [
+      "ID",
+      "NOMBRE",
+      "DESCRIPCION",
+      "UNIDAD",
+    ]);
     const data = sheet.getDataRange().getValues();
-    
+
     // Nos aseguramos de que esté en mayúsculas
     const nombreNuevo = String(datos.nombre).trim().toUpperCase();
-    
+
     // SUPER VALIDACIÓN: Quitamos todos los espacios para comparar
     // Esto hace que "PERFECT DUO" y "PERFECTDUO" se detecten como iguales
-    const nombreNuevoSinEspacios = nombreNuevo.replace(/\s+/g, '');
+    const nombreNuevoSinEspacios = nombreNuevo.replace(/\s+/g, "");
 
     for (let i = 1; i < data.length; i++) {
       let nombreExistente = String(data[i][1]).trim().toUpperCase();
-      let existenteSinEspacios = nombreExistente.replace(/\s+/g, '');
-      
+      let existenteSinEspacios = nombreExistente.replace(/\s+/g, "");
+
       // Comparamos sin espacios
       if (existenteSinEspacios === nombreNuevoSinEspacios) {
-        throw new Error(`El producto "${nombreExistente}" ya existe en tu catálogo. No puedes registrarlo dos veces.`);
+        throw new Error(
+          `El producto "${nombreExistente}" ya existe en tu catálogo. No puedes registrarlo dos veces.`,
+        );
       }
     }
 
     // Si pasa la validación, lo registramos usando el nombre con espacios correctos
     const nuevoId = Utilities.getUuid();
     sheet.appendRow([nuevoId, nombreNuevo, datos.descripcion, datos.unidad]);
-    
+
     return true;
   } catch (error) {
     // Si hubo un error (como el duplicado), lo enviamos al frontend

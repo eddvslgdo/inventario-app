@@ -449,18 +449,32 @@
           <small style="color: #555">Recepción de mercancía a almacén</small>
         </div>
 
-<div class="form-group">
+        <div class="form-group">
           <label>Producto</label>
           <div style="display: flex; gap: 10px">
-            <input type="text" id="producto_search" list="lista-productos-datalist" class="input-modern" placeholder="Escribe para buscar o agregar..." onchange="seleccionarProductoDesdeBusqueda()" autocomplete="off" />
+            <input
+              type="text"
+              id="producto_search"
+              list="lista-productos-datalist"
+              class="input-modern"
+              placeholder="Escribe para buscar o agregar..."
+              onchange="seleccionarProductoDesdeBusqueda()"
+              autocomplete="off"
+            />
             <datalist id="lista-productos-datalist"></datalist>
             <input type="hidden" id="producto" />
-            
+
             <button
               type="button"
               onclick="abrirModal()"
               class="btn-field"
-              style="width: 50px; background: #007aff; color: white; border: none; font-size: 1.5rem;"
+              style="
+                width: 50px;
+                background: #007aff;
+                color: white;
+                border: none;
+                font-size: 1.5rem;
+              "
             >
               +
             </button>
@@ -561,7 +575,7 @@
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 25px">
-<button
+          <button
             id="btn-entrada-directa"
             onclick="guardarEntradaDirecta()"
             class="btn-field"
@@ -640,9 +654,17 @@
           <div style="font-size: 2rem">🚚</div>
         </div>
 
-<div class="form-group">
+        <div class="form-group">
           <label>Producto a Enviar</label>
-          <input type="text" id="sal_producto_search" list="lista-productos-salida-datalist" class="input-modern" placeholder="Buscar producto (solo con stock)..." onchange="seleccionarProductoSalidaDesdeBusqueda()" autocomplete="off" />
+          <input
+            type="text"
+            id="sal_producto_search"
+            list="lista-productos-salida-datalist"
+            class="input-modern"
+            placeholder="Buscar producto (solo con stock)..."
+            onchange="seleccionarProductoSalidaDesdeBusqueda()"
+            autocomplete="off"
+          />
           <datalist id="lista-productos-salida-datalist"></datalist>
           <input type="hidden" id="sal_producto" />
         </div>
@@ -755,15 +777,36 @@
       </div>
     </div>
 
-<div id="vista-ubicaciones" class="vista" style="display: none">
-      <div style="max-width: 1100px; margin: 0 auto; width: 100%;">
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: white; padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #eef2f6;">
-          <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b;">📍 Mapa de Almacén</h2>
+    <div id="vista-ubicaciones" class="vista" style="display: none">
+      <div style="max-width: 1100px; margin: 0 auto; width: 100%">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eef2f6;
+          "
+        >
+          <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b">
+            📍 Mapa de Almacén
+          </h2>
           <button
             onclick="abrirModalGenerico('modalUbicacion')"
             class="btn-field"
-            style="width: auto; padding: 0 20px; margin: 0; background: #f59e0b; color: white; border: none; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);"
+            style="
+              width: auto;
+              padding: 0 20px;
+              margin: 0;
+              background: #f59e0b;
+              color: white;
+              border: none;
+              box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);
+            "
           >
             + Nueva Ubicación
           </button>
@@ -774,56 +817,57 @@
           style="text-align: center; margin: 40px; color: #64748b"
         >
           <div class="modern-spinner"></div>
-          <p style="margin-top: 15px;">Sincronizando almacén...</p>
+          <p style="margin-top: 15px">Sincronizando almacén...</p>
         </div>
-        
-        <div id="grid-ubicaciones" class="grid-layout" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px;"></div>
-      
+
+        <div
+          id="grid-ubicaciones"
+          class="grid-layout"
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 20px;
+          "
+        ></div>
       </div>
     </div>
 
-    <div id="vista-productos" class="vista" style="display: none">
-      <div
-        class="card"
-        style="
-          max-width: 900px;
-          background: transparent;
-          box-shadow: none;
-          padding: 0;
-        "
-      >
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-          "
-        >
-          <h2 style="margin: 0; font-size: 1.2rem">📦 Inventario Global</h2>
-          <input
-            type="text"
-            id="buscadorProductos"
-            placeholder="🔍 Buscar producto..."
-            class="input-modern"
-            style="max-width: 300px; margin: 0; border: 1px solid #eee"
-            onkeyup="filtrarProductos()"
-          />
-        </div>
+<div id="vista-productos" class="vista" style="display: none; width: 100%; justify-content: center;">
+      <div class="card" style="max-width: 900px; width: 100%; background: transparent; box-shadow: none; padding: 0; margin: 0 auto; display: flex; flex-direction: column;">
+        
+        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04); border: 1px solid #e2e8f0; margin-bottom: 20px; overflow: hidden; width: 100%;">
+          
+          <div style="display: flex; align-items: center; gap: 15px; padding: 20px 25px; border-bottom: 1px solid #f1f5f9;">
+            <div style="font-size: 2.5rem; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));">📦</div>
+            <div>
+              <h2 style="margin: 0 0 4px 0; font-size: 1.35rem; color: #1e293b; font-weight: 800; letter-spacing: -0.5px;">Inventario Global</h2>
+              <span style="color: #64748b; font-size: 0.9rem; font-weight: 500;">Gestión y monitoreo de productos en tiempo real</span>
+            </div>
+          </div>
 
-        <div
-          id="loading-productos"
-          style="text-align: center; margin: 40px; color: #666"
-        >
-          <div class="spinner"></div>
-          Calculando totales...
-        </div>
+<div style="display: flex; gap: 12px; align-items: center; padding: 15px 25px; flex-wrap: nowrap; overflow-x: auto;">
+            
+            <div style="display: flex; gap: 10px; flex-shrink: 0;">
+              <button id="btnFiltroStock" onclick="toggleFiltroStock()" style="background: #ffffff; border: 1px solid #e2e8f0; color: #334155; padding: 0 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 6px; height: 42px; box-sizing: border-box; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                <span style="font-size: 1rem; color: #f59e0b;">⚠️</span> Bajo Stock
+              </button>
+              <button id="btnFiltroCaducidad" onclick="toggleFiltroCaducidad()" style="background: #ffffff; border: 1px solid #e2e8f0; color: #334155; padding: 0 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 6px; height: 42px; box-sizing: border-box; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                <span style="font-size: 1rem; color: #d97706;">⏳</span> Por Caducar
+              </button>
+            </div>
 
-        <div id="contenedor-productos-lista"></div>
+            <div style="flex: 1; min-width: 150px; position: relative;">
+              <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 0.95rem;">🔍</span>
+              <input type="text" id="buscadorProductos" placeholder="Buscar por nombre o variante..." class="input-modern" style="margin: 0; border: 1px solid #e2e8f0; height: 42px; width: 100%; padding-left: 40px; box-sizing: border-box; border-radius: 8px; font-size: 0.9rem; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.01);" onkeyup="filtrarProductos()" autocomplete="off" />
+            </div>
+
+            <button onclick="exportarInventarioCSV()" style="background: #22c55e; color: white; border: none; padding: 0 20px; height: 42px; font-size: 0.9rem; font-weight: 700; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(34, 197, 94, 0.25); transition: transform 0.2s; display: flex; align-items: center; gap: 8px; white-space: nowrap; box-sizing: border-box; flex-shrink: 0; width: auto;">
+              <span style="font-size: 1.05rem;">📄</span> Exportar Excel
+            </button>
+
+          </div>
+        </div>
+        <div id="contenedor-productos-lista" style="width: 100%;"></div>
       </div>
     </div>
 
@@ -1044,24 +1088,22 @@
         </div>
       </div>
     </div>
-    <div id="modalProducto" class="modal-overlay" style="display: none">
+    <div
+      id="modalProducto"
+      class="modal-overlay"
+      style="display: none; z-index: 1005"
+    >
       <div class="modal-content">
-        <div class="form-group">
-            <label>Nuevo Producto:</label>
-            <div style="display: flex; gap: 8px; align-items: center">
-              <input type="text" id="transf_producto_search" list="lista-transf-productos" class="input-modern" placeholder="Buscar o crear sub-producto..." onchange="seleccionarProductoTransf()" autocomplete="off" />
-              <datalist id="lista-transf-productos"></datalist>
-              <input type="hidden" id="selTransfNuevoProd" />
-            </div>
-          </div>
         <div class="form-group">
           <label>Nombre *</label>
           <input type="text" id="nuevoNombre" class="input-modern" />
         </div>
+
         <div class="form-group">
           <label>Descripción</label>
           <input type="text" id="nuevaDescripcion" class="input-modern" />
         </div>
+
         <div class="form-group">
           <label>Unidad *</label>
           <select id="nuevaUnidad" class="input-modern">
@@ -1070,6 +1112,7 @@
             <option value="Unid">Unidad (Pza)</option>
           </select>
         </div>
+
         <div style="display: flex; gap: 10px; margin-top: 20px">
           <button
             onclick="cerrarModal()"
@@ -1345,7 +1388,9 @@
                 placeholder="0"
                 min="1"
                 step="1"
-                onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                onkeypress="
+                  return event.charCode >= 48 && event.charCode <= 57;
+                "
                 class="input-modern"
                 oninput="calcularSimulacionTransferencia()"
               />
@@ -1396,7 +1441,7 @@
       </div>
     </div>
 
-<div
+    <div
       id="modalTransformacion"
       class="modal-overlay"
       style="display: none; z-index: 1002"
@@ -1444,9 +1489,11 @@
               <input
                 type="number"
                 id="cantTransfPiezas"
-                min="1" 
-                step="1" 
-                onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                min="1"
+                step="1"
+                onkeypress="
+                  return event.charCode >= 48 && event.charCode <= 57;
+                "
                 placeholder="0"
                 class="input-modern"
                 oninput="calcTransf()"
@@ -1465,14 +1512,14 @@
           <div class="form-group">
             <label>Nuevo Producto (Destino):</label>
             <div style="display: flex; gap: 8px; align-items: center">
-              <input 
-                type="text" 
-                id="transf_producto_search" 
-                list="lista-transf-productos" 
-                class="input-modern" 
-                placeholder="Escribe para buscar o crear sub-producto..." 
-                onchange="seleccionarProductoTransf()" 
-                autocomplete="off" 
+              <input
+                type="text"
+                id="transf_producto_search"
+                list="lista-transf-productos"
+                class="input-modern"
+                placeholder="Escribe para buscar o crear sub-producto..."
+                onchange="seleccionarProductoTransf()"
+                autocomplete="off"
               />
               <datalist id="lista-transf-productos"></datalist>
               <input type="hidden" id="selTransfNuevoProd" />
@@ -1887,7 +1934,7 @@
           .obtenerMaterialesCaducados();
       }
 
-function renderTablaBajas() {
+      function renderTablaBajas() {
         const tabla = document.getElementById("tablaBajas");
         const tbody = document.getElementById("tablaBajasBody");
         const chkAll = document.getElementById("chkAllBajas");
@@ -1907,19 +1954,22 @@ function renderTablaBajas() {
 
         CACHE_CADUCADOS.forEach((item, index) => {
           // CORRECCIÓN: Filtro estricto (Producto + Presentación + Lote + Ubicación)
-          const yaAgregado = COLA_BAJAS.some(i => 
-              i.producto === item.producto && 
+          const yaAgregado = COLA_BAJAS.some(
+            (i) =>
+              i.producto === item.producto &&
               i.presentacion === item.presentacion &&
-              i.lote === item.lote && 
-              i.ubicacion === item.ubicacion
+              i.lote === item.lote &&
+              i.ubicacion === item.ubicacion,
           );
-          
-          const trStyle = yaAgregado ? "opacity: 0.5; background-color: #f1f5f9; pointer-events: none;" : "";
+
+          const trStyle = yaAgregado
+            ? "opacity: 0.5; background-color: #f1f5f9; pointer-events: none;"
+            : "";
           const chkAttr = yaAgregado ? "disabled checked" : "";
 
           const tr = document.createElement("tr");
-          tr.style.cssText = trStyle; 
-          
+          tr.style.cssText = trStyle;
+
           tr.innerHTML = `
       <td style="text-align: center;"><input type="checkbox" class="chk-baja" data-index="${index}" ${chkAttr} style="transform: scale(1.2); cursor:pointer;"></td>
       <td style="font-weight: 600; color: #333;">${item.producto}</td>
@@ -1943,10 +1993,16 @@ function renderTablaBajas() {
 
       // --- FASE 2: EL CARRITO DE BAJAS ---
 
-function prepararBaja() {
-        const checkboxes = document.querySelectorAll(".chk-baja:checked:not(:disabled)");
+      function prepararBaja() {
+        const checkboxes = document.querySelectorAll(
+          ".chk-baja:checked:not(:disabled)",
+        );
         if (checkboxes.length === 0) {
-          return Swal.fire("Atención", "Selecciona al menos un material válido para dar de baja.", "warning");
+          return Swal.fire(
+            "Atención",
+            "Selecciona al menos un material válido para dar de baja.",
+            "warning",
+          );
         }
 
         checkboxes.forEach((chk) => {
@@ -1954,11 +2010,12 @@ function prepararBaja() {
           const item = CACHE_CADUCADOS[idx];
 
           // CORRECCIÓN: Filtro estricto para evitar duplicados reales
-          const existe = COLA_BAJAS.find(i => 
-              i.producto === item.producto && 
+          const existe = COLA_BAJAS.find(
+            (i) =>
+              i.producto === item.producto &&
               i.presentacion === item.presentacion &&
-              i.lote === item.lote && 
-              i.ubicacion === item.ubicacion
+              i.lote === item.lote &&
+              i.ubicacion === item.ubicacion,
           );
 
           if (!existe) {
@@ -1967,7 +2024,7 @@ function prepararBaja() {
         });
 
         renderColaBajas();
-        renderTablaBajas(); 
+        renderTablaBajas();
         mostrarToast("Agregados a la lista de desincorporación 👇", "success");
       }
       function renderColaBajas() {

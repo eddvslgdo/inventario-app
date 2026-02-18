@@ -1,237 +1,343 @@
-// --- VISTA PRODUCTOS (SOLUCIÓN DEFINITIVA) ---
+// --- VISTA PRODUCTOS (NIVEL DIOS: FILTROS + CADUCIDAD + EXPORTACIÓN) ---
 
-// --- VISTA PRODUCTOS (SOLUCIÓN DEFINITIVA) ---
+let PRODUCTOS_CACHE = [];
+let FILTRO_BAJO_STOCK = false;
+let FILTRO_PROX_CADUCAR = false;
 
 function cargarDashboardProductos() {
   const contenedor = document.getElementById("contenedor-productos-lista");
-  
   if (!contenedor) return;
 
-  // 1. Aplicamos la clase de scroll global que creamos en el CSS
   contenedor.classList.add("list-scroll-container");
-
-  // 2. Reemplazamos el loader antiguo por el nuevo Spinner animado
   contenedor.innerHTML = `
-    <div class="loader-container">
+    <div class="loader-container" style="padding: 60px 0;">
         <div class="modern-spinner"></div>
-        <div style="margin-top: 15px;">Calculando totales de inventario...</div>
     </div>`;
 
   google.script.run
     .withSuccessHandler((p) => {
+      PRODUCTOS_CACHE = p; 
       renderizarTablaProductos(p);
     })
     .withFailureHandler((e) => {
       console.error(e);
-      if(contenedor) contenedor.innerHTML = '<div style="text-align:center; color:#d63031; padding:40px; background:white; border-radius:12px;">❌ Error al cargar datos.</div>';
+      if(contenedor) contenedor.innerHTML = '<div style="text-align:center; color:#dc2626; padding:40px; background:white; border-radius:8px; border:1px solid #fecaca;">❌ Error al cargar datos.</div>';
     })
     .obtenerDatosProductos();
 }
+
+function parseFechaCaducidad(str) {
+    if(!str || typeof str !== 'string' || str === "---" || str.includes("SIN-FECHA")) return null;
+    try {
+        let partes = str.split('/');
+        if(partes.length === 3) return new Date(partes[2], partes[1]-1, partes[0]);
+        if(str.includes('-')) {
+            let p2 = str.split('-');
+            if(p2.length === 3 && p2[0].length === 4) return new Date(p2[0], p2[1]-1, p2[2]); 
+        }
+    } catch(e) { return null; }
+    return null;
+}
+
 function renderizarTablaProductos(productos) {
   const contenedor = document.getElementById("contenedor-productos-lista");
   if (!contenedor) return;
-
   contenedor.innerHTML = "";
 
   const activos = productos.filter((p) => p.totalVolumen > 0.001);
 
   if (activos.length === 0) {
     contenedor.innerHTML = `
-      <div style="text-align:center; padding:60px; color:#888; background:white; border-radius:16px; border:1px solid #eee;">
-        <div style="font-size:3rem; margin-bottom:15px;">📦</div>
+      <div style="text-align:center; padding:60px; color:#64748b; background:white; border-radius:12px; border:1px solid #e2e8f0;">
+        <div style="font-size:2.5rem; margin-bottom:15px; opacity:0.5;">📦</div>
         <div style="font-weight:600; font-size:1.1rem;">Inventario Vacío</div>
-        <div style="font-size:0.9rem; margin-top:5px;">No hay productos con existencia.</div>
       </div>`;
     return;
   }
 
-  activos.forEach((p, idx) => {
-    
-// --- SEMÁFORO DE STOCK (LÓGICA BLINDADA) ---
-    // Estrategia: Empezamos asumiendo que es BAJO (Naranja)
-    // Usamos ">=" para evitar el símbolo "<" que te está dando problemas.
-    
-    let colorBorde = "#ff9500"; // Por defecto Naranja (Menos de 10)
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  const limiteTresMeses = new Date();
+  limiteTresMeses.setMonth(hoy.getMonth() + 3);
 
-    // Si es 10 o más, lo cambiamos a Azul (Normal)
-    if (p.totalVolumen >= 10) {
-        colorBorde = "#007aff"; 
-    }
+  const grupos = {
+      'L': { titulo: 'VOLUMEN (LÍQUIDOS)', icon: '💧', color: '#0284c7', bg: '#f0f9ff', total: 0, items: [] },
+      'Kg': { titulo: 'MASA (SÓLIDOS)', icon: '⚖️', color: '#d97706', bg: '#fffbeb', total: 0, items: [] },
+      'Pza': { titulo: 'PIEZAS (INDIVISIBLES)', icon: '📦', color: '#7e22ce', bg: '#faf5ff', total: 0, items: [] }
+  };
 
-    // Si es más de 100, lo cambiamos a Verde (Alto)
-    if (p.totalVolumen > 100) {
-        colorBorde = "#34c759"; 
-    }
-    // --- TABLA INTERNA ---
-    let filasDetalle = "";
-    p.lotes.forEach(l => {
-        filasDetalle += `
-            <tr>
-                <td style="font-weight:600; color:#333;">${l.ubicacion}</td>
-                <td><span style="color:#666; font-size:0.85rem;">${l.presentacion}</span></td>
-                <td><span class="col-lote">${l.lote}</span></td>
-                <td style="color:#555;">${l.caducidad || "--"}</td>
-                <td class="col-number">${l.volumen} L</td>
-            </tr>
-        `;
-    });
+  activos.forEach(p => {
+      let u = p.unidad || 'L';
+      if (!grupos[u]) u = 'L'; 
+      grupos[u].items.push(p);
+      grupos[u].total += p.totalVolumen;
+  });
 
-    // --- TARJETA ---
-    const card = document.createElement("div");
-    card.className = "product-card";
-    
-    // CAMBIO DE ESTRATEGIA: Usamos un DIV real para la barra de color
-    // Esto evita usar <style> dentro de JS, que es lo que causaba el error.
-    card.innerHTML = `
-        <div style="position:absolute; left:0; top:0; bottom:0; width:6px; background:${colorBorde};"></div>
+  ['L', 'Kg', 'Pza'].forEach(key => {
+      const grupo = grupos[key];
+      if (grupo.items.length === 0) return;
 
-        <div class="product-header" onclick="toggleDetalleProducto('${p.id}')">
-            <div class="product-info">
-                <h3>${p.nombre}</h3>
-                <span>📦 ${p.lotes.length} Lote(s) &bull; Total: <strong>${p.totalVolumen.toFixed(2)} ${p.unidad || 'L'}</strong></span>
-            </div>
-            
-            <div class="product-actions">
-                <span class="stock-badge" style="color:${colorBorde}; background-color:${colorBorde}15; border:1px solid ${colorBorde}30;">
-                    ${p.totalVolumen.toFixed(2)} ${p.unidad || 'L'}
-                </span>
-                <button class="btn-toggle-details">
-                    Ver Detalle <span style="font-size:0.8rem; margin-left:6px; opacity:0.6;">▼</span>
-                </button>
-            </div>
+      let displayTotalGrupo = (key === 'Pza') ? Math.round(grupo.total) : grupo.total.toFixed(2);
+      const groupId = `grupo-content-${key}`;
+
+      const groupWrapper = document.createElement("div");
+      groupWrapper.className = "inventory-group";
+
+      const headerGrupo = document.createElement("div");
+      headerGrupo.className = "group-accordion-header";
+      headerGrupo.style.borderLeftColor = grupo.color;
+      headerGrupo.style.backgroundColor = grupo.bg;
+      headerGrupo.onclick = () => toggleGrupo(groupId);
+      headerGrupo.innerHTML = `
+        <div class="group-title-area">
+            <span id="icon-${groupId}" class="group-chevron">▶</span>
+            <span style="color:${grupo.color}; font-weight:700; font-size:0.9rem; letter-spacing:0.5px;">${grupo.icon} ${grupo.titulo}</span>
         </div>
-        
-        <div id="detalle-${p.id}" class="product-details">
-            <table class="details-table">
-                <thead>
-                    <tr>
-                        <th style="width:25%">Ubicación</th>
-                        <th style="width:25%">Presentación</th>
-                        <th style="width:20%">Lote</th>
-                        <th style="width:15%">Caducidad</th>
-                        <th style="width:15%; text-align:right">Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filasDetalle}
-                </tbody>
-            </table>
-        </div>
-    `;
+        <div class="group-total-badge" style="color:${grupo.color}; border-color:${grupo.color}40;">
+            Total: <strong>${displayTotalGrupo} ${key}</strong>
+        </div>`;
 
-    contenedor.appendChild(card);
+      const contentGrupo = document.createElement("div");
+      contentGrupo.id = groupId;
+      contentGrupo.className = "group-accordion-content";
+      contentGrupo.style.display = "none";
+
+      grupo.items.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
+          
+          let colorIndicador = "#f59e0b"; 
+          if (p.totalVolumen >= 10) colorIndicador = "#3b82f6"; 
+          if (p.totalVolumen > 100) colorIndicador = "#10b981"; 
+
+          let filasDetalle = "";
+          let productoExpiraPronto = false; 
+
+          p.lotes.forEach(l => {
+              let aliasTag = (l.alias && l.alias.trim() !== "") ? `<span class="alias-tag">Variante: ${l.alias}</span>` : "";
+              
+              let fCad = parseFechaCaducidad(l.caducidad);
+              let cadAlertaHtml = l.caducidad || "--";
+              let rowBg = "";
+
+              if (fCad) {
+                  let fCadTime = fCad.getTime();
+                  let hoyTime = hoy.getTime();
+                  let limiteTime = limiteTresMeses.getTime();
+
+                  // FIX: Lógica invertida para evitar el símbolo "<"
+                  if (hoyTime > fCadTime) { 
+                      cadAlertaHtml = `<span style="color:#dc2626; font-weight:bold;">${l.caducidad} (Vencido)</span>`;
+                      rowBg = "background:#fef2f2;";
+                      productoExpiraPronto = true;
+                  } else if (limiteTime >= fCadTime) { 
+                      cadAlertaHtml = `<span style="color:#ea580c; font-weight:bold;">${l.caducidad} (Próximo)</span>`;
+                      rowBg = "background:#fffbeb;";
+                      productoExpiraPronto = true;
+                  }
+              }
+
+              filasDetalle += `
+                  <tr style="${rowBg}">
+                      <td class="td-ubic">${l.ubicacion}</td>
+                      <td><div class="td-pres">${l.presentacion}</div>${aliasTag}</td>
+                      <td><span class="lote-tag">${l.lote}</span></td>
+                      <td class="td-cad">${cadAlertaHtml}</td>
+                      <td class="td-cant">${l.volumen} <span style="font-size:0.75rem; color:#888;">${p.unidad}</span></td>
+                  </tr>
+              `;
+          });
+
+          let displayTotalProd = (key === 'Pza') ? Math.round(p.totalVolumen) : p.totalVolumen.toFixed(2);
+          
+          let badgeCaducidad = productoExpiraPronto 
+            ? `<span style="background:#ffedd5; color:#c2410c; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold; margin-left:10px; border:1px solid #fed7aa;">⏳ Alerta Caducidad</span>` 
+            : "";
+
+          const card = document.createElement("div");
+          card.className = "product-card-compact";
+          card.setAttribute("data-stock", p.totalVolumen);
+          card.setAttribute("data-expira", productoExpiraPronto ? "true" : "false");
+
+          card.innerHTML = `
+              <div class="card-indicator" style="background:${colorIndicador};"></div>
+              <div class="card-header-compact" onclick="toggleDetalleProducto('${p.id}')">
+                  <div class="info-main">
+                      <h3 class="prod-title">${p.nombre} ${badgeCaducidad}</h3>
+                      <span class="prod-meta">${p.lotes.length} lote(s) registrados</span>
+                  </div>
+                  <div class="info-actions">
+                      <div class="prod-stock">${displayTotalProd} <span>${p.unidad}</span></div>
+                      <button class="btn-detalles-compact">Ver <span>▼</span></button>
+                  </div>
+              </div>
+              <div id="detalle-${p.id}" class="card-body-compact" style="display:none;">
+                  <table class="table-compact">
+                      <thead>
+                          <tr><th>Ubicación</th><th>Presentación</th><th>Lote</th><th>Caducidad</th><th style="text-align:right;">Stock</th></tr>
+                      </thead>
+                      <tbody>${filasDetalle}</tbody>
+                  </table>
+              </div>
+          `;
+          contentGrupo.appendChild(card);
+      });
+
+      groupWrapper.appendChild(headerGrupo);
+      groupWrapper.appendChild(contentGrupo);
+      contenedor.appendChild(groupWrapper);
   });
 }
 
-function toggleDetalleProducto(id) {
-  const el = document.getElementById("detalle-" + id);
-  if (el) {
-      if (el.style.display === "block") {
-          el.style.display = "none";
-      } else {
-          el.style.display = "block";
-      }
-  }
-}
+// --- LOGICA DE BOTONES SWITCH (FILTROS) ---
+window.toggleFiltroStock = function() {
+    FILTRO_BAJO_STOCK = !FILTRO_BAJO_STOCK;
+    document.getElementById("btnFiltroStock").classList.toggle("active", FILTRO_BAJO_STOCK);
+    filtrarProductos();
+};
 
-function filtrarProductos() {
+window.toggleFiltroCaducidad = function() {
+    FILTRO_PROX_CADUCAR = !FILTRO_PROX_CADUCAR;
+    document.getElementById("btnFiltroCaducidad").classList.toggle("active", FILTRO_PROX_CADUCAR);
+    filtrarProductos();
+};
+
+// --- EL SÚPER BUSCADOR Y FILTRADOR ---
+window.filtrarProductos = function() {
   const txt = document.getElementById("buscadorProductos").value.toLowerCase();
-  const tarjetas = document.querySelectorAll(".product-card");
-  let encontrados = 0;
+  const grupos = document.querySelectorAll(".inventory-group");
+  let encontradosGlobal = 0;
 
-  tarjetas.forEach(card => {
-      const titulo = card.querySelector("h3");
-      if(titulo) {
-          const nombre = titulo.innerText.toLowerCase();
-          if (nombre.includes(txt)) {
+  grupos.forEach(grupo => {
+      const content = grupo.querySelector(".group-accordion-content");
+      const cards = content.querySelectorAll(".product-card-compact");
+      const icon = grupo.querySelector(".group-chevron");
+      let encontradosGrupo = 0;
+
+      cards.forEach(card => {
+          const titulo = card.querySelector(".prod-title").innerText.toLowerCase();
+          const stock = parseFloat(card.getAttribute("data-stock")) || 0;
+          const expira = card.getAttribute("data-expira") === "true";
+          
+          let pasaTexto = titulo.includes(txt);
+          
+          // FIX: Invertimos el operador para evitar el símbolo "<"
+          let pasaStock = FILTRO_BAJO_STOCK ? (10 > stock) : true; 
+          let pasaCaducidad = FILTRO_PROX_CADUCAR ? expira : true;
+
+          if (pasaTexto && pasaStock && pasaCaducidad) {
               card.style.display = "";
-              encontrados++;
+              encontradosGrupo++;
+              encontradosGlobal++;
           } else {
               card.style.display = "none";
           }
+      });
+
+      if (txt !== "" || FILTRO_BAJO_STOCK || FILTRO_PROX_CADUCAR) {
+          if (encontradosGrupo > 0) {
+              grupo.style.display = "";
+              content.style.display = "block"; 
+              if(icon) icon.style.transform = 'rotate(90deg)';
+          } else {
+              grupo.style.display = "none"; 
+          }
+      } else {
+          grupo.style.display = "";
+          content.style.display = "none"; 
+          if(icon) icon.style.transform = 'rotate(0deg)';
       }
   });
 
   let msg = document.getElementById("msg-no-resultados");
-  if(encontrados === 0 && txt !== "") {
+  if(encontradosGlobal === 0) {
      if(!msg) {
         msg = document.createElement("div");
         msg.id = "msg-no-resultados";
-        msg.style.textAlign = "center"; msg.style.padding = "40px"; msg.style.color="#888";
-        msg.innerHTML = "No se encontraron productos con ese nombre.";
+        msg.style.cssText = "text-align:center; padding:40px; color:#64748b; font-size:0.95rem; background:white; border-radius:8px; border:1px solid #e2e8f0; margin-top:15px;";
+        msg.innerHTML = "No se encontraron productos que coincidan con los filtros.";
         document.getElementById("contenedor-productos-lista").appendChild(msg);
      }
-  } else {
-     if(msg) msg.remove();
+  } else if (msg) {
+     msg.remove();
   }
-}
+};
 
-// --- MODALES (NO CAMBIAN) ---
+// --- EXPORTAR A EXCEL (CSV) NATIVO ---
+window.exportarInventarioCSV = function() {
+    if(!PRODUCTOS_CACHE || PRODUCTOS_CACHE.length === 0) {
+        return Swal.fire('Sin Datos', 'No hay inventario para exportar.', 'info');
+    }
+    
+    let csv = "Producto,Variante_Alias,Presentacion,Ubicacion,Lote,Caducidad,Volumen,Unidad\n";
 
-function guardarProducto() {
-  // 1. Tomamos el valor y lo estandarizamos: Mayúsculas y sin espacios dobles
+    PRODUCTOS_CACHE.forEach(p => {
+        if(p.lotes && p.lotes.length > 0) {
+            p.lotes.forEach(l => {
+                let nombre = `"${(p.nombre || "").replace(/"/g, '""')}"`;
+                let alias = `"${(l.alias || "").replace(/"/g, '""')}"`;
+                let pres = `"${(l.presentacion || "").replace(/"/g, '""')}"`;
+                let ubic = `"${(l.ubicacion || "").replace(/"/g, '""')}"`;
+                let lote = `"${(l.lote || "").replace(/"/g, '""')}"`;
+                let cad = `"${l.caducidad || ""}"`;
+                let vol = l.volumen || 0;
+                let uni = `"${p.unidad || ""}"`;
+                
+                csv += `${nombre},${alias},${pres},${ubic},${lote},${cad},${vol},${uni}\n`;
+            });
+        }
+    });
+
+    const blob = new Blob(["\ufeff", csv], { type: 'text/csv;charset=utf-8;' }); 
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Inventario_Global_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    if (typeof mostrarToast === 'function') mostrarToast("Descarga iniciada ✅", "success");
+};
+
+// --- UTILIDADES ---
+window.toggleGrupo = function(id) {
+    const el = document.getElementById(id);
+    const icon = document.getElementById('icon-' + id);
+    if (!el) return;
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        if(icon) icon.style.transform = 'rotate(90deg)';
+    } else {
+        el.style.display = 'none';
+        if(icon) icon.style.transform = 'rotate(0deg)';
+    }
+};
+
+window.toggleDetalleProducto = function(id) {
+  const el = document.getElementById("detalle-" + id);
+  if (el) el.style.display = (el.style.display === "block") ? "none" : "block";
+};
+
+// --- MODALES (GUARDAR PRODUCTO) ---
+function guardarProducto() { 
   let nombreRaw = document.getElementById("nuevoNombre").value;
   const nombreLimpio = nombreRaw.trim().replace(/\s+/g, ' ').toUpperCase();
   const desc = document.getElementById("nuevaDescripcion").value;
   const unidad = document.getElementById("nuevaUnidad").value;
+  if (!nombreLimpio) return mostrarToast("Falta el nombre", "warning");
 
-  if (!nombreLimpio) return mostrarToast("Falta el nombre del producto", "warning");
-
-  // 2. Cerramos la ventana del formulario
   if(typeof cerrarModal === 'function') cerrarModal();
   if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalProducto'); 
+  Swal.fire({ title: 'Procesando...', text: 'Registrando producto...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
 
-  // 3. Mostramos el Loader elegante de "Procesando..."
-  Swal.fire({
-    title: 'Procesando...',
-    text: 'Validando y registrando producto...',
-    allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading();
-    }
-  });
-
-  google.script.run
-    .withSuccessHandler(function() {
-      Swal.fire("¡Éxito!", `El producto ${nombreLimpio} ha sido registrado.`, "success");
+  google.script.run.withSuccessHandler(function() {
+      Swal.fire("¡Éxito!", `El producto ha sido registrado.`, "success");
       document.getElementById("nuevoNombre").value = "";
       document.getElementById("nuevaDescripcion").value = "";
-      
       if(typeof recargarSelectores === 'function') recargarSelectores();
       if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
-    })
-    .withFailureHandler(function(err) {
-      // Si el servidor detecta un duplicado, mostrará el error aquí
+  }).withFailureHandler(function(err) {
       Swal.fire("No se pudo registrar", err.message, "error");
-      
-      // Volvemos a abrir el modal para que el usuario corrija si quiere
       if(typeof abrirModalGenerico === 'function') abrirModalGenerico('modalProducto'); 
-    })
-    .registrarNuevoProducto({ nombre: nombreLimpio, descripcion: desc, unidad: unidad });
-}
-
-function guardarPresentacion() {
-  const desc = document.getElementById("nuevaPresDesc").value;
-  if (!desc) return mostrarToast("Falta descripción", "error");
-
-  const btn = event.target;
-  const textoOriginal = btn.innerText;
-  btn.disabled = true;
-  btn.innerText = "Guardando...";
-
-  google.script.run
-    .withSuccessHandler(function() {
-      mostrarToast("Presentación creada ✅", "success");
-      document.getElementById("nuevaPresDesc").value = "";
-      recargarSelectores();
-      if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalPresentacion');
-      btn.disabled = false;
-      btn.innerText = textoOriginal;
-    })
-    .withFailureHandler(function(err) {
-      mostrarError(err);
-      btn.disabled = false;
-      btn.innerText = textoOriginal;
-    })
-    .registrarNuevaPresentacion(desc);
+  }).registrarNuevoProducto({ nombre: nombreLimpio, descripcion: desc, unidad: unidad });
 }
