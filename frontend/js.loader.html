@@ -24,16 +24,13 @@
   <?!= include('frontend/js/salidas.js.html'); ?>
 </script>
 
-
-
 <script>
   <?!= include('frontend/js/productos.js.html'); ?>
 </script>
 
-
 <script>
   <?!= include('frontend/js/main.js.html'); ?>
-  
+
 
   // Listener de arranque
   window.addEventListener('load', function() {
@@ -46,157 +43,169 @@
   });
 </script>
 
-
 <style>
-/* Diseño de Rejilla Responsiva */
-#grid-ubicaciones {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  padding: 10px 0;
-}
+  /* Diseño de Rejilla Responsiva */
+  #grid-ubicaciones {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 10px 0;
+  }
 
-/* Tarjeta de Ubicación */
-.card-ubicacion {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  border: 1px solid #e1e4e8;
-  transition: all 0.2s ease;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
+  /* Tarjeta de Ubicación */
+  .card-ubicacion {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e1e4e8;
+    transition: all 0.2s ease;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
 
-.card-ubicacion:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 15px rgba(0,0,0,0.1);
-  border-color: #007aff;
-}
+  .card-ubicacion:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    border-color: #007aff;
+  }
 
-/* Cabecera de la Tarjeta */
-.card-header-ubic {
-  background: #f8f9fa;
-  padding: 12px 15px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+  /* Cabecera de la Tarjeta */
+  .card-header-ubic {
+    background: #f8f9fa;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-.card-title {
-  font-weight: 700;
-  color: #2c3e50;
-  font-size: 1.05rem;
-  margin: 0;
-}
+  .card-title {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 1.05rem;
+    margin: 0;
+  }
 
-/* Botones de Acción (Editar/Borrar) */
-.card-actions {
-  display: flex;
-  gap: 8px;
-}
+  /* Botones de Acción (Editar/Borrar) */
+  .card-actions {
+    display: flex;
+    gap: 8px;
+  }
 
-.btn-icon-small {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #666;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-}
+  .btn-icon-small {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #666;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
 
-.btn-icon-small:hover { background: #007aff; color: white; border-color: #007aff; }
-.btn-icon-small.delete:hover { background: #d63031; color: white; border-color: #d63031; }
+  .btn-icon-small:hover {
+    background: #007aff;
+    color: white;
+    border-color: #007aff;
+  }
+  .btn-icon-small.delete:hover {
+    background: #d63031;
+    color: white;
+    border-color: #d63031;
+  }
 
-/* Cuerpo de la Tarjeta */
-.card-body-ubic {
-  padding: 15px;
-  flex: 1;
-  cursor: pointer; /* Solo el cuerpo es clicable para ver detalle */
-}
+  /* Cuerpo de la Tarjeta */
+  .card-body-ubic {
+    padding: 15px;
+    flex: 1;
+    cursor: pointer; /* Solo el cuerpo es clicable para ver detalle */
+  }
 
-.ubic-badge {
-  background: #e3f2fd; 
-  color: #007aff; 
-  padding: 4px 10px; 
-  border-radius: 20px; 
-  font-size: 0.85rem; 
-  font-weight: bold;
-  display: inline-block;
-  margin-bottom: 10px;
-}
+  .ubic-badge {
+    background: #e3f2fd;
+    color: #007aff;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
 
-.item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  font-size: 0.85rem;
-  color: #555;
-}
-.item-list li { margin-bottom: 4px; border-bottom: 1px dashed #f0f0f0; padding-bottom: 2px; }
+  .item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.85rem;
+    color: #555;
+  }
+  .item-list li {
+    margin-bottom: 4px;
+    border-bottom: 1px dashed #f0f0f0;
+    padding-bottom: 2px;
+  }
 </style>
 
 <script>
-// ==========================================
-// LÓGICA DE MIS UBICACIONES (LIMPIA Y BLINDADA)
-// ==========================================
+  // ==========================================
+  // LÓGICA DE MIS UBICACIONES (LIMPIA Y BLINDADA)
+  // ==========================================
 
-var CACHE_UBICACIONES = [];
-var TEMP_ACCION = null;
+  var CACHE_UBICACIONES = [];
+  var TEMP_ACCION = null;
 
-// --- CARGA INICIAL ---
-function cargarDashboardUbicaciones() {
-  var grid = document.getElementById("grid-ubicaciones");
-  var loader = document.getElementById("loading-ubicaciones");
-  if(!grid) return;
-  
-  grid.classList.add("list-scroll-container");
-  if(loader) {
+  // --- CARGA INICIAL ---
+  function cargarDashboardUbicaciones() {
+    var grid = document.getElementById("grid-ubicaciones");
+    var loader = document.getElementById("loading-ubicaciones");
+    if (!grid) return;
+
+    grid.classList.add("list-scroll-container");
+    if (loader) {
       loader.style.display = "block";
       loader.innerHTML = `
         <div class="loader-container">
             <div class="modern-spinner"></div>
             <div style="margin-top: 15px;">Cargando ubicaciones e inventario...</div>
         </div>`;
-  }
-  grid.innerHTML = "";
+    }
+    grid.innerHTML = "";
 
-  google.script.run
-    .withSuccessHandler(function(ubicaciones) {
-       CACHE_UBICACIONES = ubicaciones;
-       if(loader) loader.style.display = "none";
-       renderizarGridUbicaciones(ubicaciones);
-    })
-    .withFailureHandler(function(e){
-       if(loader) loader.style.display = "none";
-       Swal.fire("Error", e.message, "error");
-    })
-    .obtenerDatosUbicaciones();
-}
-
-function renderizarGridUbicaciones(lista) {
-  var grid = document.getElementById("grid-ubicaciones");
-  grid.innerHTML = "";
-
-  if (!lista || lista.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#888; padding:40px; background:#fff; border-radius:12px;">🏢 No hay ubicaciones creadas. Usa el botón naranja.</div>';
-    return;
+    google.script.run
+      .withSuccessHandler(function (ubicaciones) {
+        CACHE_UBICACIONES = ubicaciones;
+        if (loader) loader.style.display = "none";
+        renderizarGridUbicaciones(ubicaciones);
+      })
+      .withFailureHandler(function (e) {
+        if (loader) loader.style.display = "none";
+        Swal.fire("Error", e.message, "error");
+      })
+      .obtenerDatosUbicaciones();
   }
 
-  for (var i = 0; i < lista.length; i++) {
-    var u = lista[i];
-    var card = document.createElement("div");
-    card.className = "card-ubicacion";
-    
-    var headerHtml = `
+  function renderizarGridUbicaciones(lista) {
+    var grid = document.getElementById("grid-ubicaciones");
+    grid.innerHTML = "";
+
+    if (!lista || lista.length === 0) {
+      grid.innerHTML =
+        '<div style="grid-column:1/-1; text-align:center; color:#888; padding:40px; background:#fff; border-radius:12px;">🏢 No hay ubicaciones creadas. Usa el botón naranja.</div>';
+      return;
+    }
+
+    for (var i = 0; i < lista.length; i++) {
+      var u = lista[i];
+      var card = document.createElement("div");
+      card.className = "card-ubicacion";
+
+      var headerHtml = `
       <div class="card-header-ubic">
         <h4 class="card-title">${u.nombre}</h4>
         <div class="card-actions">
@@ -206,482 +215,707 @@ function renderizarGridUbicaciones(lista) {
       </div>
     `;
 
-    let badgesHtml = "";
-    if (u.totales) {
-        if (u.totales.L > 0) badgesHtml += `<span class="ubic-badge" style="background:#e3f2fd; color:#007aff;">${u.totales.L.toFixed(2)} L</span>`;
-        if (u.totales.Kg > 0) badgesHtml += `<span class="ubic-badge" style="background:#fdf4e3; color:#d97706;">${u.totales.Kg.toFixed(2)} Kg</span>`;
-        if (u.totales.Pza > 0) badgesHtml += `<span class="ubic-badge" style="background:#f3e5f5; color:#9b59b6;">${Math.round(u.totales.Pza)} Pza</span>`;
-    }
+      let badgesHtml = "";
+      if (u.totales) {
+        if (u.totales.L > 0)
+          badgesHtml += `<span class="ubic-badge" style="background:#e3f2fd; color:#007aff;">${u.totales.L.toFixed(2)} L</span>`;
+        if (u.totales.Kg > 0)
+          badgesHtml += `<span class="ubic-badge" style="background:#fdf4e3; color:#d97706;">${u.totales.Kg.toFixed(2)} Kg</span>`;
+        if (u.totales.Pza > 0)
+          badgesHtml += `<span class="ubic-badge" style="background:#f3e5f5; color:#9b59b6;">${Math.round(u.totales.Pza)} Pza</span>`;
+      }
 
-    var bodyHtml = `
+      var bodyHtml = `
       <div class="card-body-ubic" onclick="verDetalleUbicacion('${u.id}')">
          <div style="margin-bottom:12px; display:flex; gap:6px; flex-wrap:wrap;">${badgesHtml}</div>
     `;
 
-    if(u.items && u.items.length > 0) {
-       bodyHtml += `<ul class="item-list">`;
-       for(var j=0; j<Math.min(u.items.length, 3); j++){
+      if (u.items && u.items.length > 0) {
+        bodyHtml += `<ul class="item-list">`;
+        for (var j = 0; j < Math.min(u.items.length, 3); j++) {
           let it = u.items[j];
-          let volDisplay = (it.unidad === 'Pza') ? Math.round(it.volumen) : it.volumen.toFixed(2);
+          let volDisplay =
+            it.unidad === "Pza"
+              ? Math.round(it.volumen)
+              : it.volumen.toFixed(2);
           bodyHtml += `<li><b>${it.producto}</b>: ${volDisplay} ${it.unidad}</li>`;
-       }
-       if(u.items.length > 3) bodyHtml += `<li style="color:#007aff; font-size:0.8rem;">+ ${u.items.length - 3} productos más...</li>`;
-       bodyHtml += `</ul>`;
-    } else {
-       bodyHtml += `<div style="font-size:0.8rem; color:#999; font-style:italic; margin-top:5px;">(Vacío)</div>`;
-    }
-    bodyHtml += `</div>`;
-
-    card.innerHTML = headerHtml + bodyHtml;
-    grid.appendChild(card);
-  }
-}
-
-// --- ACCIONES UBICACIÓN ---
-function guardarUbicacion() {
-  var nombre = document.getElementById("nuevaUbicNombre").value;
-  if(!nombre || nombre.trim() === "") return Swal.fire("Atención", "Escribe un nombre", "warning");
-  if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalUbicacion');
-  Swal.fire({ title: 'Creando...', didOpen: function(){ Swal.showLoading(); } });
-
-  google.script.run.withSuccessHandler(function() {
-      document.getElementById("nuevaUbicNombre").value = "";
-      cargarDashboardUbicaciones();
-      Swal.fire("Éxito", "Ubicación creada", "success");
-  }).registrarNuevaUbicacion(nombre);
-}
-
-function editarUbicacion(id, nombreActual) {
-  Swal.fire({
-    title: 'Renombrar Ubicación',
-    input: 'text',
-    inputValue: nombreActual,
-    showCancelButton: true,
-    confirmButtonText: 'Guardar',
-    confirmButtonColor: '#007aff'
-  }).then((result) => {
-    if (result.isConfirmed && result.value) {
-       Swal.fire({ title: 'Actualizando...', didOpen: function(){ Swal.showLoading(); } });
-       google.script.run.withSuccessHandler(function(){
-          cargarDashboardUbicaciones();
-          Swal.fire("Listo", "Nombre actualizado", "success");
-       }).actualizarNombreUbicacion(id, result.value);
-    }
-  });
-}
-
-function eliminarUbicacion(id, cantidadItems) {
-  if (cantidadItems > 0) return Swal.fire("No se puede borrar", "Esta ubicación tiene productos. Muévelos o sácalos primero.", "error");
-  
-  Swal.fire({
-    title: '¿Eliminar ubicación?', text: "Esta acción no se puede deshacer.", icon: 'warning',
-    showCancelButton: true, confirmButtonColor: '#d63031', confirmButtonText: 'Sí, eliminar'
-  }).then((result) => {
-    if (result.isConfirmed) {
-       Swal.fire({ title: 'Borrando...', didOpen: function(){ Swal.showLoading(); } });
-       google.script.run.withSuccessHandler(function(){
-          cargarDashboardUbicaciones();
-          Swal.fire("Eliminado", "La ubicación ha sido borrada.", "success");
-       }).borrarUbicacion(id);
-    }
-  });
-}
-
-// --- DETALLE ---
-function verDetalleUbicacion(idUbic) {
-  var ubic = null;
-  for(var i=0; i<CACHE_UBICACIONES.length; i++) {
-      if(String(CACHE_UBICACIONES[i].id) === String(idUbic)) { ubic = CACHE_UBICACIONES[i]; break; }
-  }
-  if(!ubic) return;
-
-  var tit = document.getElementById("tituloDetalle");
-  if(tit) tit.innerText = "📍 " + ubic.nombre;
-  
-  var tbody = document.getElementById("tablaDetalleBody");
-  if(tbody) {
-      tbody.innerHTML = "";
-      if(!ubic.items || ubic.items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">Esta ubicación está vacía.</td></tr>';
+        }
+        if (u.items.length > 3)
+          bodyHtml += `<li style="color:#007aff; font-size:0.8rem;">+ ${u.items.length - 3} productos más...</li>`;
+        bodyHtml += `</ul>`;
       } else {
-        const orden = { 'L': 1, 'Kg': 2, 'Pza': 3 };
+        bodyHtml += `<div style="font-size:0.8rem; color:#999; font-style:italic; margin-top:5px;">(Vacío)</div>`;
+      }
+      bodyHtml += `</div>`;
+
+      card.innerHTML = headerHtml + bodyHtml;
+      grid.appendChild(card);
+    }
+  }
+
+  // --- ACCIONES UBICACIÓN ---
+  function guardarUbicacion() {
+    var nombre = document.getElementById("nuevaUbicNombre").value;
+    if (!nombre || nombre.trim() === "")
+      return Swal.fire("Atención", "Escribe un nombre", "warning");
+    if (typeof cerrarModalGenerico === "function")
+      cerrarModalGenerico("modalUbicacion");
+    Swal.fire({
+      title: "Creando...",
+      didOpen: function () {
+        Swal.showLoading();
+      },
+    });
+
+    google.script.run
+      .withSuccessHandler(function () {
+        document.getElementById("nuevaUbicNombre").value = "";
+        cargarDashboardUbicaciones();
+        Swal.fire("Éxito", "Ubicación creada", "success");
+      })
+      .registrarNuevaUbicacion(nombre);
+  }
+
+  function editarUbicacion(id, nombreActual) {
+    Swal.fire({
+      title: "Renombrar Ubicación",
+      input: "text",
+      inputValue: nombreActual,
+      showCancelButton: true,
+      confirmButtonText: "Guardar",
+      confirmButtonColor: "#007aff",
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        Swal.fire({
+          title: "Actualizando...",
+          didOpen: function () {
+            Swal.showLoading();
+          },
+        });
+        google.script.run
+          .withSuccessHandler(function () {
+            cargarDashboardUbicaciones();
+            Swal.fire("Listo", "Nombre actualizado", "success");
+          })
+          .actualizarNombreUbicacion(id, result.value);
+      }
+    });
+  }
+
+  function eliminarUbicacion(id, cantidadItems) {
+    if (cantidadItems > 0)
+      return Swal.fire(
+        "No se puede borrar",
+        "Esta ubicación tiene productos. Muévelos o sácalos primero.",
+        "error",
+      );
+
+    Swal.fire({
+      title: "¿Eliminar ubicación?",
+      text: "Esta acción no se puede deshacer.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d63031",
+      confirmButtonText: "Sí, eliminar",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: "Borrando...",
+          didOpen: function () {
+            Swal.showLoading();
+          },
+        });
+        google.script.run
+          .withSuccessHandler(function () {
+            cargarDashboardUbicaciones();
+            Swal.fire("Eliminado", "La ubicación ha sido borrada.", "success");
+          })
+          .borrarUbicacion(id);
+      }
+    });
+  }
+
+  // --- DETALLE ---
+  function verDetalleUbicacion(idUbic) {
+    var ubic = null;
+    for (var i = 0; i < CACHE_UBICACIONES.length; i++) {
+      if (String(CACHE_UBICACIONES[i].id) === String(idUbic)) {
+        ubic = CACHE_UBICACIONES[i];
+        break;
+      }
+    }
+    if (!ubic) return;
+
+    var tit = document.getElementById("tituloDetalle");
+    if (tit) tit.innerText = "📍 " + ubic.nombre;
+
+    var tbody = document.getElementById("tablaDetalleBody");
+    if (tbody) {
+      tbody.innerHTML = "";
+      if (!ubic.items || ubic.items.length === 0) {
+        tbody.innerHTML =
+          '<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">Esta ubicación está vacía.</td></tr>';
+      } else {
+        const orden = { L: 1, Kg: 2, Pza: 3 };
         ubic.items.sort((a, b) => {
-            let oA = orden[a.unidad] || 99;
-            let oB = orden[b.unidad] || 99;
-            if (oA !== oB) return oA - oB;
-            return a.producto.localeCompare(b.producto);
+          let oA = orden[a.unidad] || 99;
+          let oB = orden[b.unidad] || 99;
+          if (oA !== oB) return oA - oB;
+          return a.producto.localeCompare(b.producto);
         });
 
         let unidadActual = "";
 
-        for(var k=0; k<ubic.items.length; k++){
-           var item = ubic.items[k];
+        for (var k = 0; k < ubic.items.length; k++) {
+          var item = ubic.items[k];
 
-           if (item.unidad !== unidadActual) {
-               unidadActual = item.unidad;
-               let lbl = "📦 PIEZAS (INDIVISIBLES)"; let colorSep = "#f3e5f5"; let textCol = "#8e24aa";
-               if (unidadActual === 'L') { lbl = "💧 VOLUMEN (LÍQUIDOS)"; colorSep = "#e3f2fd"; textCol = "#0277bd"; }
-               if (unidadActual === 'Kg') { lbl = "⚖️ MASA (SÓLIDOS)"; colorSep = "#fff8e1"; textCol = "#f57f17"; }
-               
-               var trSep = document.createElement("tr");
-               trSep.innerHTML = `<td colspan="5" style="background:${colorSep}; color:${textCol}; font-size:0.75rem; font-weight:800; padding:6px 12px; letter-spacing:1px; border-top: 2px solid ${textCol}30;">${lbl}</td>`;
-               tbody.appendChild(trSep);
-           }
+          if (item.unidad !== unidadActual) {
+            unidadActual = item.unidad;
+            let lbl = "📦 PIEZAS (INDIVISIBLES)";
+            let colorSep = "#f3e5f5";
+            let textCol = "#8e24aa";
+            if (unidadActual === "L") {
+              lbl = "💧 VOLUMEN (LÍQUIDOS)";
+              colorSep = "#e3f2fd";
+              textCol = "#0277bd";
+            }
+            if (unidadActual === "Kg") {
+              lbl = "⚖️ MASA (SÓLIDOS)";
+              colorSep = "#fff8e1";
+              textCol = "#f57f17";
+            }
 
-           var tr = document.createElement("tr");
-           tr.style.borderBottom = "1px solid #eee";
-           tr.style.background = "#fff";
-           
-           var volUnit = item.volumen_nominal || 0; 
-           let volDisplay = (item.unidad === 'Pza') ? Math.round(item.volumen) : Number(item.volumen).toFixed(2);
+            var trSep = document.createElement("tr");
+            trSep.innerHTML = `<td colspan="5" style="background:${colorSep}; color:${textCol}; font-size:0.75rem; font-weight:800; padding:6px 12px; letter-spacing:1px; border-top: 2px solid ${textCol}30;">${lbl}</td>`;
+            tbody.appendChild(trSep);
+          }
 
-           var row = '<td style="padding:12px;"><b>' + item.producto + '</b><br><small style="color:#666;">' + item.presentacion + '</small></td>';
-           row += '<td style="padding:12px; color:#d63031; font-family:monospace; font-size:0.9rem;">' + item.lote + '</td>';
-           row += '<td style="padding:12px; font-size:0.9rem;">' + (item.caducidad||'--') + '</td>';
-           row += '<td style="padding:12px; text-align:right;"><b>' + volDisplay + ' ' + item.unidad + '</b></td>';
-           row += '<td style="padding:12px; text-align:center;">';
-           
-           row += `<div style="display:flex; gap:5px; justify-content:center;">`;
-           // SE MANDAN LOS 8 PARÁMETROS AQUÍ
-           row += `<button class="btn-action btn-move" title="Transferir" onclick="abrirTransferencia('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit}, '${item.unidad}')">🔄</button>`;
-           row += `<button class="btn-action btn-transf" title="Transformar" onclick="abrirTransformacion('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit}, '${item.unidad}')">🛠️</button>`;
-           row += `</div></td>`;
-           
-           tr.innerHTML = row;
-           tbody.appendChild(tr);
+          var tr = document.createElement("tr");
+          tr.style.borderBottom = "1px solid #eee";
+          tr.style.background = "#fff";
+
+          var volUnit = item.volumen_nominal || 0;
+          let volDisplay =
+            item.unidad === "Pza"
+              ? Math.round(item.volumen)
+              : Number(item.volumen).toFixed(2);
+
+          var row =
+            '<td style="padding:12px;"><b>' +
+            item.producto +
+            '</b><br><small style="color:#666;">' +
+            item.presentacion +
+            "</small></td>";
+          row +=
+            '<td style="padding:12px; color:#d63031; font-family:monospace; font-size:0.9rem;">' +
+            item.lote +
+            "</td>";
+          row +=
+            '<td style="padding:12px; font-size:0.9rem;">' +
+            (item.caducidad || "--") +
+            "</td>";
+          row +=
+            '<td style="padding:12px; text-align:right;"><b>' +
+            volDisplay +
+            " " +
+            item.unidad +
+            "</b></td>";
+          row += '<td style="padding:12px; text-align:center;">';
+
+          row += `<div style="display:flex; gap:5px; justify-content:center;">`;
+          // SE MANDAN LOS 8 PARÁMETROS AQUÍ
+          row += `<button class="btn-action btn-move" title="Transferir" onclick="abrirTransferencia('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit}, '${item.unidad}')">🔄</button>`;
+          row += `<button class="btn-action btn-transf" title="Transformar" onclick="abrirTransformacion('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit}, '${item.unidad}')">🛠️</button>`;
+          row += `</div></td>`;
+
+          tr.innerHTML = row;
+          tbody.appendChild(tr);
         }
       }
+    }
+    if (typeof abrirModalGenerico === "function")
+      abrirModalGenerico("modalDetalleUbicacion");
   }
-  if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalDetalleUbicacion");
-}
 
-// --- TRANSFERENCIA ---
-function abrirTransferencia(pId, pNom, lote, stock, uId, presId, volUnit, unidadOrigen) {
-  // 1. Rescatamos la unidad (Si por alguna razón no llega, ponemos 'L' por defecto)
-  let unidad = unidadOrigen || 'L';
-  
-  // Guardamos los datos necesarios para la transferencia en la memoria temporal
-  volUnit = Number(volUnit);
-  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit, unidad: unidad };
-  
-  document.getElementById("txtProductoTransf").innerText = pNom;
-  document.getElementById("txtLoteTransf").innerText = "Lote: " + lote;
-  document.getElementById("cantTransferir").value = "";
-  
-  // 2. Reseteamos visuales usando la UNIDAD DINÁMICA correcta
-  document.getElementById("lblRestante").innerText = stock + " " + unidad;
-  document.getElementById("lblEquivalencia").innerText = "0 " + unidad;
-  
-  // Cálculo del máximo de piezas movibles
-  var maxPzas = (volUnit > 0) ? Math.floor(stock / volUnit) : 0;
-  var label = document.querySelector("#modalTransferencia label");
-  var btnMax = document.getElementById("btnMaxTransf");
-  
-  if (!btnMax && label) {
-      label.insertAdjacentHTML('beforeend', ` <span id="btnMaxTransf" style="color:#007aff; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`);
+  // --- TRANSFERENCIA ---
+  function abrirTransferencia(
+    pId,
+    pNom,
+    lote,
+    stock,
+    uId,
+    presId,
+    volUnit,
+    unidadOrigen,
+  ) {
+    // 1. Rescatamos la unidad (Si por alguna razón no llega, ponemos 'L' por defecto)
+    let unidad = unidadOrigen || "L";
+
+    // Guardamos los datos necesarios para la transferencia en la memoria temporal
+    volUnit = Number(volUnit);
+    TEMP_ACCION = {
+      prodId: pId,
+      prodNom: pNom,
+      lote: lote,
+      stock: stock,
+      ubicId: uId,
+      presId: presId,
+      volUnit: volUnit,
+      unidad: unidad,
+    };
+
+    document.getElementById("txtProductoTransf").innerText = pNom;
+    document.getElementById("txtLoteTransf").innerText = "Lote: " + lote;
+    document.getElementById("cantTransferir").value = "";
+
+    // 2. Reseteamos visuales usando la UNIDAD DINÁMICA correcta
+    document.getElementById("lblRestante").innerText = stock + " " + unidad;
+    document.getElementById("lblEquivalencia").innerText = "0 " + unidad;
+
+    // Cálculo del máximo de piezas movibles
+    var maxPzas = volUnit > 0 ? Math.floor(stock / volUnit) : 0;
+    var label = document.querySelector("#modalTransferencia label");
+    var btnMax = document.getElementById("btnMaxTransf");
+
+    if (!btnMax && label) {
+      label.insertAdjacentHTML(
+        "beforeend",
+        ` <span id="btnMaxTransf" style="color:#007aff; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`,
+      );
       btnMax = document.getElementById("btnMaxTransf");
-  }
-  
-  if(btnMax) {
+    }
+
+    if (btnMax) {
       btnMax.innerText = "(Máx: " + maxPzas + " pzas)";
-      btnMax.onclick = function() {
-          document.getElementById("cantTransferir").value = maxPzas;
-          if(typeof calcularSimulacionTransferencia === 'function') calcularSimulacionTransferencia();
+      btnMax.onclick = function () {
+        document.getElementById("cantTransferir").value = maxPzas;
+        if (typeof calcularSimulacionTransferencia === "function")
+          calcularSimulacionTransferencia();
       };
-  }
+    }
 
-  // Llenar destinos (todas las cajas menos la actual)
-  var selDest = document.getElementById("selDestinoTransf");
-  if(selDest && window.CACHE_UBICACIONES) {
+    // Llenar destinos (todas las cajas menos la actual)
+    var selDest = document.getElementById("selDestinoTransf");
+    if (selDest && window.CACHE_UBICACIONES) {
       selDest.innerHTML = '<option value="">Selecciona destino...</option>';
-      window.CACHE_UBICACIONES.forEach(u => {
-          if(String(u.id) !== String(uId)) {
-              var opt = document.createElement("option");
-              opt.value = u.id; opt.text = u.nombre; selDest.appendChild(opt);
-          }
+      window.CACHE_UBICACIONES.forEach((u) => {
+        if (String(u.id) !== String(uId)) {
+          var opt = document.createElement("option");
+          opt.value = u.id;
+          opt.text = u.nombre;
+          selDest.appendChild(opt);
+        }
       });
+    }
+    abrirModalGenerico("modalTransferencia");
   }
-  abrirModalGenerico("modalTransferencia");
-}
 
-function calcularSimulacionTransferencia() {
-  if(!TEMP_ACCION) return;
-  var pzas = parseFloat(document.getElementById("cantTransferir").value) || 0;
-  
-  var cantReal = pzas * TEMP_ACCION.volUnit;
-  
-  // 3. Imprimimos el resultado usando la unidad guardada en TEMP_ACCION
-  document.getElementById("lblEquivalencia").innerText = cantReal.toFixed(2) + " " + TEMP_ACCION.unidad;
-  
-  var resto = TEMP_ACCION.stock - cantReal;
-  var elRest = document.getElementById("lblRestante");
-  
-  if(elRest) {
+  function calcularSimulacionTransferencia() {
+    if (!TEMP_ACCION) return;
+    var pzas = parseFloat(document.getElementById("cantTransferir").value) || 0;
+
+    var cantReal = pzas * TEMP_ACCION.volUnit;
+
+    // 3. Imprimimos el resultado usando la unidad guardada en TEMP_ACCION
+    document.getElementById("lblEquivalencia").innerText =
+      cantReal.toFixed(2) + " " + TEMP_ACCION.unidad;
+
+    var resto = TEMP_ACCION.stock - cantReal;
+    var elRest = document.getElementById("lblRestante");
+
+    if (elRest) {
       elRest.innerText = resto.toFixed(2) + " " + TEMP_ACCION.unidad;
       // Validación visual: Rojo si te pasas
       if (resto < -0.001) {
-          elRest.style.color = "#d63031"; 
-          elRest.innerText += " (Insuficiente)";
+        elRest.style.color = "#d63031";
+        elRest.innerText += " (Insuficiente)";
       } else {
-          elRest.style.color = "#27ae60";
+        elRest.style.color = "#27ae60";
       }
-  }
-}
-
-function confirmarTransferencia() {
-  if(!TEMP_ACCION) return;
-  var pzas = parseFloat(document.getElementById("cantTransferir").value);
-  var dest = document.getElementById("selDestinoTransf").value;
-  
-  if(!pzas || pzas<=0) return Swal.fire("Error","Cantidad incorrecta","error");
-  if(!dest) return Swal.fire("Error","Elige destino","error");
-  
-  var lts = pzas * TEMP_ACCION.volUnit;
-  if(lts > TEMP_ACCION.stock + 0.001) return Swal.fire("Stock Insuficiente", "Solo tienes " + TEMP_ACCION.stock + " disponibles.", "error");
-
-  cerrarModalGenerico("modalTransferencia");
-  Swal.fire({title:'Moviendo...', didOpen: function(){Swal.showLoading()}});
-  
-  google.script.run.withSuccessHandler(function(){
-      cargarDashboardUbicaciones();
-      cerrarModalGenerico("modalDetalleUbicacion");
-      Swal.fire("Listo","Transferencia exitosa","success");
-  }).withFailureHandler(function(e){Swal.fire("Error",e.message,"error")})
-  .transferirProducto(TEMP_ACCION.ubicId, dest, TEMP_ACCION.prodId, TEMP_ACCION.presId, TEMP_ACCION.lote, lts);
-}
-
-// --- TRANSFORMACIÓN ---
-function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unidadOrigen) {
-  if (unidadOrigen === 'Pza') {
-      return Swal.fire("Acción no permitida", "Los productos por Pieza son indivisibles. Utiliza la opción de 'Transferir'.", "warning");
-  }
-
-  volUnit = Number(volUnit);
-  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit, unidad: unidadOrigen };
-  
-  document.getElementById("lblTransfOrigen").innerText = pNom;
-  document.getElementById("lblTransfLote").innerText = lote;
-  document.getElementById("cantTransfPiezas").value = "";
-  document.getElementById("lblTransfLitros").innerText = `0 ${unidadOrigen}`;
-  
-  // Limpiar Buscador
-  document.getElementById("transf_producto_search").value = "";
-  document.getElementById("selTransfNuevoProd").value = "";
-  
-  // Filtrar Datalist de Productos (Misma unidad)
-  let dlProd = document.getElementById("lista-transf-productos");
-  if (dlProd && window.CACHE_CATALOGOS) {
-      dlProd.innerHTML = "";
-      window.CACHE_CATALOGOS.productos.forEach(p => {
-          let uLow = (p.unidad || 'L').toLowerCase();
-          let pUni = (uLow.includes('kg') || uLow.includes('kilo')) ? 'Kg' : 'L'; // Pzas ya están bloqueadas
-          if (pUni === unidadOrigen) {
-              let opt = document.createElement("option");
-              opt.value = p.nombre; dlProd.appendChild(opt);
-          }
-      });
-  }
-
-  // Filtrar Select de Presentaciones (Riguroso)
-  let selPres = document.getElementById("selTransfNuevaPres");
-  if (selPres && window.CACHE_CATALOGOS) {
-      selPres.innerHTML = '<option value="">Selecciona...</option>';
-      window.CACHE_CATALOGOS.presentaciones.forEach(p => {
-          let n = p.nombre.toLowerCase();
-          let pUni = '';
-          if (n.includes('kg') || n.includes('gramo')) pUni = 'Kg';
-          else if (n.includes(' pza') || n.includes('unid') || n.includes('pieza')) pUni = 'Pza';
-          else if (n.includes(' l') || n.includes('ml') || n.includes('litro')) pUni = 'L';
-          
-          if (pUni === unidadOrigen) {
-              let opt = document.createElement("option");
-              opt.value = p.id; opt.text = p.nombre; opt.setAttribute("data-volumen", p.volumen || 0);
-              selPres.appendChild(opt);
-          }
-      });
-  }
-  
-  var maxPzas = (volUnit > 0) ? Math.floor(stock / volUnit) : 0;
-  var btnMax2 = document.getElementById("btnMaxTransf2");
-  if (!btnMax2) {
-      var label = document.querySelector("#modalTransformacion label");
-      if(label) label.insertAdjacentHTML('beforeend', ` <span id="btnMaxTransf2" style="color:#9b59b6; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`);
-      btnMax2 = document.getElementById("btnMaxTransf2");
-  }
-  if(btnMax2) {
-      btnMax2.innerText = "(Máx: " + maxPzas + ")";
-      btnMax2.onclick = function() {
-          if (volUnit <= 0) return;
-          document.getElementById("cantTransfPiezas").value = maxPzas;
-          calcTransf();
-      };
-  }
-  abrirModalGenerico("modalTransformacion");
-}
-
-// 1. EL BUSCADOR AHORA ES SILENCIOSO (Solo busca, no lanza alertas)
-// --- 1. SELECCIÓN DE PRODUCTO (Sincroniza Filtro de Presentaciones) ---
-function seleccionarProductoTransf() {
-    let searchVal = document.getElementById('transf_producto_search').value.trim();
-    let hiddenId = document.getElementById('selTransfNuevoProd');
-    if(searchVal === "") { hiddenId.value = ""; return; }
-
-    let prod = window.CACHE_CATALOGOS.productos.find(p => p.nombre.toUpperCase() === searchVal.toUpperCase());
-    
-    if(prod) {
-        hiddenId.value = prod.id;
-        // ¡IMPORTANTE! Al encontrar el producto, validamos su unidad contra el origen
-        let uLow = (prod.unidad || 'L').toLowerCase();
-        let pUni = (uLow.includes('kg')) ? 'Kg' : (uLow.includes('pza') || uLow.includes('unid')) ? 'Pza' : 'L';
-        
-        if (pUni !== TEMP_ACCION.unidad) {
-            Swal.fire("Unidad Incompatible", `El producto "${prod.nombre}" es de tipo ${pUni}, pero el origen es ${TEMP_ACCION.unidad}.`, "error");
-            document.getElementById('transf_producto_search').value = "";
-            hiddenId.value = "";
-            return;
-        }
-        // Refrescamos el cálculo de piezas estimadas
-        calcTransf();
-    } else {
-        // Lógica de creación de Sub-Producto (Padre/Hijo)
-        hiddenId.value = "";
-        let nombrePadre = TEMP_ACCION.prodNom;
-        let match = nombrePadre.match(/(.*)\(([^)]+)\)$/);
-        if(match) nombrePadre = match[2].trim();
-        
-        let nuevoNombreAlias = `${searchVal.toUpperCase()} (${nombrePadre})`;
-
-        Swal.fire({
-            title: 'Producto No Registrado',
-            text: `¿Deseas registrar "${nuevoNombreAlias}" como un sub-producto de ${nombrePadre}?`,
-            icon: 'question',
-            showCancelButton: true, confirmButtonColor: '#9b59b6', confirmButtonText: 'Sí, registrar'
-        }).then((res) => {
-            if(res.isConfirmed) {
-                document.getElementById("nuevoNombre").value = nuevoNombreAlias;
-                let uSelect = document.getElementById("nuevaUnidad");
-                if(uSelect) {
-                    // FIX: Asegurar que si la unidad es Pza, seleccione 'Unid' en el selector
-                    uSelect.value = TEMP_ACCION.unidad === 'Kg' ? 'Kg' : (TEMP_ACCION.unidad === 'Pza' ? 'Unid' : 'L');
-                    uSelect.disabled = true;
-                }
-                
-                // FIX: Forzamos visualmente que el modalProducto se ponga hasta el frente
-                document.getElementById('modalProducto').style.zIndex = "1005";
-                abrirModalGenerico('modalProducto'); 
-            } else { document.getElementById('transf_producto_search').value = ""; }
-        });
     }
-}
+  }
 
-function calcTransf() {
-  if(!TEMP_ACCION) return;
-  
-  var inputPzas = document.getElementById("cantTransfPiezas");
-  var pzas = Math.floor(parseFloat(inputPzas.value)) || 0;
-  if(pzas < 0) pzas = 0;
-  
-  var cantReal = pzas * TEMP_ACCION.volUnit;
-  
-  var elLit = document.getElementById("lblTransfLitros"); 
-  if(elLit) {
+  function confirmarTransferencia() {
+    if (!TEMP_ACCION) return;
+    var pzas = parseFloat(document.getElementById("cantTransferir").value);
+    var dest = document.getElementById("selDestinoTransf").value;
+
+    if (!pzas || pzas <= 0)
+      return Swal.fire("Error", "Cantidad incorrecta", "error");
+    if (!dest) return Swal.fire("Error", "Elige destino", "error");
+
+    var lts = pzas * TEMP_ACCION.volUnit;
+    if (lts > TEMP_ACCION.stock + 0.001)
+      return Swal.fire(
+        "Stock Insuficiente",
+        "Solo tienes " + TEMP_ACCION.stock + " disponibles.",
+        "error",
+      );
+
+    cerrarModalGenerico("modalTransferencia");
+    Swal.fire({
+      title: "Moviendo...",
+      didOpen: function () {
+        Swal.showLoading();
+      },
+    });
+
+    google.script.run
+      .withSuccessHandler(function () {
+        cargarDashboardUbicaciones();
+        cerrarModalGenerico("modalDetalleUbicacion");
+        Swal.fire("Listo", "Transferencia exitosa", "success");
+      })
+      .withFailureHandler(function (e) {
+        Swal.fire("Error", e.message, "error");
+      })
+      .transferirProducto(
+        TEMP_ACCION.ubicId,
+        dest,
+        TEMP_ACCION.prodId,
+        TEMP_ACCION.presId,
+        TEMP_ACCION.lote,
+        lts,
+      );
+  }
+
+  // --- TRANSFORMACIÓN ---
+  function abrirTransformacion(
+    pId,
+    pNom,
+    lote,
+    stock,
+    uId,
+    presId,
+    volUnit,
+    unidadOrigen,
+  ) {
+    if (unidadOrigen === "Pza") {
+      return Swal.fire(
+        "Acción no permitida",
+        "Los productos por Pieza son indivisibles. Utiliza la opción de 'Transferir'.",
+        "warning",
+      );
+    }
+
+    volUnit = Number(volUnit);
+    TEMP_ACCION = {
+      prodId: pId,
+      prodNom: pNom,
+      lote: lote,
+      stock: stock,
+      ubicId: uId,
+      presId: presId,
+      volUnit: volUnit,
+      unidad: unidadOrigen,
+    };
+
+    document.getElementById("lblTransfOrigen").innerText = pNom;
+    document.getElementById("lblTransfLote").innerText = lote;
+    document.getElementById("cantTransfPiezas").value = "";
+    document.getElementById("lblTransfLitros").innerText = `0 ${unidadOrigen}`;
+
+    // Limpiar Buscador
+    document.getElementById("transf_producto_search").value = "";
+    document.getElementById("selTransfNuevoProd").value = "";
+
+    // Filtrar Datalist de Productos (Misma unidad)
+    let dlProd = document.getElementById("lista-transf-productos");
+    if (dlProd && window.CACHE_CATALOGOS) {
+      dlProd.innerHTML = "";
+      window.CACHE_CATALOGOS.productos.forEach((p) => {
+        let uLow = (p.unidad || "L").toLowerCase();
+        let pUni = uLow.includes("kg") || uLow.includes("kilo") ? "Kg" : "L"; // Pzas ya están bloqueadas
+        if (pUni === unidadOrigen) {
+          let opt = document.createElement("option");
+          opt.value = p.nombre;
+          dlProd.appendChild(opt);
+        }
+      });
+    }
+
+    // Filtrar Select de Presentaciones (Riguroso)
+    let selPres = document.getElementById("selTransfNuevaPres");
+    if (selPres && window.CACHE_CATALOGOS) {
+      selPres.innerHTML = '<option value="">Selecciona...</option>';
+      window.CACHE_CATALOGOS.presentaciones.forEach((p) => {
+        let n = p.nombre.toLowerCase();
+        let pUni = "";
+        if (n.includes("kg") || n.includes("gramo")) pUni = "Kg";
+        else if (
+          n.includes(" pza") ||
+          n.includes("unid") ||
+          n.includes("pieza")
+        )
+          pUni = "Pza";
+        else if (n.includes(" l") || n.includes("ml") || n.includes("litro"))
+          pUni = "L";
+
+        if (pUni === unidadOrigen) {
+          let opt = document.createElement("option");
+          opt.value = p.id;
+          opt.text = p.nombre;
+          opt.setAttribute("data-volumen", p.volumen || 0);
+          selPres.appendChild(opt);
+        }
+      });
+    }
+
+    var maxPzas = volUnit > 0 ? Math.floor(stock / volUnit) : 0;
+    var btnMax2 = document.getElementById("btnMaxTransf2");
+    if (!btnMax2) {
+      var label = document.querySelector("#modalTransformacion label");
+      if (label)
+        label.insertAdjacentHTML(
+          "beforeend",
+          ` <span id="btnMaxTransf2" style="color:#9b59b6; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`,
+        );
+      btnMax2 = document.getElementById("btnMaxTransf2");
+    }
+    if (btnMax2) {
+      btnMax2.innerText = "(Máx: " + maxPzas + ")";
+      btnMax2.onclick = function () {
+        if (volUnit <= 0) return;
+        document.getElementById("cantTransfPiezas").value = maxPzas;
+        calcTransf();
+      };
+    }
+    abrirModalGenerico("modalTransformacion");
+  }
+
+  // 1. EL BUSCADOR AHORA ES SILENCIOSO (Solo busca, no lanza alertas)
+  // --- 1. SELECCIÓN DE PRODUCTO (Sincroniza Filtro de Presentaciones) ---
+  function seleccionarProductoTransf() {
+    let searchVal = document
+      .getElementById("transf_producto_search")
+      .value.trim();
+    let hiddenId = document.getElementById("selTransfNuevoProd");
+    if (searchVal === "") {
+      hiddenId.value = "";
+      return;
+    }
+
+    let prod = window.CACHE_CATALOGOS.productos.find(
+      (p) => p.nombre.toUpperCase() === searchVal.toUpperCase(),
+    );
+
+    if (prod) {
+      hiddenId.value = prod.id;
+      // ¡IMPORTANTE! Al encontrar el producto, validamos su unidad contra el origen
+      let uLow = (prod.unidad || "L").toLowerCase();
+      let pUni = uLow.includes("kg")
+        ? "Kg"
+        : uLow.includes("pza") || uLow.includes("unid")
+          ? "Pza"
+          : "L";
+
+      if (pUni !== TEMP_ACCION.unidad) {
+        Swal.fire(
+          "Unidad Incompatible",
+          `El producto "${prod.nombre}" es de tipo ${pUni}, pero el origen es ${TEMP_ACCION.unidad}.`,
+          "error",
+        );
+        document.getElementById("transf_producto_search").value = "";
+        hiddenId.value = "";
+        return;
+      }
+      // Refrescamos el cálculo de piezas estimadas
+      calcTransf();
+    } else {
+      // Lógica de creación de Sub-Producto (Padre/Hijo)
+      hiddenId.value = "";
+      let nombrePadre = TEMP_ACCION.prodNom;
+      let match = nombrePadre.match(/(.*)\(([^)]+)\)$/);
+      if (match) nombrePadre = match[2].trim();
+
+      let nuevoNombreAlias = `${searchVal.toUpperCase()} (${nombrePadre})`;
+
+      Swal.fire({
+        title: "Producto No Registrado",
+        text: `¿Deseas registrar "${nuevoNombreAlias}" como un sub-producto de ${nombrePadre}?`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#9b59b6",
+        confirmButtonText: "Sí, registrar",
+      }).then((res) => {
+        if (res.isConfirmed) {
+          document.getElementById("nuevoNombre").value = nuevoNombreAlias;
+          let uSelect = document.getElementById("nuevaUnidad");
+          if (uSelect) {
+            // FIX: Asegurar que si la unidad es Pza, seleccione 'Unid' en el selector
+            uSelect.value =
+              TEMP_ACCION.unidad === "Kg"
+                ? "Kg"
+                : TEMP_ACCION.unidad === "Pza"
+                  ? "Unid"
+                  : "L";
+            uSelect.disabled = true;
+          }
+
+          // FIX: Forzamos visualmente que el modalProducto se ponga hasta el frente
+          document.getElementById("modalProducto").style.zIndex = "1005";
+          abrirModalGenerico("modalProducto");
+        } else {
+          document.getElementById("transf_producto_search").value = "";
+        }
+      });
+    }
+  }
+
+  function calcTransf() {
+    if (!TEMP_ACCION) return;
+
+    var inputPzas = document.getElementById("cantTransfPiezas");
+    var pzas = Math.floor(parseFloat(inputPzas.value)) || 0;
+    if (pzas < 0) pzas = 0;
+
+    var cantReal = pzas * TEMP_ACCION.volUnit;
+
+    var elLit = document.getElementById("lblTransfLitros");
+    if (elLit) {
       elLit.innerText = cantReal.toFixed(2) + " " + TEMP_ACCION.unidad;
-      elLit.style.color = (cantReal > TEMP_ACCION.stock + 0.001) ? "red" : "#9b59b6";
-  }
-  
-  var selD = document.getElementById("selTransfNuevaPres");
-  var volD = 0;
-  if(selD && selD.selectedIndex >= 0) volD = parseFloat(selD.options[selD.selectedIndex].getAttribute("data-volumen")) || 0;
-  
-  var res = 0; 
-  if(volD > 0) res = Math.floor(cantReal / volD);
-  
-  var elRes = document.getElementById("lblTransfResultado"); 
-  if(elRes) {
+      elLit.style.color =
+        cantReal > TEMP_ACCION.stock + 0.001 ? "red" : "#9b59b6";
+    }
+
+    var selD = document.getElementById("selTransfNuevaPres");
+    var volD = 0;
+    if (selD && selD.selectedIndex >= 0)
+      volD =
+        parseFloat(
+          selD.options[selD.selectedIndex].getAttribute("data-volumen"),
+        ) || 0;
+
+    var res = 0;
+    if (volD > 0) res = Math.floor(cantReal / volD);
+
+    var elRes = document.getElementById("lblTransfResultado");
+    if (elRes) {
       elRes.innerText = res + " Piezas";
+    }
   }
-}
 
-// 2. EL BOTÓN "TRANSFORMAR" AHORA ES INTELIGENTE (Controla todo el flujo)
-function confirmarTransformacion() {
-  var pzas = parseFloat(document.getElementById("cantTransfPiezas").value);
-  var searchVal = document.getElementById("transf_producto_search").value.trim();
-  var nProd = document.getElementById("selTransfNuevoProd").value;
-  var nPres = document.getElementById("selTransfNuevaPres").value;
-  var nLote = document.getElementById("inputTransfNuevoLote").value;
-  
-  if(!pzas || pzas <= 0) return Swal.fire("Error", "Cantidad incorrecta", "error");
-  if(!searchVal) return Swal.fire("Error", "Escribe el nombre del producto destino", "error");
-  if(!nPres) return Swal.fire("Error", "Selecciona la nueva presentación", "error");
+  // 2. EL BOTÓN "TRANSFORMAR" AHORA ES INTELIGENTE (Controla todo el flujo)
+  function confirmarTransformacion() {
+    var pzas = parseFloat(document.getElementById("cantTransfPiezas").value);
+    var searchVal = document
+      .getElementById("transf_producto_search")
+      .value.trim();
+    var nProd = document.getElementById("selTransfNuevoProd").value;
+    var nPres = document.getElementById("selTransfNuevaPres").value;
+    var nLote = document.getElementById("inputTransfNuevoLote").value;
 
-  // A. VERIFICAMOS EN TIEMPO REAL SI EL PRODUCTO EXISTE
-  let prod = window.CACHE_CATALOGOS.productos.find(p => p.nombre.toUpperCase() === searchVal.toUpperCase());
+    if (!pzas || pzas <= 0)
+      return Swal.fire("Error", "Cantidad incorrecta", "error");
+    if (!searchVal)
+      return Swal.fire(
+        "Error",
+        "Escribe el nombre del producto destino",
+        "error",
+      );
+    if (!nPres)
+      return Swal.fire("Error", "Selecciona la nueva presentación", "error");
 
-  if (prod) {
+    // A. VERIFICAMOS EN TIEMPO REAL SI EL PRODUCTO EXISTE
+    let prod = window.CACHE_CATALOGOS.productos.find(
+      (p) => p.nombre.toUpperCase() === searchVal.toUpperCase(),
+    );
+
+    if (prod) {
       // B. SI EXISTE: Aseguramos su ID interno y validamos unidades
       nProd = prod.id;
-      let uLow = (prod.unidad || 'L').toLowerCase();
-      let pUni = (uLow.includes('kg')) ? 'Kg' : (uLow.includes('pza') || uLow.includes('unid')) ? 'Pza' : 'L';
-      
+      let uLow = (prod.unidad || "L").toLowerCase();
+      let pUni = uLow.includes("kg")
+        ? "Kg"
+        : uLow.includes("pza") || uLow.includes("unid")
+          ? "Pza"
+          : "L";
+
       if (pUni !== TEMP_ACCION.unidad) {
-          return Swal.fire("Incompatibilidad", `El producto es ${pUni} pero estás transformando ${TEMP_ACCION.unidad}.`, "error");
+        return Swal.fire(
+          "Incompatibilidad",
+          `El producto es ${pUni} pero estás transformando ${TEMP_ACCION.unidad}.`,
+          "error",
+        );
       }
-  } else {
+    } else {
       // C. SI NO EXISTE: Detenemos el guardado y ofrecemos crearlo aquí mismo
       let nombrePadre = TEMP_ACCION.prodNom;
       let match = nombrePadre.match(/(.*)\(([^)]+)\)$/);
-      if(match) nombrePadre = match[2].trim();
-      
+      if (match) nombrePadre = match[2].trim();
+
       let nuevoNombreAlias = `${searchVal.toUpperCase()} (${nombrePadre})`;
 
       return Swal.fire({
-          title: 'Producto No Registrado',
-          text: `¿Deseas registrar "${searchVal.toUpperCase()}" como un sub-producto de ${nombrePadre}?`,
-          icon: 'question',
-          showCancelButton: true, confirmButtonColor: '#9b59b6', confirmButtonText: 'Sí, registrar'
+        title: "Producto No Registrado",
+        text: `¿Deseas registrar "${searchVal.toUpperCase()}" como un sub-producto de ${nombrePadre}?`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#9b59b6",
+        confirmButtonText: "Sí, registrar",
       }).then((res) => {
-          if(res.isConfirmed) {
-              document.getElementById("nuevoNombre").value = nuevoNombreAlias;
-              let uSelect = document.getElementById("nuevaUnidad");
-              if(uSelect) {
-                  uSelect.value = TEMP_ACCION.unidad === 'Kg' ? 'Kg' : 'L';
-                  uSelect.disabled = true;
-              }
-              abrirModalGenerico('modalProducto'); 
+        if (res.isConfirmed) {
+          document.getElementById("nuevoNombre").value = nuevoNombreAlias;
+          let uSelect = document.getElementById("nuevaUnidad");
+          if (uSelect) {
+            uSelect.value = TEMP_ACCION.unidad === "Kg" ? "Kg" : "L";
+            uSelect.disabled = true;
           }
+          abrirModalGenerico("modalProducto");
+        }
       });
+    }
+
+    // D. SI TODO ESTÁ EN ORDEN, HACEMOS LA MATEMÁTICA Y GUARDAMOS
+    var lts = pzas * TEMP_ACCION.volUnit;
+    if (lts > TEMP_ACCION.stock + 0.001)
+      return Swal.fire("Error", "Stock insuficiente", "error");
+
+    var datos = {
+      origenId: TEMP_ACCION.ubicId,
+      productoIdOrigen: TEMP_ACCION.prodId,
+      loteOrigen: TEMP_ACCION.lote,
+      cantidadLitros: lts,
+      nuevoProductoId: nProd,
+      nuevaPresentacionId: nPres,
+      nuevoLote: nLote,
+    };
+
+    if (typeof cerrarModalGenerico === "function")
+      cerrarModalGenerico("modalTransformacion");
+    Swal.fire({
+      title: "Procesando...",
+      didOpen: function () {
+        Swal.showLoading();
+      },
+    });
+
+    google.script.run
+      .withSuccessHandler(function () {
+        cargarDashboardUbicaciones();
+        if (typeof cerrarModalGenerico === "function")
+          cerrarModalGenerico("modalDetalleUbicacion");
+        Swal.fire("Listo", "Transformación exitosa", "success");
+      })
+      .withFailureHandler(function (e) {
+        Swal.fire("Error", e.message, "error");
+      })
+      .realizarTransformacion(datos);
   }
-
-  // D. SI TODO ESTÁ EN ORDEN, HACEMOS LA MATEMÁTICA Y GUARDAMOS
-  var lts = pzas * TEMP_ACCION.volUnit;
-  if(lts > TEMP_ACCION.stock + 0.001) return Swal.fire("Error", "Stock insuficiente", "error");
-
-  var datos = { origenId:TEMP_ACCION.ubicId, productoIdOrigen:TEMP_ACCION.prodId, loteOrigen:TEMP_ACCION.lote, cantidadLitros:lts, nuevoProductoId:nProd, nuevaPresentacionId:nPres, nuevoLote:nLote };
-  
-  if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico("modalTransformacion");
-  Swal.fire({title:'Procesando...', didOpen: function(){Swal.showLoading()}});
-  
-  google.script.run.withSuccessHandler(function(){
-      cargarDashboardUbicaciones();
-      if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico("modalDetalleUbicacion");
-      Swal.fire("Listo", "Transformación exitosa", "success");
-  }).withFailureHandler(function(e){Swal.fire("Error", e.message, "error")})
-  .realizarTransformacion(datos);
-}
 </script>
 
 <script>
-    // ==========================================
-// GESTIÓN DE ENVÍOS (V40 - FIX EMPRESA & RESPONSIVE)
-// ==========================================
+  // ==========================================
+  // GESTIÓN DE ENVÍOS (V40 - FIX EMPRESA & RESPONSIVE)
+  // ==========================================
 
-var LISTA_PEDIDOS_CACHE = [];
-var FILTRO_ACTUAL_PEDIDOS = 'Todos';
-var ID_PEDIDO_SELECCIONADO = null;
-var EMPRESA_SELECCIONADA_CACHE = ""; // Variable para guardar la empresa temporalmente
+  var LISTA_PEDIDOS_CACHE = [];
+  var FILTRO_ACTUAL_PEDIDOS = "Todos";
+  var ID_PEDIDO_SELECCIONADO = null;
+  var EMPRESA_SELECCIONADA_CACHE = ""; // Variable para guardar la empresa temporalmente
 
-// --- ESTILOS INYECTADOS (MODAL PERFECTO & RESPONSIVO) ---
-var ESTILOS_MODAL_PREMIUM = `
+  // --- ESTILOS INYECTADOS (MODAL PERFECTO & RESPONSIVO) ---
+  var ESTILOS_MODAL_PREMIUM = `
 <style>
   /* 1. FORZAR BORRADO DE ESTILOS VIEJOS */
   #modalDetallePedido .modal-header, 
@@ -808,58 +1042,71 @@ var ESTILOS_MODAL_PREMIUM = `
 </style>
 `;
 
-// 1. CARGAR DATOS
-function cargarDashboardPedidos() {
-  var loading = document.getElementById("loading-pedidos");
-  var tabla = document.getElementById("tablaPedidosMain");
-  
-  if(loading) loading.style.display = "block";
-  if(tabla) tabla.style.display = "none";
-  
-  google.script.run
-    .withSuccessHandler(function(lista) {
-       LISTA_PEDIDOS_CACHE = lista || [];
-       renderizarTablaPedidos(LISTA_PEDIDOS_CACHE);
-    })
-    .withFailureHandler(function(err){
-       console.error(err);
-       if(loading) loading.innerHTML = "<p style='color:red'>Error al cargar</p>";
-    })
-    .obtenerHistorialPedidos();
-}
+  // 1. CARGAR DATOS
+  function cargarDashboardPedidos() {
+    var loading = document.getElementById("loading-pedidos");
+    var tabla = document.getElementById("tablaPedidosMain");
 
-// 2. RENDERIZAR TABLA PRINCIPAL
-function renderizarTablaPedidos(lista) {
-  var tbody = document.getElementById("tablaPedidosBody");
-  var loading = document.getElementById("loading-pedidos");
-  var tabla = document.getElementById("tablaPedidosMain");
+    if (loading) loading.style.display = "block";
+    if (tabla) tabla.style.display = "none";
 
-  if(loading) loading.style.display = "none";
-  if(tabla) tabla.style.display = "table"; 
-  if(tbody) tbody.innerHTML = "";
-
-  if (!lista || lista.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:60px; color:#999;">No hay envíos encontrados.</td></tr>`;
-    return;
+    google.script.run
+      .withSuccessHandler(function (lista) {
+        LISTA_PEDIDOS_CACHE = lista || [];
+        renderizarTablaPedidos(LISTA_PEDIDOS_CACHE);
+      })
+      .withFailureHandler(function (err) {
+        console.error(err);
+        if (loading)
+          loading.innerHTML = "<p style='color:red'>Error al cargar</p>";
+      })
+      .obtenerHistorialPedidos();
   }
 
-  lista.forEach(function(p) {
-    var tr = document.createElement("tr");
-    
-    // Estatus
-    var stClass = "status-pendiente"; var iconSt = "⏳"; var stTexto = p.estatus || "Pendiente";
-    
-    // Ajuste de texto "En Proceso"
-    if(stTexto.indexOf('Enviado') !== -1 || stTexto.indexOf('Camino') !== -1 || stTexto.indexOf('Proceso') !== -1) { 
-        stClass = "status-enviado"; iconSt = "🚀"; stTexto = "En Proceso"; 
+  // 2. RENDERIZAR TABLA PRINCIPAL
+  function renderizarTablaPedidos(lista) {
+    var tbody = document.getElementById("tablaPedidosBody");
+    var loading = document.getElementById("loading-pedidos");
+    var tabla = document.getElementById("tablaPedidosMain");
+
+    if (loading) loading.style.display = "none";
+    if (tabla) tabla.style.display = "table";
+    if (tbody) tbody.innerHTML = "";
+
+    if (!lista || lista.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:60px; color:#999;">No hay envíos encontrados.</td></tr>`;
+      return;
     }
-    if(stTexto.indexOf('Entregado') !== -1) { stClass = "status-entregado"; iconSt = "✅"; }
 
-    var nombreCliente = p.cliente || "Cliente";
-    var iniciales = nombreCliente.substring(0,2).toUpperCase();
-    var fechaStr = p.fecha || ""; if(fechaStr.length > 10) fechaStr = fechaStr.substring(0,10);
+    lista.forEach(function (p) {
+      var tr = document.createElement("tr");
 
-    tr.innerHTML = `
+      // Estatus
+      var stClass = "status-pendiente";
+      var iconSt = "⏳";
+      var stTexto = p.estatus || "Pendiente";
+
+      // Ajuste de texto "En Proceso"
+      if (
+        stTexto.indexOf("Enviado") !== -1 ||
+        stTexto.indexOf("Camino") !== -1 ||
+        stTexto.indexOf("Proceso") !== -1
+      ) {
+        stClass = "status-enviado";
+        iconSt = "🚀";
+        stTexto = "En Proceso";
+      }
+      if (stTexto.indexOf("Entregado") !== -1) {
+        stClass = "status-entregado";
+        iconSt = "✅";
+      }
+
+      var nombreCliente = p.cliente || "Cliente";
+      var iniciales = nombreCliente.substring(0, 2).toUpperCase();
+      var fechaStr = p.fecha || "";
+      if (fechaStr.length > 10) fechaStr = fechaStr.substring(0, 10);
+
+      tr.innerHTML = `
       <td>
          <span class="id-badge">${p.id}</span>
          <span class="date-text">${fechaStr}</span>
@@ -869,101 +1116,135 @@ function renderizarTablaPedidos(lista) {
             <div class="client-avatar">${iniciales}</div>
             <div>
                <div style="font-weight:600; color:#1e293b;">${nombreCliente}</div>
-               <div style="font-size:0.8rem; color:#64748b;">${p.empresa || ''}</div>
+               <div style="font-size:0.8rem; color:#64748b;">${p.empresa || ""}</div>
             </div>
          </div>
       </td>
       <td>
          <div style="font-size:0.85rem; color:#334155; line-height:1.4; font-weight:500;">${p.resumenProductos}</div>
-         ${p.guia ? `<div style="font-size:0.75rem; color:#059669; margin-top:4px; font-family:monospace; background:#ecfdf5; display:inline-block; padding:2px 6px; border-radius:4px;">🎫 ${p.guia}</div>` : ''}
+         ${p.guia ? `<div style="font-size:0.75rem; color:#059669; margin-top:4px; font-family:monospace; background:#ecfdf5; display:inline-block; padding:2px 6px; border-radius:4px;">🎫 ${p.guia}</div>` : ""}
       </td>
       <td><span class="status-badge ${stClass}">${iconSt} ${stTexto}</span></td>
       <td style="text-align:right;">
          <button onclick="verDetallePedido('${p.id}')" class="btn-manage" style="margin-left:auto;">Gestionar ➡️</button>
       </td>
     `;
-    tbody.appendChild(tr);
-  });
-}
+      tbody.appendChild(tr);
+    });
+  }
 
-// 3. FILTROS
-function filtrarTablaPedidos() { aplicarFiltrosCombinados(); }
-function filtrarEstado(estado, btn) {
-    document.querySelectorAll('.filter-tab').forEach(function(b) { b.classList.remove('active'); });
-    if(btn) btn.classList.add('active');
+  // 3. FILTROS
+  function filtrarTablaPedidos() {
+    aplicarFiltrosCombinados();
+  }
+  function filtrarEstado(estado, btn) {
+    document.querySelectorAll(".filter-tab").forEach(function (b) {
+      b.classList.remove("active");
+    });
+    if (btn) btn.classList.add("active");
     FILTRO_ACTUAL_PEDIDOS = estado;
     aplicarFiltrosCombinados();
-}
-// --- EN frontend/js/pedidos.js.html ---
+  }
+  // --- EN frontend/js/pedidos.js.html ---
 
-// Función para traducir cualquier fecha a formato universal YYYY-MM-DD
-function parseDateYMD(dateString) {
+  // Función para traducir cualquier fecha a formato universal YYYY-MM-DD
+  function parseDateYMD(dateString) {
     if (!dateString) return "";
     var cleanStr = String(dateString).split(" ")[0].split("T")[0]; // Quita las horas
     var parts = cleanStr.match(/\d+/g);
     if (!parts || parts.length < 3) return "";
-    
+
     // Si empieza con el año (ej. 2026-02-13)
     if (parts[0].length === 4) {
-        return parts[0] + "-" + parts[1].padStart(2, '0') + "-" + parts[2].padStart(2, '0');
+      return (
+        parts[0] +
+        "-" +
+        parts[1].padStart(2, "0") +
+        "-" +
+        parts[2].padStart(2, "0")
+      );
     }
     // Si viene de Sheets como DD/MM/YYYY o D/M/YYYY (ej. 13/2/2026)
-    return parts[2] + "-" + parts[1].padStart(2, '0') + "-" + parts[0].padStart(2, '0');
-}
+    return (
+      parts[2] +
+      "-" +
+      parts[1].padStart(2, "0") +
+      "-" +
+      parts[0].padStart(2, "0")
+    );
+  }
 
-function aplicarFiltrosCombinados() {
+  function aplicarFiltrosCombinados() {
     var input = document.getElementById("buscadorPedidos");
     var texto = input ? input.value.toLowerCase() : "";
-    
-    var fDesdeInput = document.getElementById("filtroFechaDesde") ? document.getElementById("filtroFechaDesde").value : "";
-    var fHastaInput = document.getElementById("filtroFechaHasta") ? document.getElementById("filtroFechaHasta").value : "";
 
-    var filtrados = LISTA_PEDIDOS_CACHE.filter(function(p) {
-        // 1. Estado
-        var cumpleEstado = true;
-        if(FILTRO_ACTUAL_PEDIDOS === 'Pendiente') cumpleEstado = (p.estatus === 'Pendiente' || !p.estatus);
-        else if (FILTRO_ACTUAL_PEDIDOS === 'Enviado') cumpleEstado = (p.estatus.indexOf('Enviado') !== -1 || p.estatus.indexOf('Camino') !== -1 || p.estatus.indexOf('Entregado') !== -1 || p.estatus.indexOf('Proceso') !== -1);
-        
-        // 2. Texto (BÚSQUEDA MEJORADA)
-        // Agrupamos todos los campos posibles en un solo arreglo, evitando valores nulos, y los unimos en un texto gigante.
-        var todo = [
-            p.id || "",
-            p.cliente || "",
-            p.empresa || "",
-            p.guia || "",
-            p.resumenProductos || ""
-        ].join(" ").toLowerCase();
-        
-        var cumpleTexto = !texto || todo.indexOf(texto) !== -1;
+    var fDesdeInput = document.getElementById("filtroFechaDesde")
+      ? document.getElementById("filtroFechaDesde").value
+      : "";
+    var fHastaInput = document.getElementById("filtroFechaHasta")
+      ? document.getElementById("filtroFechaHasta").value
+      : "";
 
-        // 3. Fechas 
-        var cumpleFecha = true;
-        if (fDesdeInput || fHastaInput) {
-            var fechaPedStr = parseDateYMD(p.fecha); 
-            if (fechaPedStr) {
-                if (fDesdeInput && fechaPedStr < fDesdeInput) cumpleFecha = false;
-                if (fHastaInput && fechaPedStr > fHastaInput) cumpleFecha = false;
-            }
+    var filtrados = LISTA_PEDIDOS_CACHE.filter(function (p) {
+      // 1. Estado
+      var cumpleEstado = true;
+      if (FILTRO_ACTUAL_PEDIDOS === "Pendiente")
+        cumpleEstado = p.estatus === "Pendiente" || !p.estatus;
+      else if (FILTRO_ACTUAL_PEDIDOS === "Enviado")
+        cumpleEstado =
+          p.estatus.indexOf("Enviado") !== -1 ||
+          p.estatus.indexOf("Camino") !== -1 ||
+          p.estatus.indexOf("Entregado") !== -1 ||
+          p.estatus.indexOf("Proceso") !== -1;
+
+      // 2. Texto (BÚSQUEDA MEJORADA)
+      // Agrupamos todos los campos posibles en un solo arreglo, evitando valores nulos, y los unimos en un texto gigante.
+      var todo = [
+        p.id || "",
+        p.cliente || "",
+        p.empresa || "",
+        p.guia || "",
+        p.resumenProductos || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      var cumpleTexto = !texto || todo.indexOf(texto) !== -1;
+
+      // 3. Fechas
+      var cumpleFecha = true;
+      if (fDesdeInput || fHastaInput) {
+        var fechaPedStr = parseDateYMD(p.fecha);
+        if (fechaPedStr) {
+          if (fDesdeInput && fechaPedStr < fDesdeInput) cumpleFecha = false;
+          if (fHastaInput && fechaPedStr > fHastaInput) cumpleFecha = false;
         }
-        return cumpleEstado && cumpleTexto && cumpleFecha;
+      }
+      return cumpleEstado && cumpleTexto && cumpleFecha;
     });
 
     renderizarTablaPedidos(filtrados);
-}
+  }
 
-// 4. DETALLE DEL PEDIDO (MODAL V40 FINAL)
-function verDetallePedido(id) {
-  ID_PEDIDO_SELECCIONADO = id;
-  
-  // --- TRUCO: Recuperar Empresa del Cache antes de ir al servidor ---
-  var pedidoEnCache = LISTA_PEDIDOS_CACHE.find(function(p) { return p.id === id; });
-  EMPRESA_SELECCIONADA_CACHE = (pedidoEnCache && pedidoEnCache.empresa) ? pedidoEnCache.empresa : "";
+  // 4. DETALLE DEL PEDIDO (MODAL V40 FINAL)
+  function verDetallePedido(id) {
+    ID_PEDIDO_SELECCIONADO = id;
 
-  if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalDetallePedido");
-  
-  // Limpiamos el modal con el loader bonito
-  var modalPadre = document.querySelector("#modalDetallePedido .modal-content");
-  if(modalPadre) {
+    // --- TRUCO: Recuperar Empresa del Cache antes de ir al servidor ---
+    var pedidoEnCache = LISTA_PEDIDOS_CACHE.find(function (p) {
+      return p.id === id;
+    });
+    EMPRESA_SELECCIONADA_CACHE =
+      pedidoEnCache && pedidoEnCache.empresa ? pedidoEnCache.empresa : "";
+
+    if (typeof abrirModalGenerico === "function")
+      abrirModalGenerico("modalDetallePedido");
+
+    // Limpiamos el modal con el loader bonito
+    var modalPadre = document.querySelector(
+      "#modalDetallePedido .modal-content",
+    );
+    if (modalPadre) {
       modalPadre.innerHTML = `
         ${ESTILOS_MODAL_PREMIUM}
         <div class="loader-box">
@@ -971,40 +1252,67 @@ function verDetallePedido(id) {
            <h3 style="color:#334155; margin:0;">Cargando Resumen...</h3>
            <p style="color:#94a3b8; font-size:0.9rem;">Obteniendo detalles del servidor</p>
         </div>`;
+    }
+
+    google.script.run
+      .withSuccessHandler(renderModalDetalle)
+      .withFailureHandler(function (e) {
+        if (modalPadre)
+          modalPadre.innerHTML = `<div style="padding:30px; text-align:center; color:red;">Error: ${e.message} <br><br><button class="btn-action-modal btn-close" onclick="cerrarModalGenerico('modalDetallePedido')">Cerrar</button></div>`;
+      })
+      .obtenerDetallePedidoCompleto(id);
   }
-  
-  google.script.run
-    .withSuccessHandler(renderModalDetalle)
-    .withFailureHandler(function(e){ 
-        if(modalPadre) modalPadre.innerHTML = `<div style="padding:30px; text-align:center; color:red;">Error: ${e.message} <br><br><button class="btn-action-modal btn-close" onclick="cerrarModalGenerico('modalDetallePedido')">Cerrar</button></div>`; 
-    })
-    .obtenerDetallePedidoCompleto(id);
-}
 
-// En frontend/js/pedidos.js.html
+  // En frontend/js/pedidos.js.html
 
-function renderModalDetalle(data) {
-  var modalPadre = document.querySelector("#modalDetallePedido .modal-content");
-  if(!modalPadre) return;
+  function renderModalDetalle(data) {
+    var modalPadre = document.querySelector(
+      "#modalDetallePedido .modal-content",
+    );
+    if (!modalPadre) return;
 
-  var cab = data.cabecera;
-  var esFinalizado = (cab.estatus === "Entregado");
-  var disabledAttr = esFinalizado ? "disabled" : "";
-  var fechaEstVal = cab.fechaEst ? cab.fechaEst.split("T")[0] : "";
-  var fechaRealVal = cab.fechaReal ? cab.fechaReal.split("T")[0] : "";
+    var cab = data.cabecera;
+    var esFinalizado = cab.estatus === "Entregado";
+    var disabledAttr = esFinalizado ? "disabled" : "";
+    var fechaEstVal = cab.fechaEst ? cab.fechaEst.split("T")[0] : "";
+    var fechaRealVal = cab.fechaReal ? cab.fechaReal.split("T")[0] : "";
 
-  // 1. LÓGICA DE LA GUÍA 
-  let htmlGuia = "";
-  if (cab.guia && cab.guia !== "---" && cab.guia !== "") {
+    // 1. LÓGICA DE LA GUÍA
+    let htmlGuia = "";
+    if (cab.guia && cab.guia !== "---" && cab.guia !== "") {
       htmlGuia = `<span style="background:#eff6ff; color:#2563eb; padding:4px 10px; border-radius:6px; font-weight:bold; font-family:monospace; font-size:1rem;">${cab.guia}</span>`;
-  } else {
+    } else {
       htmlGuia = `<input type="text" id="inputNuevaGuia" placeholder="Ingresar Guía..." style="border:1px solid #d63031; padding:5px; border-radius:4px; width:100%; font-family:monospace; color:#d63031;">`;
-  }
+    }
 
-  // 2. LÓGICA DE ITEMS
-  var itemsHtml = "";
-  if(data.items && data.items.length > 0) {
-      itemsHtml = data.items.map(function(i) {
+    // 2. LÓGICA DE ITEMS
+    var itemsHtml = "";
+    if (data.items && data.items.length > 0) {
+      itemsHtml = data.items
+        .map(function (i) {
+          let volNum = Number(i.volumen) || 0;
+          let pzasNum = Number(i.piezas) || 0;
+          let prName = String(i.presentacion || "").toLowerCase();
+
+          // Deducir la unidad real basándonos en el nombre de la presentación
+          let uni = "L";
+          if (
+            prName.includes("kg") ||
+            prName.includes("kilo") ||
+            prName.includes("gramo")
+          ) {
+            uni = "Kg";
+          } else if (
+            prName.includes("unid") ||
+            prName.includes("pza") ||
+            prName.includes("pieza")
+          ) {
+            uni = "Pza";
+          }
+
+          let volMostrar = uni === "Pza" ? Math.round(volNum) : volNum;
+          let displayVolumen = `${volMostrar} ${uni}`;
+
           return `
           <div class="prod-item">
              <div>
@@ -1012,22 +1320,40 @@ function renderModalDetalle(data) {
                 <div style="font-size:0.8rem; color:#64748b;">${i.presentacion} • Lote: <span style="font-family:monospace; color:#333;">${i.lote}</span></div>
              </div>
              <div style="text-align:right;">
-                <div style="font-weight:700; color:#2563eb;">${i.volumen} L</div>
-                <div style="font-size:0.75rem; color:#64748b; font-weight:600;">(${i.piezas || 0} pzas)</div>
+                <div style="font-weight:700; color:#2563eb;">${displayVolumen}</div>
+                <div style="font-size:0.75rem; color:#64748b; font-weight:600;">(${pzasNum} pzas)</div>
              </div>
           </div>`;
-      }).join("");
-  } else { itemsHtml = "<div style='color:#999; font-style:italic; padding:10px;'>Sin detalles</div>"; }
+        })
+        .join("");
+    } else {
+      itemsHtml =
+        "<div style='color:#999; font-style:italic; padding:10px;'>Sin detalles</div>";
+    }
 
-  var displayEmpresa = (cab.empresa && cab.empresa.length > 1) ? cab.empresa : EMPRESA_SELECCIONADA_CACHE;
-  if(!displayEmpresa || displayEmpresa === "") displayEmpresa = "Particular";
-  var displayEmail = (cab.email && cab.email !== "---") ? cab.email : "<span style='color:#94a3b8; font-style:italic;'>No registrado</span>";
-  var colorSt = "#f59e0b"; 
-  var textoStatus = cab.estatus;
-  if(cab.estatus.indexOf("Entregado") !== -1) { colorSt = "#10b981"; } 
-  if(cab.estatus.indexOf("Camino") !== -1 || cab.estatus.indexOf("Enviado") !== -1) { colorSt = "#3b82f6"; textoStatus = "En Proceso"; }
+    var displayEmpresa =
+      cab.empresa && cab.empresa.length > 1
+        ? cab.empresa
+        : EMPRESA_SELECCIONADA_CACHE;
+    if (!displayEmpresa || displayEmpresa === "") displayEmpresa = "Particular";
+    var displayEmail =
+      cab.email && cab.email !== "---"
+        ? cab.email
+        : "<span style='color:#94a3b8; font-style:italic;'>No registrado</span>";
+    var colorSt = "#f59e0b";
+    var textoStatus = cab.estatus;
+    if (cab.estatus.indexOf("Entregado") !== -1) {
+      colorSt = "#10b981";
+    }
+    if (
+      cab.estatus.indexOf("Camino") !== -1 ||
+      cab.estatus.indexOf("Enviado") !== -1
+    ) {
+      colorSt = "#3b82f6";
+      textoStatus = "En Proceso";
+    }
 
-  modalPadre.innerHTML = `
+    modalPadre.innerHTML = `
     ${ESTILOS_MODAL_PREMIUM}
     <div class="clean-header">
        <div class="clean-title-group">
@@ -1036,7 +1362,7 @@ function renderModalDetalle(data) {
        </div>
        <div style="text-align:right;">
           <div style="font-size:0.75rem; color:#64748b; font-weight:700;">TOTAL ENVÍO</div>
-          <div style="font-size:1.5rem; font-weight:800; color:#10b981;">$${Number(cab.costoEnvio||0).toFixed(2)}</div>
+          <div style="font-size:1.5rem; font-weight:800; color:#10b981;">$${Number(cab.costoEnvio || 0).toFixed(2)}</div>
        </div>
     </div>
     
@@ -1047,7 +1373,7 @@ function renderModalDetalle(data) {
                  <div class="card-label">👤 DATOS DEL CLIENTE</div>
                  <div class="data-item"><span class="data-icon">😊</span> <span class="data-bold">${cab.cliente}</span></div>
                  <div class="data-item"><span class="data-icon">🏢</span> <span style="font-weight:600; color:#475569;">${displayEmpresa}</span></div>
-                 <div class="data-item"><span class="data-icon">📞</span> ${cab.telefono||"--"}</div>
+                 <div class="data-item"><span class="data-icon">📞</span> ${cab.telefono || "--"}</div>
                  <div class="data-item"><span class="data-icon">✉️</span> ${displayEmail}</div>
               </div>
           </div>
@@ -1085,8 +1411,8 @@ function renderModalDetalle(data) {
           </button>
        </div>
 
-       <div class="info-card" style="background:${esFinalizado?'#f0fdf4':'#fff'}; border-color:${esFinalizado?'#bbf7d0':'#e2e8f0'}; margin-bottom:0;">
-          <div class="card-label" style="color:${esFinalizado?'#15803d':'#0f172a'};">📅 ACTUALIZACIÓN</div>
+       <div class="info-card" style="background:${esFinalizado ? "#f0fdf4" : "#fff"}; border-color:${esFinalizado ? "#bbf7d0" : "#e2e8f0"}; margin-bottom:0;">
+          <div class="card-label" style="color:${esFinalizado ? "#15803d" : "#0f172a"};">📅 ACTUALIZACIÓN</div>
           <div class="clean-grid" style="margin-bottom:0; gap:15px;">
              <div class="clean-col">
                 <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:5px;">Fecha Estimada</label>
@@ -1102,120 +1428,135 @@ function renderModalDetalle(data) {
 
     <div class="clean-footer">
        <button onclick="cerrarModalGenerico('modalDetallePedido')" class="btn-action-modal btn-close">Cerrar</button>
-       ${!esFinalizado ? `<button onclick="guardarCambiosPedido()" class="btn-action-modal btn-save">Guardar Cambios</button>` : ''}
+       ${!esFinalizado ? `<button onclick="guardarCambiosPedido()" class="btn-action-modal btn-save">Guardar Cambios</button>` : ""}
     </div>
   `;
 
-  // Cargar los archivos justo después de renderizar el modal
-  cargarArchivosPedidoUI(cab.id);
-}
+    // Cargar los archivos justo después de renderizar el modal
+    cargarArchivosPedidoUI(cab.id);
+  }
 
-// --- LÓGICA DE ARCHIVOS (NUEVO) ---
+  // --- LÓGICA DE ARCHIVOS (NUEVO) ---
 
-function cargarArchivosPedidoUI(idPedido) {
-  google.script.run.withSuccessHandler(function(res) {
-      var div = document.getElementById("contenedor-archivos-pedido");
-      if(!div) return;
-      if(!res.success) {
-          div.innerHTML = "<span style='color:red; font-size:0.85rem;'>Error al cargar: " + res.error + "</span>";
+  function cargarArchivosPedidoUI(idPedido) {
+    google.script.run
+      .withSuccessHandler(function (res) {
+        var div = document.getElementById("contenedor-archivos-pedido");
+        if (!div) return;
+        if (!res.success) {
+          div.innerHTML =
+            "<span style='color:red; font-size:0.85rem;'>Error al cargar: " +
+            res.error +
+            "</span>";
           return;
-      }
-      
-      let html = "";
-      if (res.urlCarpeta) {
+        }
+
+        let html = "";
+        if (res.urlCarpeta) {
           html += `<div style="margin-bottom:10px; text-align:right;">
                       <a href="${res.urlCarpeta}" target="_blank" style="font-size:0.8rem; color:#0f172a; text-decoration:none; font-weight:bold; background:#e2e8f0; padding:4px 10px; border-radius:6px;">📁 Abrir Carpeta en Drive</a>
                    </div>`;
-      }
-      
-      if (res.archivos.length === 0) {
-          html += "<div style='color:#94a3b8; font-size:0.85rem; font-style:italic; text-align:center; padding:10px;'>No hay documentos adjuntos.</div>";
-      } else {
-          res.archivos.forEach(f => {
-              html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:white; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+        }
+
+        if (res.archivos.length === 0) {
+          html +=
+            "<div style='color:#94a3b8; font-size:0.85rem; font-style:italic; text-align:center; padding:10px;'>No hay documentos adjuntos.</div>";
+        } else {
+          res.archivos.forEach((f) => {
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:white; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
                           <span style="font-size:0.85rem; color:#334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80%;" title="${f.nombre}">📄 ${f.nombre}</span>
                           <a href="${f.url}" target="_blank" style="font-size:0.8rem; color:#10b981; font-weight:bold; text-decoration:none;">Ver ➡️</a>
                        </div>`;
           });
-      }
-      div.innerHTML = html;
-  }).obtenerArchivosPedido(idPedido);
-}
-
-function procesarSubidaArchivo(idPedido, btnElement) {
-  const input = document.getElementById("inputArchivoPedido");
-  if (!input.files || input.files.length === 0) {
-      return Swal.fire("Atención", "Selecciona un archivo primero.", "warning");
+        }
+        div.innerHTML = html;
+      })
+      .obtenerArchivosPedido(idPedido);
   }
-  
-  const file = input.files[0];
-  const reader = new FileReader();
-  
-  const originalText = btnElement.innerText;
-  btnElement.innerText = "Subiendo ⏳...";
-  btnElement.disabled = true;
 
-  // Convertimos el archivo a Base64 para poder enviarlo a Google Apps Script
-  reader.onload = function(e) {
+  function procesarSubidaArchivo(idPedido, btnElement) {
+    const input = document.getElementById("inputArchivoPedido");
+    if (!input.files || input.files.length === 0) {
+      return Swal.fire("Atención", "Selecciona un archivo primero.", "warning");
+    }
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    const originalText = btnElement.innerText;
+    btnElement.innerText = "Subiendo ⏳...";
+    btnElement.disabled = true;
+
+    // Convertimos el archivo a Base64 para poder enviarlo a Google Apps Script
+    reader.onload = function (e) {
       const dataUrl = e.target.result;
-      const base64Data = dataUrl.split(',')[1];
-      const mimeType = dataUrl.split(';')[0].split(':')[1];
+      const base64Data = dataUrl.split(",")[1];
+      const mimeType = dataUrl.split(";")[0].split(":")[1];
 
       google.script.run
-        .withSuccessHandler(function(res) {
+        .withSuccessHandler(function (res) {
           btnElement.innerText = originalText;
           btnElement.disabled = false;
-          
+
           // LIMPIEZA DEL INPUT Y DEL TEXTO VISUAL
-          input.value = ""; 
-          document.getElementById('lbl-nombre-archivo').innerText = "Ningún archivo seleccionado";
-          
-          if(res.success) {
-              mostrarToast("Archivo guardado en Drive ✅", "success");
-              cargarArchivosPedidoUI(idPedido); // Refrescar la lista de archivos
+          input.value = "";
+          document.getElementById("lbl-nombre-archivo").innerText =
+            "Ningún archivo seleccionado";
+
+          if (res.success) {
+            mostrarToast("Archivo guardado en Drive ✅", "success");
+            cargarArchivosPedidoUI(idPedido); // Refrescar la lista de archivos
           } else {
-              Swal.fire("Error", res.error, "error");
+            Swal.fire("Error", res.error, "error");
           }
-      })
-      .withFailureHandler(function(err) {
+        })
+        .withFailureHandler(function (err) {
           btnElement.innerText = originalText;
           btnElement.disabled = false;
           Swal.fire("Error de Conexión", err.message, "error");
+        })
+        .subirArchivoPedido(idPedido, file.name, base64Data, mimeType);
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  // --- GUARDAR CAMBIOS ---
+
+  function guardarCambiosPedido() {
+    var fe = document.getElementById("fechaEst").value;
+    var fr = document.getElementById("fechaReal").value;
+
+    var inputGuia = document.getElementById("inputNuevaGuia");
+    var nuevaGuia = "";
+    if (inputGuia) nuevaGuia = inputGuia.value.trim();
+
+    var nuevoSt = "Pendiente";
+    if (fe) nuevoSt = "En Camino";
+    if (fr) nuevoSt = "Entregado";
+
+    var btn = document.querySelector(".btn-save");
+    if (btn) {
+      btn.innerText = "Guardando...";
+      btn.disabled = true;
+    }
+
+    google.script.run
+      .withSuccessHandler(function () {
+        if (typeof mostrarToast === "function")
+          mostrarToast("Pedido actualizado ✅", "success");
+        if (typeof cerrarModalGenerico === "function")
+          cerrarModalGenerico("modalDetallePedido");
+        cargarDashboardPedidos();
       })
-      .subirArchivoPedido(idPedido, file.name, base64Data, mimeType);
-  };
-  
-  reader.readAsDataURL(file);
-}
-
-// --- GUARDAR CAMBIOS ---
-
-function guardarCambiosPedido() {
-   var fe = document.getElementById("fechaEst").value;
-   var fr = document.getElementById("fechaReal").value;
-   
-   var inputGuia = document.getElementById("inputNuevaGuia");
-   var nuevaGuia = "";
-   if (inputGuia) nuevaGuia = inputGuia.value.trim();
-
-   var nuevoSt = "Pendiente";
-   if (fe) nuevoSt = "En Camino"; 
-   if (fr) nuevoSt = "Entregado";
-
-   var btn = document.querySelector(".btn-save");
-   if(btn) { btn.innerText = "Guardando..."; btn.disabled = true; }
-
-   google.script.run
-     .withSuccessHandler(function() {
-        if(typeof mostrarToast === 'function') mostrarToast("Pedido actualizado ✅", "success");
-        if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico("modalDetallePedido");
-        cargarDashboardPedidos(); 
-     })
-     .withFailureHandler(function(err) {
-        if(typeof mostrarToast === 'function') mostrarToast("Error: " + err.message, "error");
-        if(btn) { btn.innerText = "Guardar Cambios"; btn.disabled = false; }
-     })
-     .actualizarPedido(ID_PEDIDO_SELECCIONADO, fe, fr, nuevoSt, nuevaGuia);
-}
+      .withFailureHandler(function (err) {
+        if (typeof mostrarToast === "function")
+          mostrarToast("Error: " + err.message, "error");
+        if (btn) {
+          btn.innerText = "Guardar Cambios";
+          btn.disabled = false;
+        }
+      })
+      .actualizarPedido(ID_PEDIDO_SELECCIONADO, fe, fr, nuevoSt, nuevaGuia);
+  }
 </script>
- 

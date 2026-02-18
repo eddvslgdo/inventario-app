@@ -48,6 +48,16 @@ function _fmtFechaDisplay(valor) {
   }
   return String(valor).trim();
 }
+
+function _normalizarUnidadLabel(unidadRaw) {
+  const u = String(unidadRaw || "")
+    .toLowerCase()
+    .trim();
+  if (u.includes("unid") || u.includes("pza") || u.includes("pieza"))
+    return "Pza";
+  if (u.includes("kg") || u.includes("kilo")) return "Kg";
+  return "L";
+}
 // ==========================================
 // 1. CATÁLOGOS
 // ==========================================
@@ -355,22 +365,27 @@ function obtenerDatosProductos() {
       const prId = String(dataInv[i][1]).trim();
       const uName = mapUbic[uId] || uId;
 
-let presName = mapPres[prId] || prId;
+      let presName = mapPres[prId] || prId;
       const cadStr = _fmtFechaDisplay(dataInv[i][4]);
-      
+
       let loteExistente = productosMap[baseName].lotes.find(
-        (l) => l.lote === String(dataInv[i][6]).trim() && l.ubicacion === uName && l.presentacion === presName && l.caducidad === cadStr && l.alias === subName
+        (l) =>
+          l.lote === String(dataInv[i][6]).trim() &&
+          l.ubicacion === uName &&
+          l.presentacion === presName &&
+          l.caducidad === cadStr &&
+          l.alias === subName,
       );
       if (loteExistente) {
         loteExistente.volumen += stock;
       } else {
-        productosMap[baseName].lotes.push({ 
-            lote: String(dataInv[i][6]).trim(), 
-            volumen: stock, 
-            ubicacion: uName, 
-            presentacion: presName, 
-            alias: subName, // <--- Pasamos el alias limpio aquí
-            caducidad: cadStr 
+        productosMap[baseName].lotes.push({
+          lote: String(dataInv[i][6]).trim(),
+          volumen: stock,
+          ubicacion: uName,
+          presentacion: presName,
+          alias: subName, // <--- Pasamos el alias limpio aquí
+          caducidad: cadStr,
         });
       }
     }
@@ -778,6 +793,7 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
         "LOTE",
         "VOLUMEN",
         "PIEZAS",
+        "UNIDAD",
       ]);
     const dataInv = sInv.getDataRange().getValues();
 
@@ -790,6 +806,7 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
         item.lote,
         Number(item.volumen_L),
         Number(item.piezas || 0),
+        _normalizarUnidadLabel(item.unidad_medida),
       ]);
 
       let restante = item.volumen_L;
@@ -849,17 +866,33 @@ function obtenerHistorialPedidos() {
     sCli = obtenerHojaSegura("CLIENTES");
   const mapProd = {},
     mapEmp = {};
-
   if (sDet) {
     const dDet = sDet.getDataRange().getDisplayValues();
     for (let i = 1; i < dDet.length; i++) {
       let id = String(dDet[i][0]).trim();
       if (id) {
         if (!mapProd[id]) mapProd[id] = [];
-        mapProd[id].push(`${dDet[i][1]} (${dDet[i][4]}L)`);
+        
+        let prodName = dDet[i][1];
+        let presentacion = String(dDet[i][2]).toLowerCase();
+        let volumen = Number(dDet[i][4]) || 0;
+        
+        // Deducir unidad de la presentación en lugar de usar las piezas
+        let uni = "L";
+        if (presentacion.includes("kg") || presentacion.includes("kilo") || presentacion.includes("gramo")) {
+            uni = "Kg";
+        } else if (presentacion.includes("unid") || presentacion.includes("pza") || presentacion.includes("pieza")) {
+            uni = "Pza";
+        }
+        
+        // Si es pieza quitamos decimales, si no, lo dejamos normal
+        let volMostrar = (uni === "Pza") ? Math.round(volumen) : volumen;
+        
+        mapProd[id].push(`${prodName} (${volMostrar} ${uni})`);
       }
     }
   }
+
   if (sCli)
     sCli
       .getDataRange()
@@ -1094,7 +1127,13 @@ function obtenerMaterialesCaducados() {
     sP.getDataRange()
       .getValues()
       .slice(1)
-      .forEach((r) => (mapProd[String(r[0]).trim()] = r[1]));
+      .forEach(
+        (r) =>
+          (mapProd[String(r[0]).trim()] = {
+            nombre: r[1],
+            unidad: _normalizarUnidadLabel(r[3]),
+          }),
+      );
   if (sPr)
     sPr
       .getDataRange()
@@ -1144,13 +1183,14 @@ function obtenerMaterialesCaducados() {
 
         caducados.push({
           producto_id: pId,
-          producto: mapProd[pId] || pId,
+          producto: (mapProd[pId] && mapProd[pId].nombre) || pId,
           presentacion_id: prId,
           presentacion: mapPres[prId] || prId,
           ubicacion_id: uId,
           ubicacion: mapUbic[uId] || uId,
           lote: String(dataInv[i][6]).trim(),
           volumen: stock,
+          unidad: (mapProd[pId] && mapProd[pId].unidad) || "L",
           caducidadStr: _fmtFechaDisplay(caducidad),
         });
       }
@@ -1403,40 +1443,67 @@ function procesarBajaOficial(itemsBaja) {
   }
 }
 
+/**
+ * Localiza esta función en backend/Controller.gs
+ * Se corrigió para que incluya la unidad real de cada producto en el detalle.
+ */
 function obtenerDetallePedidoCompleto(idPedido) {
   const sPed = obtenerHojaSegura("PEDIDOS"),
     sDet = obtenerHojaSegura("DETALLE_PEDIDOS"),
-    sCli = obtenerHojaSegura("CLIENTES");
+    sCli = obtenerHojaSegura("CLIENTES"),
+    sProd = obtenerHojaSegura("PRODUCTOS"); // Accedemos a productos para traer unidades
+
   const id = String(idPedido).trim();
   const dP = sPed.getDataRange().getDisplayValues();
   let cab = null,
     items = [];
 
+  const mapUnidadPorNombre = {};
+  if (sProd && sProd.getLastRow() > 1) {
+    sProd
+      .getDataRange()
+      .getDisplayValues()
+      .slice(1)
+      .forEach((r) => {
+        const nombre = String(r[1] || "")
+          .trim()
+          .toUpperCase();
+        if (nombre) mapUnidadPorNombre[nombre] = _normalizarUnidadLabel(r[3]);
+      });
+  }
+
+  // 1. Mapa de unidades (Producto -> Unidad)
+  const mapUnidades = {};
+  if (sProd) {
+    const dProd = sProd.getDataRange().getValues();
+    dProd.forEach((r) => {
+      mapUnidades[String(r[1]).trim()] = r[3] || "L";
+    });
+  }
+
+  // 2. Buscar cabecera del pedido
   for (let i = 1; i < dP.length; i++) {
     if (String(dP[i][0]).trim() === id) {
       let r = dP[i];
-      let email = "---";
-      let empresa = ""; // <--- ¡AQUÍ ESTÁ LA CORRECCIÓN!
-
-      // Buscamos al cliente en el catálogo para traer su Empresa y Email
+      let email = "---",
+        empresa = "";
       if (sCli) {
         const dC = sCli.getDataRange().getDisplayValues();
         for (let k = 1; k < dC.length; k++) {
           if (String(dC[k][0]).trim() === String(r[2]).trim()) {
-            empresa = dC[k][2]; // Columna C (Empresa)
-            email = dC[k][5]; // Columna F (Email)
+            empresa = dC[k][2];
+            email = dC[k][5];
             break;
           }
         }
       }
-
       cab = {
         id: r[0],
         cliente: r[3],
         direccion: r[4],
         telefono: r[5],
         email: email,
-        empresa: empresa, // <--- Ahora sí enviamos la empresa al Frontend
+        empresa: empresa,
         paqueteria: r[6],
         guia: r[7],
         costoEnvio: r[9] ? r[9].replace(/[^0-9.]/g, "") : 0,
@@ -1450,6 +1517,7 @@ function obtenerDetallePedidoCompleto(idPedido) {
 
   if (!cab) throw new Error("Pedido no encontrado");
 
+  // 3. Buscar items e inyectar su unidad real
   if (sDet) {
     const dD = sDet.getDataRange().getDisplayValues();
     for (let i = 1; i < dD.length; i++) {
@@ -1457,12 +1525,24 @@ function obtenerDetallePedidoCompleto(idPedido) {
         let pName = dD[i][1];
         if (pName.includes("Selecciona") || pName === "undefined")
           pName = "⚠️ Error Datos";
+
+        const unidadFila = _normalizarUnidadLabel(dD[i][6]);
+        const unidad =
+          dD[i][6] && String(dD[i][6]).trim() !== ""
+            ? unidadFila
+            : mapUnidadPorNombre[
+                String(pName || "")
+                  .trim()
+                  .toUpperCase()
+              ] || "L";
+
         items.push({
           producto: pName,
           presentacion: dD[i][2],
           lote: dD[i][3],
           volumen: dD[i][4],
           piezas: dD[i][5] || 0,
+          unidad: unidad,
         });
       }
     }
