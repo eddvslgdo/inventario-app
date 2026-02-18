@@ -32,7 +32,12 @@ function cerrarModalGenerico(id) {
   if (el) el.style.display = "none";
 }
 
-function abrirModal() { abrirModalGenerico("modalProducto"); }
+function abrirModal() { 
+  const u = document.getElementById("nuevaUnidad");
+  if(u) u.disabled = false; // Desbloquea la unidad
+  abrirModalGenerico("modalProducto"); 
+}
+
 function cerrarModal() { cerrarModalGenerico("modalProducto"); }
 
 // --- CALCULADORA GLOBAL ---

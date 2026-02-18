@@ -374,9 +374,8 @@ function verDetalleUbicacion(idUbic) {
 // --- 4. TRANSFERENCIA INTELIGENTE (MAX BUTTON) ---
 
 function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unidadOrigen) {
-  // 1. REGLA: Prohibido transformar piezas
   if (unidadOrigen === 'Pza') {
-      return Swal.fire("Acción no permitida", "Los productos contabilizados por Pieza no se pueden transformar/reetiquetar. Utiliza la opción de 'Transferir'.", "warning");
+      return Swal.fire("Acción no permitida", "Los productos por Pieza son indivisibles y no se pueden reetiquetar aquí. Utiliza 'Transferir'.", "warning");
   }
 
   volUnit = Number(volUnit);
@@ -387,46 +386,48 @@ function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unida
   document.getElementById("cantTransfPiezas").value = "";
   document.getElementById("lblTransfLitros").innerText = `0 ${unidadOrigen}`;
   
-  // 2. FILTRAR SELECT DE PRODUCTOS (L solo con L, Kg solo con Kg)
-  let selProd = document.getElementById("selTransfNuevoProd");
-  if (selProd && window.CACHE_CATALOGOS) {
-      selProd.innerHTML = '<option value="">Selecciona...</option>';
+  // 1. LIMPIAR Y ALIMENTAR BUSCADOR CON LA MISMA UNIDAD
+  document.getElementById("transf_producto_search").value = "";
+  document.getElementById("selTransfNuevoProd").value = "";
+  
+  let dlProd = document.getElementById("lista-transf-productos");
+  if (dlProd && window.CACHE_CATALOGOS) {
+      dlProd.innerHTML = "";
       let filtradosProd = window.CACHE_CATALOGOS.productos.filter(p => {
           let uLow = (p.unidad || 'L').toLowerCase();
-          let pUni = 'L'; // Por defecto L
-          if (uLow.includes('kg') || uLow.includes('kilo')) pUni = 'Kg';
-          else if (uLow.includes('unid') || uLow.includes('pza') || uLow.includes('pieza')) pUni = 'Pza';
-          
-          return pUni === unidadOrigen; // Solo deja pasar los idénticos
+          let pUni = (uLow.includes('kg') || uLow.includes('kilo')) ? 'Kg' : (uLow.includes('pza') || uLow.includes('unid')) ? 'Pza' : 'L';
+          return pUni === unidadOrigen; 
       });
-      
       filtradosProd.forEach(p => {
           let opt = document.createElement("option");
-          opt.value = p.id; opt.text = p.nombre; selProd.appendChild(opt);
+          opt.value = p.nombre; dlProd.appendChild(opt);
       });
   }
 
-  // 3. FILTRAR SELECT DE PRESENTACIONES (Oculta las cajas si es L, y los litros si es Kg)
+// 3. FILTRAR PRESENTACIONES (DENTRO DE abrirTransformacion)
   let selPres = document.getElementById("selTransfNuevaPres");
   if (selPres && window.CACHE_CATALOGOS) {
       selPres.innerHTML = '<option value="">Selecciona...</option>';
-      let presFiltradas = window.CACHE_CATALOGOS.presentaciones.filter(p => {
+      window.CACHE_CATALOGOS.presentaciones.forEach(p => {
           let n = p.nombre.toLowerCase();
-          let pUni = 'Extraño';
-          if (n.includes('kg') || n.includes('kilo') || n.includes('gramo') || n.includes('saco')) pUni = 'Kg';
-          else if (/\bl\b/.test(n) || /[0-9]l\b/.test(n) || n.includes('ml') || n.includes('litro') || n.includes('galón') || n.includes('tambo')) pUni = 'L';
-          else if (n.includes('pza') || n.includes('pieza') || n.includes('caja') || n.includes('unid')) pUni = 'Pza';
+          let pUni = '';
           
-          return pUni === unidadOrigen || pUni === 'Extraño'; // Permite pasar los extraños para no bloquear al usuario por error
-      });
-      
-      presFiltradas.forEach(p => {
-          let opt = document.createElement("option");
-          opt.value = p.id; opt.text = p.nombre; opt.setAttribute("data-volumen", p.volumen || 0);
-          selPres.appendChild(opt);
+          // DETECCIÓN RIGUROSA
+          if (n.includes('kg') || n.includes('gramo')) pUni = 'Kg';
+          else if (n.includes(' pza') || n.includes('unid') || n.includes('pieza')) pUni = 'Pza';
+          else if (n.includes(' l') || n.includes('ml') || n.includes('litro')) pUni = 'L';
+          
+          // Solo permitimos si la unidad de la presentación coincide EXACTAMENTE con el origen
+          if (pUni === unidadOrigen) {
+              let opt = document.createElement("option");
+              opt.value = p.id; 
+              opt.text = p.nombre; 
+              opt.setAttribute("data-volumen", p.volumen || 0);
+              selPres.appendChild(opt);
+          }
       });
   }
-  
+
   var maxPzas = (volUnit > 0) ? Math.floor(stock / volUnit) : 0;
   var btnMax2 = document.getElementById("btnMaxTransf2");
   if (!btnMax2) {
@@ -442,7 +443,6 @@ function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unida
           calcTransf();
       };
   }
-
   if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalTransformacion");
 }
 
@@ -494,9 +494,8 @@ function confirmarTransferencia() {
 // --- 5. TRANSFORMACIÓN (También actualizada) ---
 
 function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unidadOrigen) {
-  // 1. REGLA DE NEGOCIO: Prohibido transformar piezas
   if (unidadOrigen === 'Pza') {
-      return Swal.fire("Acción no permitida", "Los productos contabilizados por Pieza no se pueden transformar/reetiquetar. Utiliza la opción de 'Transferir'.", "warning");
+      return Swal.fire("Acción no permitida", "Los productos por Pieza son indivisibles y no se pueden reetiquetar aquí. Utiliza 'Transferir'.", "warning");
   }
 
   volUnit = Number(volUnit);
@@ -507,19 +506,39 @@ function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unida
   document.getElementById("cantTransfPiezas").value = "";
   document.getElementById("lblTransfLitros").innerText = `0 ${unidadOrigen}`;
   
-  // 2. FILTRAR EL SELECT PARA QUE SOLO MUESTRE LA MISMA UNIDAD (L con L, Kg con Kg)
-  let selProd = document.getElementById("selTransfNuevoProd");
-  if (selProd && window.CACHE_CATALOGOS) {
-      selProd.innerHTML = '<option value="">Selecciona...</option>';
-      let filtrados = window.CACHE_CATALOGOS.productos.filter(p => {
+  // 1. LIMPIAR Y ALIMENTAR BUSCADOR CON LA MISMA UNIDAD
+  document.getElementById("transf_producto_search").value = "";
+  document.getElementById("selTransfNuevoProd").value = "";
+  
+  let dlProd = document.getElementById("lista-transf-productos");
+  if (dlProd && window.CACHE_CATALOGOS) {
+      dlProd.innerHTML = "";
+      let filtradosProd = window.CACHE_CATALOGOS.productos.filter(p => {
           let uLow = (p.unidad || 'L').toLowerCase();
-          let pUni = (uLow.includes('kg') || uLow.includes('kilo')) ? 'Kg' : 'L'; // Sabemos que no es Pza
+          let pUni = (uLow.includes('kg') || uLow.includes('kilo')) ? 'Kg' : (uLow.includes('pza') || uLow.includes('unid')) ? 'Pza' : 'L';
           return pUni === unidadOrigen; 
       });
-      
-      filtrados.forEach(p => {
+      filtradosProd.forEach(p => {
           let opt = document.createElement("option");
-          opt.value = p.id; opt.text = p.nombre; selProd.appendChild(opt);
+          opt.value = p.nombre; dlProd.appendChild(opt);
+      });
+  }
+
+  // 2. FILTRAR PRESENTACIONES RESTRINGIDAS
+  let selPres = document.getElementById("selTransfNuevaPres");
+  if (selPres && window.CACHE_CATALOGOS) {
+      selPres.innerHTML = '<option value="">Selecciona...</option>';
+      let presFiltradas = window.CACHE_CATALOGOS.presentaciones.filter(p => {
+          let n = p.nombre.toLowerCase();
+          let pUni = 'Extraño';
+          if (n.includes('kg') || n.includes('kilo') || n.includes('gramo') || n.includes('saco')) pUni = 'Kg';
+          else if (/\bl\b/.test(n) || /[0-9]l\b/.test(n) || n.includes('ml') || n.includes('litro') || n.includes('galón')) pUni = 'L';
+          return pUni === unidadOrigen || pUni === 'Extraño'; 
+      });
+      presFiltradas.forEach(p => {
+          let opt = document.createElement("option");
+          opt.value = p.id; opt.text = p.nombre; opt.setAttribute("data-volumen", p.volumen || 0);
+          selPres.appendChild(opt);
       });
   }
   
@@ -538,27 +557,92 @@ function abrirTransformacion(pId, pNom, lote, stock, uId, presId, volUnit, unida
           calcTransf();
       };
   }
-
   if(typeof abrirModalGenerico === 'function') abrirModalGenerico("modalTransformacion");
 }
 
+// --- 1. SELECCIÓN DE PRODUCTO (Sincroniza Filtro de Presentaciones) ---
+function seleccionarProductoTransf() {
+    let searchVal = document.getElementById('transf_producto_search').value.trim();
+    let hiddenId = document.getElementById('selTransfNuevoProd');
+    if(searchVal === "") { hiddenId.value = ""; return; }
+
+    let prod = window.CACHE_CATALOGOS.productos.find(p => p.nombre.toUpperCase() === searchVal.toUpperCase());
+    
+    if(prod) {
+        hiddenId.value = prod.id;
+        // ¡IMPORTANTE! Al encontrar el producto, validamos su unidad contra el origen
+        let uLow = (prod.unidad || 'L').toLowerCase();
+        let pUni = (uLow.includes('kg')) ? 'Kg' : (uLow.includes('pza') || uLow.includes('unid')) ? 'Pza' : 'L';
+        
+        if (pUni !== TEMP_ACCION.unidad) {
+            Swal.fire("Unidad Incompatible", `El producto "${prod.nombre}" es de tipo ${pUni}, pero el origen es ${TEMP_ACCION.unidad}.`, "error");
+            document.getElementById('transf_producto_search').value = "";
+            hiddenId.value = "";
+            return;
+        }
+        // Refrescamos el cálculo de piezas estimadas
+        calcTransf();
+    } else {
+        // Lógica de creación de Sub-Producto (Padre/Hijo)
+        hiddenId.value = "";
+        let nombrePadre = TEMP_ACCION.prodNom;
+        let match = nombrePadre.match(/(.*)\(([^)]+)\)$/);
+        if(match) nombrePadre = match[2].trim();
+        
+        let nuevoNombreAlias = `${searchVal.toUpperCase()} (${nombrePadre})`;
+
+        Swal.fire({
+            title: 'Crear Sub-Producto',
+            text: `¿Registrar "${searchVal.toUpperCase()}" como sub-producto de ${nombrePadre}?`,
+            icon: 'question',
+            showCancelButton: true, confirmButtonColor: '#9b59b6', confirmButtonText: 'Sí, registrar'
+        }).then((res) => {
+            if(res.isConfirmed) {
+                document.getElementById("nuevoNombre").value = nuevoNombreAlias;
+                let uSelect = document.getElementById("nuevaUnidad");
+                if(uSelect) {
+                    uSelect.value = TEMP_ACCION.unidad === 'Kg' ? 'Kg' : 'L';
+                    uSelect.disabled = true;
+                }
+                abrirModalGenerico('modalProducto'); 
+            } else { document.getElementById('transf_producto_search').value = ""; }
+        });
+    }
+}
+
+// --- 2. CÁLCULO DE EQUIVALENCIA (Corrige el texto "L" por la unidad real) ---
 function calcTransf() {
   if(!TEMP_ACCION) return;
-  var pzas = parseFloat(document.getElementById("cantTransfPiezas").value) || 0;
-  var lts = pzas * TEMP_ACCION.volUnit;
+  
+  // Forzamos a que el input sea entero por si pegaron un decimal
+  var inputPzas = document.getElementById("cantTransfPiezas");
+  var pzas = Math.floor(parseFloat(inputPzas.value)) || 0;
+  if(pzas < 0) pzas = 0;
+  inputPzas.value = pzas; // Corregimos el valor visualmente
+
+  var cantReal = pzas * TEMP_ACCION.volUnit;
   
   var elLit = document.getElementById("lblTransfLitros"); 
   if(elLit) {
-      elLit.innerText = lts.toFixed(2) + " " + TEMP_ACCION.unidad;
-      elLit.style.color = (lts > TEMP_ACCION.stock + 0.001) ? "red" : "#9b59b6";
+      // Reemplazamos la "L" fija por la unidad guardada en TEMP_ACCION
+      elLit.innerText = cantReal.toFixed(2) + " " + TEMP_ACCION.unidad;
+      elLit.style.color = (cantReal > TEMP_ACCION.stock + 0.001) ? "red" : "#9b59b6";
   }
   
   var selD = document.getElementById("selTransfNuevaPres");
   var volD = 0;
-  if(selD && selD.selectedIndex>=0) volD=parseFloat(selD.options[selD.selectedIndex].getAttribute("data-volumen"))||0;
-  var res = 0; if(volD>0) res = Math.floor(lts/volD);
-  var elRes = document.getElementById("lblTransfResultado"); if(elRes) elRes.innerText = res + " Piezas";
+  if(selD && selD.selectedIndex >= 0) volD = parseFloat(selD.options[selD.selectedIndex].getAttribute("data-volumen")) || 0;
+  
+  var res = 0; 
+  if(volD > 0) res = Math.floor(cantReal / volD);
+  
+  var elRes = document.getElementById("lblTransfResultado"); 
+  if(elRes) {
+      // Si la unidad es Pza, el resultado estimado no lleva decimales
+      elRes.innerText = res + " Piezas";
+  }
 }
+
 
 function confirmarTransformacion() {
   var pzas = parseFloat(document.getElementById("cantTransfPiezas").value);
@@ -588,6 +672,51 @@ function confirmarTransformacion() {
 function abrirModalDesdeTransf() {
    if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalTransformacion');
    if(typeof abrirModalGenerico === 'function') abrirModalGenerico('modalProducto');
+}
+
+function abrirTransferencia(pId, pNom, lote, stock, uId, presId, volUnit) {
+  // Guardamos los datos necesarios para la transferencia
+  volUnit = Number(volUnit);
+  TEMP_ACCION = { prodId:pId, prodNom:pNom, lote:lote, stock:stock, ubicId:uId, presId:presId, volUnit: volUnit };
+  
+  document.getElementById("txtProductoTransf").innerText = pNom;
+  document.getElementById("txtLoteTransf").innerText = "Lote: " + lote;
+  document.getElementById("cantTransferir").value = "";
+  
+  // Reseteamos visuales
+  document.getElementById("lblRestante").innerText = stock + " L";
+  document.getElementById("lblEquivalencia").innerText = "0 L";
+  
+  // Cálculo del máximo de piezas movibles
+  var maxPzas = (volUnit > 0) ? Math.floor(stock / volUnit) : 0;
+  var label = document.querySelector("#modalTransferencia label");
+  var btnMax = document.getElementById("btnMaxTransf");
+  
+  if (!btnMax && label) {
+      label.insertAdjacentHTML('beforeend', ` <span id="btnMaxTransf" style="color:#007aff; cursor:pointer; font-weight:bold; font-size:0.9rem; margin-left:10px;"></span>`);
+      btnMax = document.getElementById("btnMaxTransf");
+  }
+  
+  if(btnMax) {
+      btnMax.innerText = "(Máx: " + maxPzas + " pzas)";
+      btnMax.onclick = function() {
+          document.getElementById("cantTransferir").value = maxPzas;
+          if(typeof calcularSimulacionTransferencia === 'function') calcularSimulacionTransferencia();
+      };
+  }
+
+  // Llenar destinos (todas las cajas menos la actual)
+  var selDest = document.getElementById("selDestinoTransf");
+  if(selDest && window.CACHE_UBICACIONES) {
+      selDest.innerHTML = '<option value="">Selecciona destino...</option>';
+      window.CACHE_UBICACIONES.forEach(u => {
+          if(String(u.id) !== String(uId)) {
+              var opt = document.createElement("option");
+              opt.value = u.id; opt.text = u.nombre; selDest.appendChild(opt);
+          }
+      });
+  }
+  abrirModalGenerico("modalTransferencia");
 }
 </script>
 

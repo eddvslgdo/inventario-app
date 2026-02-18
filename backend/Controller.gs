@@ -229,28 +229,16 @@ function obtenerDatosProductos() {
   const sInv = obtenerHojaOCrear("INVENTARIO", []);
   if (sInv.getLastRow() < 2) return [];
 
-  const mapProd = {},
-    mapUbic = {},
-    mapPres = {};
-  const sP = obtenerHojaOCrear("PRODUCTOS", []),
-    sU = obtenerHojaOCrear("UBICACIONES", []),
-    sPr = obtenerHojaOCrear("PRESENTACIONES", []);
-  if (sP.getLastRow() > 1)
-    sP.getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => (mapProd[String(r[0]).trim()] = r[1]));
-  if (sU.getLastRow() > 1)
-    sU.getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
-  if (sPr.getLastRow() > 1)
-    sPr
-      .getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
+  const mapProd = {}, mapUbic = {}, mapPres = {};
+  const sP = obtenerHojaOCrear("PRODUCTOS", []), sU = obtenerHojaOCrear("UBICACIONES", []), sPr = obtenerHojaOCrear("PRESENTACIONES", []);
+
+  if (sP.getLastRow() > 1) {
+    sP.getDataRange().getValues().slice(1).forEach((r) => {
+      mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: r[3] || 'L' };
+    });
+  }
+  if (sU.getLastRow() > 1) sU.getDataRange().getValues().slice(1).forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
+  if (sPr.getLastRow() > 1) sPr.getDataRange().getValues().slice(1).forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
 
   const dataInv = sInv.getDataRange().getValues();
   let productosMap = {};
@@ -259,45 +247,53 @@ function obtenerDatosProductos() {
     const stock = Number(dataInv[i][3]);
     if (stock > 0.001) {
       const pId = String(dataInv[i][0]).trim();
-      if (!productosMap[pId])
-        productosMap[pId] = {
-          id: pId,
-          nombre: mapProd[pId] || pId,
-          totalVolumen: 0,
-          lotes: [],
-        };
+      const prodObj = mapProd[pId] || { nombre: pId, unidad: 'L' };
+      const rawName = prodObj.nombre;
+      
+      // MAGIA PADRE/HIJO: Si el nombre es "BAYADY1 (PERFECT DUO)"
+      let baseName = rawName;
+      let subName = "";
+      let match = rawName.match(/(.*)\(([^)]+)\)$/);
+      if (match) {
+          subName = match[1].trim();  // Ej: BAYADY1
+          baseName = match[2].trim(); // Ej: PERFECT DUO
+      }
 
-      productosMap[pId].totalVolumen += stock;
+      if (!productosMap[baseName]) {
+        productosMap[baseName] = { id: pId, nombre: baseName, unidad: prodObj.unidad, totalVolumen: 0, lotes: [] };
+      }
+      productosMap[baseName].totalVolumen += stock;
 
       const uId = String(dataInv[i][2]).trim();
       const prId = String(dataInv[i][1]).trim();
-      const lote = String(dataInv[i][6]).trim();
       const uName = mapUbic[uId] || uId;
-      const presName = mapPres[prId] || prId;
-      const cadStr = _fmtFechaDisplay(dataInv[i][4]);
+      
+      let presName = mapPres[prId] || prId;
+      // Inyectamos visualmente el alias para que sepas qué es
+      if (subName !== "") presName = `[Alias: ${subName}] ${presName}`;
 
-      let loteExistente = productosMap[pId].lotes.find(
-        (l) =>
-          l.lote === lote &&
-          l.ubicacion === uName &&
-          l.presentacion === presName &&
-          l.caducidad === cadStr,
+      const cadStr = _fmtFechaDisplay(dataInv[i][4]);
+      
+      let loteExistente = productosMap[baseName].lotes.find(
+        (l) => l.lote === String(dataInv[i][6]).trim() && l.ubicacion === uName && l.presentacion === presName && l.caducidad === cadStr
       );
 
       if (loteExistente) {
         loteExistente.volumen += stock;
       } else {
-        productosMap[pId].lotes.push({
-          lote: lote,
-          volumen: stock,
-          ubicacion: uName,
-          presentacion: presName,
-          caducidad: cadStr,
-        });
+        productosMap[baseName].lotes.push({ lote: String(dataInv[i][6]).trim(), volumen: stock, ubicacion: uName, presentacion: presName, caducidad: cadStr });
       }
     }
   }
-  return Object.values(productosMap);
+
+  // Ajustamos la unidad visual para el frontend
+  return Object.values(productosMap).map(p => {
+      let uLower = String(p.unidad).toLowerCase();
+      if(uLower.includes('unid') || uLower.includes('pza')) p.unidad = 'Pza';
+      else if(uLower.includes('kg') || uLower.includes('kilo')) p.unidad = 'Kg';
+      else p.unidad = 'L';
+      return p;
+  });
 }
 
 // ==========================================

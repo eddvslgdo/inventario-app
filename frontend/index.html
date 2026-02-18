@@ -1046,7 +1046,14 @@
     </div>
     <div id="modalProducto" class="modal-overlay" style="display: none">
       <div class="modal-content">
-        <h3>Nuevo Producto</h3>
+        <div class="form-group">
+            <label>Nuevo Producto:</label>
+            <div style="display: flex; gap: 8px; align-items: center">
+              <input type="text" id="transf_producto_search" list="lista-transf-productos" class="input-modern" placeholder="Buscar o crear sub-producto..." onchange="seleccionarProductoTransf()" autocomplete="off" />
+              <datalist id="lista-transf-productos"></datalist>
+              <input type="hidden" id="selTransfNuevoProd" />
+            </div>
+          </div>
         <div class="form-group">
           <label>Nombre *</label>
           <input type="text" id="nuevoNombre" class="input-modern" />
@@ -1338,6 +1345,7 @@
                 placeholder="0"
                 min="1"
                 step="1"
+                onkeypress="return event.charCode >= 48 && event.charCode <= 57"
                 class="input-modern"
                 oninput="calcularSimulacionTransferencia()"
               />
@@ -1388,7 +1396,7 @@
       </div>
     </div>
 
-    <div
+<div
       id="modalTransformacion"
       class="modal-overlay"
       style="display: none; z-index: 1002"
@@ -1436,6 +1444,9 @@
               <input
                 type="number"
                 id="cantTransfPiezas"
+                min="1" 
+                step="1" 
+                onkeypress="return event.charCode >= 48 && event.charCode <= 57"
                 placeholder="0"
                 class="input-modern"
                 oninput="calcTransf()"
@@ -1452,23 +1463,19 @@
           <h4 style="margin: 0 0 10px 0; color: #333">¿En qué se convierte?</h4>
 
           <div class="form-group">
-            <label>Nuevo Producto:</label>
+            <label>Nuevo Producto (Destino):</label>
             <div style="display: flex; gap: 8px; align-items: center">
-              <select id="selTransfNuevoProd" class="input-modern"></select>
-              <button
-                onclick="abrirModalDesdeTransf()"
-                class="btn-field"
-                style="
-                  width: 45px;
-                  height: 45px;
-                  background: #007aff;
-                  color: white;
-                  border: none;
-                  font-size: 1.5rem;
-                "
-              >
-                +
-              </button>
+              <input 
+                type="text" 
+                id="transf_producto_search" 
+                list="lista-transf-productos" 
+                class="input-modern" 
+                placeholder="Escribe para buscar o crear sub-producto..." 
+                onchange="seleccionarProductoTransf()" 
+                autocomplete="off" 
+              />
+              <datalist id="lista-transf-productos"></datalist>
+              <input type="hidden" id="selTransfNuevoProd" />
             </div>
           </div>
 

@@ -65,6 +65,16 @@ function recargarSelectores() {
 function llenarSelects(data) {
   window.CACHE_CATALOGOS = data; 
 
+  // Llenar recomendaciones para el Inventario Global
+  let dlGlobal = document.getElementById("lista-productos-global");
+  if(dlGlobal) {
+      dlGlobal.innerHTML = "";
+      data.productos.forEach(p => {
+          let opt = document.createElement("option");
+          opt.value = p.nombre; dlGlobal.appendChild(opt);
+      });
+  }
+  
   // 1. Llenar Autocomplete de ENTRADAS (Todos los productos)
   let dlEnt = document.getElementById("lista-productos-datalist");
   if(dlEnt) {
