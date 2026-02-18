@@ -1,15 +1,20 @@
 // --- VISTA PRODUCTOS (SOLUCIÓN DEFINITIVA) ---
 
+// --- VISTA PRODUCTOS (SOLUCIÓN DEFINITIVA) ---
+
 function cargarDashboardProductos() {
   const contenedor = document.getElementById("contenedor-productos-lista");
   
   if (!contenedor) return;
 
-  // Loader visual
+  // 1. Aplicamos la clase de scroll global que creamos en el CSS
+  contenedor.classList.add("list-scroll-container");
+
+  // 2. Reemplazamos el loader antiguo por el nuevo Spinner animado
   contenedor.innerHTML = `
-    <div style="text-align: center; padding: 60px; color: #999;">
-      <div class="spinner" style="margin: 0 auto 15px auto; border: 4px solid #f3f3f3; border-top: 4px solid #007aff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
-      <p style="font-weight:500;">Analizando inventario...</p>
+    <div class="loader-container">
+        <div class="modern-spinner"></div>
+        <div style="margin-top: 15px;">Calculando totales de inventario...</div>
     </div>`;
 
   google.script.run
@@ -22,7 +27,6 @@ function cargarDashboardProductos() {
     })
     .obtenerDatosProductos();
 }
-
 function renderizarTablaProductos(productos) {
   const contenedor = document.getElementById("contenedor-productos-lista");
   if (!contenedor) return;
@@ -165,33 +169,45 @@ function filtrarProductos() {
 // --- MODALES (NO CAMBIAN) ---
 
 function guardarProducto() {
-  const nombre = document.getElementById("nuevoNombre").value;
+  // 1. Tomamos el valor y lo estandarizamos: Mayúsculas y sin espacios dobles
+  let nombreRaw = document.getElementById("nuevoNombre").value;
+  const nombreLimpio = nombreRaw.trim().replace(/\s+/g, ' ').toUpperCase();
   const desc = document.getElementById("nuevaDescripcion").value;
   const unidad = document.getElementById("nuevaUnidad").value;
 
-  if (!nombre) return mostrarToast("Falta el nombre", "error");
+  if (!nombreLimpio) return mostrarToast("Falta el nombre del producto", "warning");
 
-  const btn = event.target;
-  const textoOriginal = btn.innerText;
-  btn.disabled = true;
-  btn.innerText = "Guardando...";
+  // 2. Cerramos la ventana del formulario
+  if(typeof cerrarModal === 'function') cerrarModal();
+  if(typeof cerrarModalGenerico === 'function') cerrarModalGenerico('modalProducto'); 
+
+  // 3. Mostramos el Loader elegante de "Procesando..."
+  Swal.fire({
+    title: 'Procesando...',
+    text: 'Validando y registrando producto...',
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
 
   google.script.run
     .withSuccessHandler(function() {
-      mostrarToast("Producto creado ✅", "success");
+      Swal.fire("¡Éxito!", `El producto ${nombreLimpio} ha sido registrado.`, "success");
       document.getElementById("nuevoNombre").value = "";
       document.getElementById("nuevaDescripcion").value = "";
-      recargarSelectores();
-      if(typeof cerrarModal === 'function') cerrarModal();
-      btn.disabled = false;
-      btn.innerText = textoOriginal;
+      
+      if(typeof recargarSelectores === 'function') recargarSelectores();
+      if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
     })
     .withFailureHandler(function(err) {
-      mostrarError(err);
-      btn.disabled = false;
-      btn.innerText = textoOriginal;
+      // Si el servidor detecta un duplicado, mostrará el error aquí
+      Swal.fire("No se pudo registrar", err.message, "error");
+      
+      // Volvemos a abrir el modal para que el usuario corrija si quiere
+      if(typeof abrirModalGenerico === 'function') abrirModalGenerico('modalProducto'); 
     })
-    .registrarNuevoProducto({ nombre: nombre, descripcion: desc, unidad: unidad });
+    .registrarNuevoProducto({ nombre: nombreLimpio, descripcion: desc, unidad: unidad });
 }
 
 function guardarPresentacion() {

@@ -149,12 +149,26 @@ var CACHE_UBICACIONES = [];
 var TEMP_ACCION = null;
 
 // --- 1. CARGA INICIAL ---
+// --- 1. CARGA INICIAL ---
 function cargarDashboardUbicaciones() {
   var grid = document.getElementById("grid-ubicaciones");
   var loader = document.getElementById("loading-ubicaciones");
   if(!grid) return;
   
-  if(loader) loader.style.display = "block";
+  // Le agregamos la clase del scroll al contenedor principal
+  grid.classList.add("list-scroll-container");
+
+  if(loader) {
+      loader.style.display = "block";
+      // Reemplazamos el texto plano por el Spinner moderno y animado
+      loader.innerHTML = `
+        <div class="loader-container">
+            <div class="modern-spinner"></div>
+            <div style="margin-top: 15px;">Cargando ubicaciones e inventario...</div>
+        </div>
+      `;
+  }
+  
   grid.innerHTML = "";
 
   google.script.run
@@ -169,7 +183,6 @@ function cargarDashboardUbicaciones() {
     })
     .obtenerDatosUbicaciones();
 }
-
 function renderizarGridUbicaciones(lista) {
   var grid = document.getElementById("grid-ubicaciones");
   grid.innerHTML = "";

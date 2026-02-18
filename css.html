@@ -1780,6 +1780,45 @@ tr.fila-bloqueada {
     }
 }
 
+/* =========================================================
+   MEJORAS UX: SPINNERS DE CARGA Y SCROLL GLOBAL
+   ========================================================= */
+
+/* 1. Contenedores con scroll interno para listas largas (Ubicaciones y Productos) */
+.list-scroll-container {
+    max-height: 65vh; /* Altura máxima: 65% de la pantalla */
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px; /* Espacio para que el scroll no tape el texto */
+    margin-top: 15px;
+}
+
+/* Diseño elegante para la barra de scroll */
+.list-scroll-container::-webkit-scrollbar { width: 6px; }
+.list-scroll-container::-webkit-scrollbar-track { background: transparent; }
+.list-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+.list-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* 2. Animación del Spinner (Círculo giratorio) */
+.modern-spinner {
+    width: 42px;
+    height: 42px;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #007aff; /* Azul principal */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.loader-container {
+    text-align: center;
+    padding: 50px 20px;
+    color: #64748b;
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
 </style>
 
 
