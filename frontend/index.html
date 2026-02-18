@@ -406,9 +406,9 @@
       }
 
       /* FORZAR ALERTAS SWEETALERT POR ENCIMA DE TODOS LOS MODALES */
-    .swal2-container {
-      z-index: 9999 !important;
-    }
+      .swal2-container {
+        z-index: 9999 !important;
+      }
     </style>
   </head>
 
@@ -1893,7 +1893,7 @@
           .obtenerMaterialesCaducados();
       }
 
-      function renderTablaBajas() {
+function renderTablaBajas() {
         const tabla = document.getElementById("tablaBajas");
         const tbody = document.getElementById("tablaBajasBody");
         const chkAll = document.getElementById("chkAllBajas");
@@ -1912,9 +1912,22 @@
         tabla.style.display = "table";
 
         CACHE_CADUCADOS.forEach((item, index) => {
+          // CORRECCIÓN: Filtro estricto (Producto + Presentación + Lote + Ubicación)
+          const yaAgregado = COLA_BAJAS.some(i => 
+              i.producto === item.producto && 
+              i.presentacion === item.presentacion &&
+              i.lote === item.lote && 
+              i.ubicacion === item.ubicacion
+          );
+          
+          const trStyle = yaAgregado ? "opacity: 0.5; background-color: #f1f5f9; pointer-events: none;" : "";
+          const chkAttr = yaAgregado ? "disabled checked" : "";
+
           const tr = document.createElement("tr");
+          tr.style.cssText = trStyle; 
+          
           tr.innerHTML = `
-      <td style="text-align: center;"><input type="checkbox" class="chk-baja" data-index="${index}" style="transform: scale(1.2); cursor:pointer;"></td>
+      <td style="text-align: center;"><input type="checkbox" class="chk-baja" data-index="${index}" ${chkAttr} style="transform: scale(1.2); cursor:pointer;"></td>
       <td style="font-weight: 600; color: #333;">${item.producto}</td>
       <td style="font-size: 0.85rem; color: #666;">${item.presentacion}</td>
       <td style="font-family: monospace; color: #d63031; font-weight: bold; background:#fff5f5; padding:2px 6px; border-radius:4px;">${item.lote}</td>
@@ -1927,45 +1940,42 @@
       }
 
       function toggleAllBajas(source) {
-        const checkboxes = document.querySelectorAll(".chk-baja");
+        // Solo agarramos los checkboxes que NO estén deshabilitados
+        const checkboxes = document.querySelectorAll(
+          ".chk-baja:not(:disabled)",
+        );
         checkboxes.forEach((chk) => (chk.checked = source.checked));
       }
 
       // --- FASE 2: EL CARRITO DE BAJAS ---
 
-      function prepararBaja() {
-        const checkboxes = document.querySelectorAll(".chk-baja:checked");
+function prepararBaja() {
+        const checkboxes = document.querySelectorAll(".chk-baja:checked:not(:disabled)");
         if (checkboxes.length === 0) {
-          return Swal.fire(
-            "Atención",
-            "Selecciona al menos un material para dar de baja.",
-            "warning",
-          );
+          return Swal.fire("Atención", "Selecciona al menos un material válido para dar de baja.", "warning");
         }
 
         checkboxes.forEach((chk) => {
           const idx = chk.getAttribute("data-index");
           const item = CACHE_CADUCADOS[idx];
 
-          // Verificamos que no se haya agregado ya para evitar duplicados
-          const existe = COLA_BAJAS.find(
-            (i) => i.lote === item.lote && i.ubicacion_id === item.ubicacion_id,
+          // CORRECCIÓN: Filtro estricto para evitar duplicados reales
+          const existe = COLA_BAJAS.find(i => 
+              i.producto === item.producto && 
+              i.presentacion === item.presentacion &&
+              i.lote === item.lote && 
+              i.ubicacion === item.ubicacion
           );
+
           if (!existe) {
             COLA_BAJAS.push(item);
           }
         });
 
         renderColaBajas();
-
-        // Desmarcar las casillas para limpiar la vista superior
-        const chkAll = document.getElementById("chkAllBajas");
-        if (chkAll) chkAll.checked = false;
-        checkboxes.forEach((chk) => (chk.checked = false));
-
+        renderTablaBajas(); 
         mostrarToast("Agregados a la lista de desincorporación 👇", "success");
       }
-
       function renderColaBajas() {
         const area = document.getElementById("area-cola-bajas");
         const tbody = document.getElementById("tablaColaBajasBody");
@@ -2010,6 +2020,10 @@
       function eliminarDeBajas(index) {
         COLA_BAJAS.splice(index, 1);
         renderColaBajas();
+
+        // ESTA ES LA CLAVE: Volver a dibujar arriba para quitarles lo gris
+        renderTablaBajas();
+
         mostrarToast("Lote removido de la lista.", "info");
       }
 

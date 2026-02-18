@@ -64,23 +64,29 @@ function recargarSelectores() {
 }
 
 function llenarSelects(data) {
+  // 1. Entradas: Muestra TODOS los productos
   poblarSelect("producto", data.productos);
   poblarSelect("ubicacion", data.ubicaciones);
 
   var fnEntrada = (typeof calcularTotalEntrada === 'function') ? calcularTotalEntrada : function(){ console.warn("Fn Entrada no cargada"); return 0; };
   setupPresentacion("presentacion", data.presentaciones, fnEntrada);
 
-  poblarSelect("sal_producto", data.productos);
+  // 2. Salidas: FILTRAMOS PARA MOSTRAR SOLO LOS QUE TIENEN STOCK (> 0)
+  const productosConStock = data.productos.filter(p => p.stockTotal > 0.001);
+  poblarSelect("sal_producto", productosConStock);
+  
   poblarSelect("sal_ubicacion", data.ubicaciones);
 
   var fnSalida = (typeof calcularTotalSalida === 'function') ? calcularTotalSalida : function(){ console.warn("Fn Salida no cargada"); return 0; };
   setupPresentacion("sal_presentacion", data.presentaciones, fnSalida);
 
+  // 3. Transformaciones: Muestra TODOS los productos 
   if (document.getElementById("selTransfNuevoProd"))
     poblarSelect("selTransfNuevoProd", data.productos);
   if (document.getElementById("selTransfNuevaPres"))
     setupPresentacion("selTransfNuevaPres", data.presentaciones, null);
 
+  // Reactivar eventos
   const selProdSalida = document.getElementById("sal_producto");
   if (selProdSalida) {
     const nuevoSel = selProdSalida.cloneNode(true);

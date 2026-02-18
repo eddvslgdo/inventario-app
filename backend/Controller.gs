@@ -48,11 +48,15 @@ function _fmtFechaDisplay(valor) {
 // ==========================================
 // 1. CATÁLOGOS
 // ==========================================
+// ==========================================
+// 1. CATÁLOGOS
+// ==========================================
 function obtenerCatalogos() {
   const sProd = obtenerHojaOCrear('PRODUCTOS', ['ID', 'NOMBRE', 'DESCRIPCION', 'UNIDAD']);
   const sPres = obtenerHojaOCrear('PRESENTACIONES', ['ID', 'NOMBRE', 'VOLUMEN']);
   const sUbic = obtenerHojaOCrear('UBICACIONES', ['ID', 'NOMBRE']);
-
+  const sInv = obtenerHojaOCrear('INVENTARIO', []); // Cargar inventario para ver stock
+  
   const leer = (s, esPres) => {
     if (!s || s.getLastRow() < 2) return [];
     return s.getDataRange().getValues().slice(1).map(r => ({
@@ -62,7 +66,30 @@ function obtenerCatalogos() {
     })).filter(i => i.id);
   };
 
-  return { productos: leer(sProd), presentaciones: leer(sPres, true), ubicaciones: leer(sUbic) };
+  let productos = leer(sProd);
+  const presentaciones = leer(sPres, true);
+  const ubicaciones = leer(sUbic);
+
+  // --- NUEVO: Calcular stock total por producto ---
+  let stockPorProducto = {};
+  if (sInv && sInv.getLastRow() > 1) {
+     const dataInv = sInv.getDataRange().getValues();
+     for(let i=1; i<dataInv.length; i++) {
+        const pId = String(dataInv[i][0]).trim();
+        const stock = Number(dataInv[i][3]) || 0;
+        if (!stockPorProducto[pId]) stockPorProducto[pId] = 0;
+        stockPorProducto[pId] += stock;
+     }
+  }
+
+  // Adjuntar el stock a cada producto
+  productos = productos.map(p => {
+     p.stockTotal = stockPorProducto[p.id] || 0;
+     return p;
+  });
+  // ------------------------------------------------
+
+  return { productos: productos, presentaciones: presentaciones, ubicaciones: ubicaciones };
 }
 
 function obtenerListaClientes() {

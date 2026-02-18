@@ -1589,49 +1589,197 @@
         box-shadow: 0 2px 4px rgba(37,99,235,0.1);
     }
 }
-
 /* =========================================================
-   FIX: MODALES PERFECTOS EN MÓVILES (iOS / SAFARI / CHROME)
+   FIX DEFINITIVO: MODALES PERFECTOS (PC, LAPTOP Y MÓVIL)
    ========================================================= */
+
+/* 1. Límite general para que ningún modal se salga de la pantalla */
+.modal-content {
+    max-height: 88vh !important;
+    overflow-y: auto; /* Scroll nativo para modales pequeños (ubicaciones, etc) */
+}
+
+/* 2. Layout "App Nativa" exclusivo para el Modal de Pedidos (PC y Móvil) */
+#modalDetallePedido .modal-content {
+    overflow-y: hidden !important; /* Apagamos el scroll general aquí */
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+}
+
+#modalDetallePedido .clean-header {
+    flex-shrink: 0 !important; /* Nunca se encoge, se queda congelado arriba */
+}
+
+#modalDetallePedido .clean-body {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important; /* El scroll SOLO ocurre aquí adentro */
+    max-height: none !important;
+}
+
+#modalDetallePedido .clean-footer {
+    flex-shrink: 0 !important; /* Nunca se encoge, se queda congelado abajo */
+}
+
+/* 3. Barrita de scroll elegante para la zona central */
+#modalDetallePedido .clean-body::-webkit-scrollbar {
+    width: 6px;
+}
+#modalDetallePedido .clean-body::-webkit-scrollbar-track {
+    background: transparent; 
+}
+#modalDetallePedido .clean-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1; 
+    border-radius: 10px;
+}
+#modalDetallePedido .clean-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; 
+}
+
+/* 4. Comportamiento de los botones en celulares */
 @media only screen and (max-width: 768px) {
-    #modalDetallePedido .modal-content {
-        /* Convertimos el modal en una caja flexible */
-        display: flex !important;
-        flex-direction: column !important;
-        
-        /* Ajustamos el margen para que no se salga por arriba ni por abajo */
-        max-height: 85vh !important; 
-        margin: 5vh auto !important;
-    }
-
-    .clean-header {
-        /* La cabecera nunca se encoge */
-        flex-shrink: 0 !important;
-        padding: 15px !important;
-    }
-
-    .clean-body {
-        /* El cuerpo toma todo el espacio sobrante y hace scroll interno */
-        flex: 1 1 auto !important;
-        overflow-y: auto !important;
-        max-height: none !important; /* Quitamos el límite fijo que tenía */
-        padding: 15px !important;
-    }
-
     .clean-footer {
-        /* El pie (botones) nunca se encoge y se queda pegado abajo */
-        flex-shrink: 0 !important;
-        padding: 15px !important;
-        display: flex;
-        flex-direction: column; /* Apila los botones uno sobre otro */
+        flex-direction: column;
         gap: 10px;
     }
-
     .clean-footer .btn-action-modal {
-        width: 100% !important; /* Botones anchos y fáciles de tocar */
+        width: 100% !important;
         margin: 0 !important;
     }
 }
+
+/* Fila bloqueada en la tabla de caducados */
+tr.fila-bloqueada {
+    background-color: #f1f5f9 !important; /* Gris clarito */
+    opacity: 0.5;
+    pointer-events: none; /* Evita que le den clic por error */
+}
+
+/* =========================================================
+   REMATES VISUALES: TABLA DE BAJAS (SCROLL Y MÓVIL)
+   ========================================================= */
+
+/* 1. SCROLL EN ESCRITORIO (Mantiene los encabezados fijos) */
+#tablaBajas {
+    display: block;
+    max-height: 55vh; /* La tabla nunca será más alta que la mitad de la pantalla */
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+#tablaBajas thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8fafc; /* Fondo para que los datos no se encimen con los títulos al scrollear */
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Sombrita elegante */
+}
+
+/* 2. DISEÑO MÓVIL TIPO "TARJETAS" (Para pantallas pequeñas) */
+@media only screen and (max-width: 768px) {
+    #tablaBajas {
+        max-height: none; /* En móvil dejamos que fluya natural */
+        border: none;
+    }
+    
+    #tablaBajas thead {
+        display: none; /* Ocultamos los encabezados porque estorban en móvil */
+    }
+    
+    #tablaBajas tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    #tablaBajas tr {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 16px;
+        position: relative;
+        background: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    #tablaBajas td {
+        display: flex;
+        justify-content: space-between; /* Etiqueta a la izquierda, valor a la derecha */
+        align-items: center;
+        padding: 6px 0 !important;
+        border-bottom: 1px dashed #e2e8f0 !important;
+        text-align: right !important; 
+    }
+    
+    #tablaBajas td:last-child {
+        border-bottom: none !important;
+    }
+
+    /* Columna 1: Checkbox (Lo mandamos a la esquina superior izquierda) */
+    #tablaBajas td:nth-child(1) {
+        position: absolute;
+        top: 16px;
+        left: 16px; 
+        border: none !important;
+        padding: 0 !important;
+        width: auto;
+    }
+    #tablaBajas td:nth-child(1) input {
+        transform: scale(1.6) !important; /* Hacemos la casilla más grande para el dedo */
+    }
+
+    /* Columna 2: Producto (Más grande y con espacio para la casilla) */
+    #tablaBajas td:nth-child(2) {
+        justify-content: flex-start;
+        padding-left: 36px !important; 
+        font-size: 1.15rem;
+        color: #0f172a;
+        border-bottom: 2px solid #f1f5f9 !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 5px;
+    }
+
+    /* INYECCIÓN DE ETIQUETAS: El CSS le pone nombre a cada dato para que se entienda en móvil */
+    #tablaBajas td:nth-child(3)::before { content: "Presentación:"; color: #64748b; font-weight: 500; font-size: 0.85rem; }
+    #tablaBajas td:nth-child(4)::before { content: "Lote:"; color: #64748b; font-weight: 500; font-size: 0.85rem; }
+    #tablaBajas td:nth-child(5)::before { content: "Ubicación:"; color: #64748b; font-weight: 500; font-size: 0.85rem; }
+    #tablaBajas td:nth-child(6)::before { content: "Caducidad:"; color: #dc3545; font-weight: 500; font-size: 0.85rem; }
+    #tablaBajas td:nth-child(7)::before { content: "Stock Disponible:"; color: #007aff; font-weight: 500; font-size: 0.85rem; }
+    
+    /* 3. Ajuste extra para el "Carrito" rosado de abajo en móviles */
+    #tablaColaBajasBody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 10px 0;
+    }
+    #tablaColaBajasBody td {
+        width: 100% !important;
+        text-align: left !important;
+        padding: 4px 0 !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    #tablaColaBajasBody td:nth-child(2) {
+        justify-content: flex-end; 
+    }
+    #tablaColaBajasBody td:nth-child(3) {
+        justify-content: flex-end; 
+        border-top: 1px dashed #ffd1d1;
+        margin-top: 8px;
+        padding-top: 12px !important;
+    }
+    #tablaColaBajasBody td:nth-child(3) button {
+        width: 100%;
+        background: #fff5f5;
+        border-radius: 8px;
+        padding: 8px;
+        border: 1px solid #ffcccc;
+    }
+}
+
 </style>
 
 

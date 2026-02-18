@@ -32,7 +32,7 @@ const api = {
     google.script.run
       .withSuccessHandler(success)
       .withFailureHandler(failure || mostrarError)
-      .obtenerSugerenciaFIFO();
+      .obtenerSugerenciaFIFO(prodId, cola);
   },
 
   procesarPedidoCompleto(datos, items, guardarCliente, success, failure) {
