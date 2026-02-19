@@ -371,22 +371,45 @@
 
           if (item.unidad !== unidadActual) {
             unidadActual = item.unidad;
+
+            // Valores por defecto (Piezas)
             let lbl = "📦 PIEZAS (INDIVISIBLES)";
             let colorSep = "#f3e5f5";
             let textCol = "#8e24aa";
+            let totalGrupo =
+              ubic.totales && ubic.totales.Pza
+                ? Math.round(ubic.totales.Pza) + " Pza"
+                : "0 Pza";
+
+            // Ajustes si es Litros o Kilos
             if (unidadActual === "L") {
               lbl = "💧 VOLUMEN (LÍQUIDOS)";
               colorSep = "#e3f2fd";
               textCol = "#0277bd";
+              totalGrupo =
+                ubic.totales && ubic.totales.L
+                  ? ubic.totales.L.toFixed(2) + " L"
+                  : "0.00 L";
             }
             if (unidadActual === "Kg") {
               lbl = "⚖️ MASA (SÓLIDOS)";
               colorSep = "#fff8e1";
               textCol = "#f57f17";
+              totalGrupo =
+                ubic.totales && ubic.totales.Kg
+                  ? ubic.totales.Kg.toFixed(2) + " Kg"
+                  : "0.00 Kg";
             }
 
             var trSep = document.createElement("tr");
-            trSep.innerHTML = `<td colspan="5" style="background:${colorSep}; color:${textCol}; font-size:0.75rem; font-weight:800; padding:6px 12px; letter-spacing:1px; border-top: 2px solid ${textCol}30;">${lbl}</td>`;
+            trSep.innerHTML = `
+                 <td colspan="5" style="background:${colorSep}; padding:8px 12px; border-top: 2px solid ${textCol}30;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                       <span style="color:${textCol}; font-size:0.75rem; font-weight:800; letter-spacing:1px;">${lbl}</span>
+                       <span style="background: white; border: 1px solid ${textCol}40; color: ${textCol}; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">Total: ${totalGrupo}</span>
+                    </div>
+                 </td>
+               `;
             tbody.appendChild(trSep);
           }
 
@@ -436,6 +459,26 @@
     if (typeof abrirModalGenerico === "function")
       abrirModalGenerico("modalDetalleUbicacion");
   }
+
+  // --- LÓGICA DE COLAPSO (ACORDEÓN) PARA UBICACIONES ---
+window.toggleGrupoUbicacion = function(groupId, headerRow) {
+    // Busca todas las filas que pertenezcan al grupo clíqueado (ej. grupo-ubic-L)
+    var rows = document.querySelectorAll("." + groupId);
+    var chevron = headerRow.querySelector(".ubic-chevron");
+    
+    // Verificamos si actualmente están ocultas
+    var isHidden = rows.length > 0 && rows[0].style.display === "none";
+
+    // Mostramos u ocultamos
+    rows.forEach(function(r) {
+        r.style.display = isHidden ? "table-row" : "none";
+    });
+
+    // Cambiamos el ícono de flecha (▶ o ▼)
+    if (chevron) {
+        chevron.innerText = isHidden ? "▼" : "▶";
+    }
+};
 
   // --- TRANSFERENCIA ---
   function abrirTransferencia(
