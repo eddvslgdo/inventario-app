@@ -1,5 +1,47 @@
 function initApp() {
   cambiarVista('vista-operacion');
-  recargarSelectores();
+  
+  // 1. Averiguamos el entorno actual antes de cargar los catálogos
+  google.script.run.withSuccessHandler(mode => {
+     updateEnvButton(mode);
+     recargarSelectores(); 
+  }).getCurrentEnvironment();
 }
 
+function toggleEnvironment() {
+   const btn = document.getElementById('btn-env-switch');
+   const isProd = btn.innerText.includes('PRODUCCIÓN');
+   const newMode = isProd ? 'TEST' : 'PROD';
+   
+   Swal.fire({
+      title: 'Cambiando entorno...',
+      text: 'Conectando con la base de datos...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+   });
+   
+   google.script.run.withSuccessHandler(mode => {
+      updateEnvButton(mode);
+      
+      // Recargamos TODO para limpiar la caché de la vista anterior
+      recargarSelectores();
+      if(document.getElementById('vista-productos').style.display !== 'none') cargarDashboardProductos();
+      if(document.getElementById('vista-ubicaciones').style.display !== 'none') cargarDashboardUbicaciones();
+      if(document.getElementById('vista-pedidos').style.display !== 'none') cargarDashboardPedidos();
+      if(document.getElementById('vista-bajas').style.display !== 'none') cargarCaducados();
+      
+      Swal.fire('¡Cambiado!', `Ahora estás trabajando en la base de datos de:\n${mode === 'PROD' ? '🟢 PRODUCCIÓN' : '🧪 PRUEBAS'}`, 'success');
+   }).switchEnvironment(newMode);
+}
+
+function updateEnvButton(mode) {
+   const btn = document.getElementById('btn-env-switch');
+   if(!btn) return;
+   if(mode === 'TEST') {
+      btn.style.background = '#f39c12'; 
+      btn.innerHTML = '🧪 MODO: PRUEBAS';
+   } else {
+      btn.style.background = '#2ecc71'; 
+      btn.innerHTML = '🟢 MODO: PRODUCCIÓN';
+   }
+}

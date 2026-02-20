@@ -1,5 +1,4 @@
 // --- CONFIGURACIÓN ---
-var ID_HOJA = '1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E'; // <--- TU ID
 
 const SHEETS = {
   PRODUCTOS: 'CAT_PRODUCTOS',
@@ -10,8 +9,9 @@ const SHEETS = {
   SALIDAS: 'REGISTROS_SALIDA'
 };
 
+// BORRAMOS LA VARIABLE ID_HOJA
 function getDb() {
-  return SpreadsheetApp.openById(ID_HOJA);
+  return SpreadsheetApp.openById(getActiveDbId());
 }
 
 // --- LECTURA GENÉRICA ---

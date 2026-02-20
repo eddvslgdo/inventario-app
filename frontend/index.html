@@ -413,6 +413,30 @@
   </head>
 
   <body>
+    <button
+      id="btn-env-switch"
+      onclick="toggleEnvironment()"
+      style="
+        position: fixed;
+        top: 15px;
+        right: 20px;
+        width: auto !important;
+        margin: 0;
+        z-index: 9999;
+        border-radius: 30px;
+        font-weight: 800;
+        font-size: 0.85rem;
+        padding: 8px 20px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        letter-spacing: 0.5px;
+        transition: transform 0.2s;
+      "
+    >
+      🟢 MODO: PRODUCCIÓN
+    </button>
+
     <div class="nav-bar">
       <button class="nav-btn active" onclick="cambiarVista('vista-operacion')">
         📦 Entradas
@@ -480,6 +504,21 @@
             </button>
           </div>
         </div>
+        <div
+          id="info-contextual-entrada"
+          style="
+            display: none;
+            margin-top: -5px;
+            margin-bottom: 15px;
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #555;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+          "
+        ></div>
 
         <div class="form-group">
           <label>Presentación</label>
@@ -1139,117 +1178,69 @@
       </div>
     </div>
 
-    <div id="vista-bajas" class="vista" style="display: none">
-      <div class="card" style="max-width: 1000px">
-        <div
-          style="
-            background: #fff3cd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 5px solid #ffc107;
-          "
-        >
-          <h2 style="margin: 0; color: #856404">🗑️ Materiales Caducados</h2>
-          <small style="color: #856404"
-            >Selecciona los lotes vencidos que deseas desincorporar del
-            inventario.</small
-          >
+<div id="vista-bajas" class="vista" style="display: none; padding-top: 10px;">
+      <div class="card" style="max-width: 1000px; width: 100%; padding: 0; display: flex; flex-direction: column; max-height: 86vh; overflow: hidden; border-radius: 12px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        
+        <div style="background: #fff3cd; padding: 20px; border-bottom: 1px solid #ffeeba; flex-shrink: 0;">
+          <h2 style="margin: 0; color: #856404; font-size: 1.4rem;">🗑️ Materiales Caducados</h2>
+          <small style="color: #856404">Selecciona los lotes vencidos que deseas desincorporar del inventario.</small>
         </div>
 
-        <div
-          id="loading-bajas"
-          style="text-align: center; margin: 20px; color: #666; display: none"
-        >
+        <div id="loading-bajas" style="text-align: center; margin: 20px; color: #666; display: none; flex-shrink: 0;">
           <div class="spinner"></div>
           <p>Buscando lotes vencidos...</p>
         </div>
 
-        <div style="overflow-x: auto">
-          <table
-            class="modern-table"
-            id="tablaBajas"
-            style="width: 100%; display: none"
-          >
-            <thead style="background: #f8f9fa">
+        <div style="flex: 1 1 auto; overflow-y: auto; background: white;">
+          <table class="modern-table" id="tablaBajas" style="width: 100%; display: none; margin: 0;">
+            <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
               <tr>
-                <th style="width: 5%; text-align: center">
-                  <input
-                    type="checkbox"
-                    id="chkAllBajas"
-                    onchange="toggleAllBajas(this)"
-                    style="transform: scale(1.2); cursor: pointer"
-                  />
+                <th style="width: 5%; text-align: center; padding: 12px 10px;">
+                  <input type="checkbox" id="chkAllBajas" onchange="toggleAllBajas(this)" style="transform: scale(1.2); cursor: pointer" />
                 </th>
-                <th>Producto</th>
-                <th>Presentación</th>
-                <th>Lote</th>
-                <th>Ubicación</th>
-                <th>Caducidad</th>
-                <th style="text-align: right">Stock Disp.</th>
+                <th style="padding: 12px 10px;">Producto</th>
+                <th style="padding: 12px 10px;">Presentación</th>
+                <th style="padding: 12px 10px;">Lote</th>
+                <th style="padding: 12px 10px;">Ubicación</th>
+                <th style="padding: 12px 10px;">Caducidad</th>
+                <th style="text-align: right; padding: 12px 10px;">Stock Disp.</th>
               </tr>
             </thead>
             <tbody id="tablaBajasBody"></tbody>
           </table>
         </div>
 
-        <div
-          style="
-            margin-top: 25px;
-            text-align: right;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-          "
-        >
-          <button
-            onclick="prepararBaja()"
-            class="btn-field"
-            style="
-              background: #dc3545;
-              color: white;
-              border: none;
-              width: auto;
-              padding: 0 30px;
-              display: inline-flex;
-            "
-          >
+        <div style="padding: 15px 20px; background: white; border-top: 1px solid #e2e8f0; flex-shrink: 0; display: flex; justify-content: flex-end; box-shadow: 0 -2px 10px rgba(0,0,0,0.03); z-index: 15;">
+          <button onclick="prepararBaja()" class="btn-field" style="background: #dc3545; color: white; border: none; width: auto; padding: 0 30px; box-shadow: 0 4px 6px rgba(220, 53, 69, 0.2);">
             ➡️ Preparar Baja Seleccionada
           </button>
         </div>
 
-        <div
-          id="area-cola-bajas"
-          style="
-            margin-top: 25px;
-            display: none;
-            background: #fff5f5;
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid #ffcccc;
-          "
-        >
-          <h4 style="margin: 0 0 10px 0; color: #c0392b">
-            📋 Lotes a Desincorporar (<span id="contadorColaBajas">0</span>)
-          </h4>
-
-          <div style="overflow-x: auto; margin-bottom: 15px">
-            <table
-              style="width: 100%; border-collapse: collapse; font-size: 0.85rem"
-            >
-              <tbody id="tablaColaBajasBody"></tbody>
-            </table>
-          </div>
-
-          <button
-            onclick="confirmarBajaFinal()"
-            class="btn-field"
-            style="width: 100%; background: #333; color: white; border: none"
-          >
-            📄 CONFIRMAR Y GENERAR REPORTES
-          </button>
+        <div id="area-cola-bajas" style="display: none; flex-shrink: 0; background: #fff5f5; border-top: 2px dashed #ffcccc; max-height: 40vh;">
+            <div style="display: flex; flex-direction: column; height: 100%;">
+                
+                <div style="padding: 15px 20px 10px 20px; flex-shrink: 0;">
+                    <h4 style="margin: 0; color: #c0392b">📋 Lotes a Desincorporar (<span id="contadorColaBajas">0</span>)</h4>
+                </div>
+                
+                <div style="flex: 1 1 auto; overflow-y: auto; padding: 0 20px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem">
+                      <tbody id="tablaColaBajasBody"></tbody>
+                    </table>
+                </div>
+                
+                <div style="padding: 15px 20px; flex-shrink: 0; border-top: 1px solid #ffcccc; background: #fff5f5;">
+                    <button onclick="confirmarBajaFinal()" class="btn-field" style="width: 100%; background: #333; color: white; border: none; font-size: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                      📄 CONFIRMAR Y GENERAR REPORTES
+                    </button>
+                </div>
+                
+            </div>
         </div>
+
       </div>
     </div>
+    
     <div
       id="modalProducto"
       class="modal-overlay"
@@ -1394,68 +1385,82 @@
       </div>
     </div>
 
-    <div id="modalDetalleUbicacion" class="modal-overlay" style="display: none">
-      <div
-        class="modal-content"
-        style="max-width: 700px; width: 95%; padding-top: 0; overflow: hidden"
-      >
-        <div
-          style="
-            background: #f9f9f9;
-            padding: 20px 20px 10px 20px;
-            border-bottom: 1px solid #eee;
-            margin: 0 -20px 15px -20px;
-          "
-        >
-          <h3 id="tituloDetalle" style="margin: 0; color: #333">
-            Detalle Ubicación
-          </h3>
+<div id="modalDetalleUbicacion" class="modal-overlay" style="display: none; z-index: 1000;">
+      <div class="modal-content" style="max-width: 800px; width: 95%; padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh;">
+        
+        <div style="background: #f8fafc; padding: 20px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0;">
+          <h3 id="tituloDetalle" style="margin: 0; color: #1e293b; font-size: 1.25rem;">📍 Detalle Ubicación</h3>
         </div>
-        <div style="overflow-x: auto">
-          <table
-            style="width: 100%; border-collapse: collapse; font-size: 0.9rem"
-          >
-            <thead>
-              <tr
-                style="
-                  background: #fff;
-                  text-align: left;
-                  border-bottom: 2px solid #007aff;
-                "
-              >
-                <th style="padding: 10px; color: #007aff">Producto</th>
-                <th style="padding: 10px; color: #007aff">Lote</th>
-                <th style="padding: 10px; color: #007aff">Caducidad</th>
-                <th style="padding: 10px; text-align: right; color: #007aff">
-                  Stock
+
+        <div style="flex: 1 1 auto; overflow-y: auto; padding: 0; background: white;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead style="position: sticky; top: 0; background: #ffffff; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+              <tr style="text-align: left; border-bottom: 2px solid #007aff;">
+                <th style="padding: 12px 10px; width: 40px; text-align: center;">
+                    <input type="checkbox" id="chkAllUbic" onchange="toggleAllUbicItems(this)" style="transform: scale(1.2); cursor: pointer;">
                 </th>
-                <th style="padding: 10px; text-align: center; color: #007aff">
-                  Acción
-                </th>
+                <th style="padding: 12px 10px; color: #007aff">Producto</th>
+                <th style="padding: 12px 10px; color: #007aff">Lote</th>
+                <th style="padding: 12px 10px; color: #007aff">Caducidad</th>
+                <th style="padding: 12px 10px; text-align: right; color: #007aff">Stock</th>
+                <th style="padding: 12px 10px; text-align: center; color: #007aff">Acción</th>
               </tr>
             </thead>
             <tbody id="tablaDetalleBody"></tbody>
           </table>
         </div>
-        <div
-          style="
-            margin-top: 25px;
-            text-align: right;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-          "
-        >
+        
+        <div style="background: #ffffff; padding: 15px 20px; border-top: 1px solid #e2e8f0; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <button onclick="cerrarModalGenerico('modalDetalleUbicacion')" class="btn-field" style="background: #f1f5f9; color: #475569; width: auto; display: inline-flex; border: 1px solid #cbd5e1;">
+             Cerrar Detalle
+          </button>
+          <button onclick="prepararTransferenciaMasiva()" class="btn-field" style="background: #007aff; color: white; width: auto; display: inline-flex; box-shadow: 0 4px 6px rgba(0,122,255,0.2);">
+             🚚 Transferir Seleccionados
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <div
+      id="modalTransferenciaMasiva"
+      class="modal-overlay"
+      style="display: none; z-index: 1005"
+    >
+      <div class="modal-content" style="max-width: 400px">
+        <div style="text-align: center; margin-bottom: 20px">
+          <span style="font-size: 3rem">🚚</span>
+          <h3 style="margin: 10px 0 5px 0">Mover en Bloque</h3>
+          <p style="color: #666; font-size: 0.9rem; margin: 0">
+            Vas a mover
+            <strong
+              id="lblCantMasivaTransf"
+              style="color: #007aff; font-size: 1.1rem"
+              >0</strong
+            >
+            lote(s).
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label>¿A dónde los vas a mover?</label>
+          <select id="selDestinoMasivo" class="input-modern"></select>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 25px">
           <button
-            onclick="cerrarModalGenerico('modalDetalleUbicacion')"
+            onclick="cerrarModalGenerico('modalTransferenciaMasiva')"
             class="btn-field"
-            style="
-              background: #e5e5ea;
-              color: #333;
-              width: auto;
-              display: inline-flex;
-            "
+            style="flex: 1; background: #f1f3f5; border: none"
           >
-            Cerrar Detalle
+            Cancelar
+          </button>
+          <button
+            onclick="confirmarTransferenciaMasiva()"
+            class="btn-field"
+            style="flex: 1; background: #007aff; color: white; border: none"
+          >
+            Confirmar Mover
           </button>
         </div>
       </div>

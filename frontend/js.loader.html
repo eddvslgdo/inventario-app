@@ -336,6 +336,10 @@
   }
 
   // --- DETALLE ---
+
+  let UBICACION_ACTUAL_ID = null;
+
+  // --- DETALLE CON CHECKBOXES ---
   function verDetalleUbicacion(idUbic) {
     var ubic = null;
     for (var i = 0; i < CACHE_UBICACIONES.length; i++) {
@@ -346,15 +350,18 @@
     }
     if (!ubic) return;
 
+    UBICACION_ACTUAL_ID = ubic.id; // Guardamos para el movimiento masivo
     var tit = document.getElementById("tituloDetalle");
     if (tit) tit.innerText = "📍 " + ubic.nombre;
 
     var tbody = document.getElementById("tablaDetalleBody");
+    var chkAll = document.getElementById("chkAllUbic");
+    if (chkAll) chkAll.checked = false; // Resetear casilla maestra
+
     if (tbody) {
       tbody.innerHTML = "";
       if (!ubic.items || ubic.items.length === 0) {
-        tbody.innerHTML =
-          '<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">Esta ubicación está vacía.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">Esta ubicación está vacía.</td></tr>';
       } else {
         const orden = { L: 1, Kg: 2, Pza: 3 };
         ubic.items.sort((a, b) => {
@@ -371,39 +378,23 @@
 
           if (item.unidad !== unidadActual) {
             unidadActual = item.unidad;
-
-            // Valores por defecto (Piezas)
             let lbl = "📦 PIEZAS (INDIVISIBLES)";
             let colorSep = "#f3e5f5";
             let textCol = "#8e24aa";
-            let totalGrupo =
-              ubic.totales && ubic.totales.Pza
-                ? Math.round(ubic.totales.Pza) + " Pza"
-                : "0 Pza";
+            let totalGrupo = ubic.totales && ubic.totales.Pza ? Math.round(ubic.totales.Pza) + " Pza" : "0 Pza";
 
-            // Ajustes si es Litros o Kilos
             if (unidadActual === "L") {
-              lbl = "💧 VOLUMEN (LÍQUIDOS)";
-              colorSep = "#e3f2fd";
-              textCol = "#0277bd";
-              totalGrupo =
-                ubic.totales && ubic.totales.L
-                  ? ubic.totales.L.toFixed(2) + " L"
-                  : "0.00 L";
+              lbl = "💧 VOLUMEN (LÍQUIDOS)"; colorSep = "#e3f2fd"; textCol = "#0277bd";
+              totalGrupo = ubic.totales && ubic.totales.L ? ubic.totales.L.toFixed(2) + " L" : "0.00 L";
             }
             if (unidadActual === "Kg") {
-              lbl = "⚖️ MASA (SÓLIDOS)";
-              colorSep = "#fff8e1";
-              textCol = "#f57f17";
-              totalGrupo =
-                ubic.totales && ubic.totales.Kg
-                  ? ubic.totales.Kg.toFixed(2) + " Kg"
-                  : "0.00 Kg";
+              lbl = "⚖️ MASA (SÓLIDOS)"; colorSep = "#fff8e1"; textCol = "#f57f17";
+              totalGrupo = ubic.totales && ubic.totales.Kg ? ubic.totales.Kg.toFixed(2) + " Kg" : "0.00 Kg";
             }
 
             var trSep = document.createElement("tr");
             trSep.innerHTML = `
-                 <td colspan="5" style="background:${colorSep}; padding:8px 12px; border-top: 2px solid ${textCol}30;">
+                 <td colspan="6" style="background:${colorSep}; padding:8px 12px; border-top: 2px solid ${textCol}30;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                        <span style="color:${textCol}; font-size:0.75rem; font-weight:800; letter-spacing:1px;">${lbl}</span>
                        <span style="background: white; border: 1px solid ${textCol}40; color: ${textCol}; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">Total: ${totalGrupo}</span>
@@ -418,35 +409,16 @@
           tr.style.background = "#fff";
 
           var volUnit = item.volumen_nominal || 0;
-          let volDisplay =
-            item.unidad === "Pza"
-              ? Math.round(item.volumen)
-              : Number(item.volumen).toFixed(2);
+          let volDisplay = item.unidad === "Pza" ? Math.round(item.volumen) : Number(item.volumen).toFixed(2);
 
-          var row =
-            '<td style="padding:12px;"><b>' +
-            item.producto +
-            '</b><br><small style="color:#666;">' +
-            item.presentacion +
-            "</small></td>";
-          row +=
-            '<td style="padding:12px; color:#d63031; font-family:monospace; font-size:0.9rem;">' +
-            item.lote +
-            "</td>";
-          row +=
-            '<td style="padding:12px; font-size:0.9rem;">' +
-            (item.caducidad || "--") +
-            "</td>";
-          row +=
-            '<td style="padding:12px; text-align:right;"><b>' +
-            volDisplay +
-            " " +
-            item.unidad +
-            "</b></td>";
+          // AGREGADA LA CASILLA (CHECKBOX) EN LA PRIMERA CELDA
+          var row = '<td style="padding:12px; text-align:center;"><input type="checkbox" class="chk-ubic-item" data-idx="' + k + '" style="transform: scale(1.2); cursor:pointer;"></td>';
+          row += '<td style="padding:12px;"><b>' + item.producto + '</b><br><small style="color:#666;">' + item.presentacion + "</small></td>";
+          row += '<td style="padding:12px; color:#d63031; font-family:monospace; font-size:0.9rem;">' + item.lote + "</td>";
+          row += '<td style="padding:12px; font-size:0.9rem;">' + (item.caducidad || "--") + "</td>";
+          row += '<td style="padding:12px; text-align:right;"><b>' + volDisplay + " " + item.unidad + "</b></td>";
           row += '<td style="padding:12px; text-align:center;">';
-
           row += `<div style="display:flex; gap:5px; justify-content:center;">`;
-          // SE MANDAN LOS 8 PARÁMETROS AQUÍ
           row += `<button class="btn-action btn-move" title="Transferir" onclick="abrirTransferencia('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit}, '${item.unidad}')">🔄</button>`;
           row += `<button class="btn-action btn-transf" title="Transformar" onclick="abrirTransformacion('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit}, '${item.unidad}')">🛠️</button>`;
           row += `</div></td>`;
@@ -456,8 +428,7 @@
         }
       }
     }
-    if (typeof abrirModalGenerico === "function")
-      abrirModalGenerico("modalDetalleUbicacion");
+    if (typeof abrirModalGenerico === "function") abrirModalGenerico("modalDetalleUbicacion");
   }
 
   // --- LÓGICA DE COLAPSO (ACORDEÓN) PARA UBICACIONES ---
@@ -939,11 +910,94 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
         if (typeof cerrarModalGenerico === "function")
           cerrarModalGenerico("modalDetalleUbicacion");
         Swal.fire("Listo", "Transformación exitosa", "success");
+        // --- NUEVA LÍNEA: Refrescar también la tabla de Productos ---
+        if (typeof cargarDashboardProductos === "function") cargarDashboardProductos(); 
+        
+        if (typeof cerrarModalGenerico === "function") cerrarModalGenerico("modalDetalleUbicacion");
+        Swal.fire("Listo", "Transformación exitosa", "success");
       })
       .withFailureHandler(function (e) {
         Swal.fire("Error", e.message, "error");
       })
       .realizarTransformacion(datos);
+  }
+
+  // --- LÓGICA DE TRANSFERENCIA MASIVA ---
+  
+  function toggleAllUbicItems(source) {
+     const checkboxes = document.querySelectorAll(".chk-ubic-item");
+     checkboxes.forEach((chk) => (chk.checked = source.checked));
+  }
+
+  let ITEMS_MASIVOS = [];
+
+  function prepararTransferenciaMasiva() {
+     const checkboxes = document.querySelectorAll(".chk-ubic-item:checked");
+     if (checkboxes.length === 0) {
+        return Swal.fire("Atención", "Selecciona al menos un lote marcando la casilla del lado izquierdo.", "warning");
+     }
+
+     // Buscamos la ubicación completa actual en el cache
+     let ubicInfo = CACHE_UBICACIONES.find(u => String(u.id) === String(UBICACION_ACTUAL_ID));
+     if(!ubicInfo) return;
+
+     ITEMS_MASIVOS = [];
+     checkboxes.forEach((chk) => {
+        let idx = parseInt(chk.getAttribute("data-idx"));
+        let item = ubicInfo.items[idx];
+        ITEMS_MASIVOS.push({
+           productoId: item.raw_producto_id,
+           presentacionId: item.raw_presentacion_id,
+           lote: item.lote,
+           volumen: item.volumen
+        });
+     });
+
+     document.getElementById("lblCantMasivaTransf").innerText = ITEMS_MASIVOS.length;
+
+     // Llenar el select de destinos excluyendo el estante actual
+     var selDest = document.getElementById("selDestinoMasivo");
+     if (selDest && window.CACHE_UBICACIONES) {
+        selDest.innerHTML = '<option value="">Selecciona destino...</option>';
+        window.CACHE_UBICACIONES.forEach((u) => {
+           if (String(u.id) !== String(UBICACION_ACTUAL_ID)) {
+              var opt = document.createElement("option");
+              opt.value = u.id;
+              opt.text = u.nombre;
+              selDest.appendChild(opt);
+           }
+        });
+     }
+
+     abrirModalGenerico("modalTransferenciaMasiva");
+  }
+
+  function confirmarTransferenciaMasiva() {
+     var dest = document.getElementById("selDestinoMasivo").value;
+     if (!dest) return Swal.fire("Atención", "Por favor selecciona el estante de destino.", "warning");
+
+     cerrarModalGenerico("modalTransferenciaMasiva");
+     
+     Swal.fire({
+        title: "Moviendo " + ITEMS_MASIVOS.length + " lotes...",
+        allowOutsideClick: false,
+        didOpen: function () { Swal.showLoading(); }
+     });
+
+     google.script.run
+       .withSuccessHandler(function (res) {
+          if(res.success) {
+             cargarDashboardUbicaciones();
+             cerrarModalGenerico("modalDetalleUbicacion");
+             Swal.fire("¡Listo!", "Movimiento masivo completado con éxito.", "success");
+          } else {
+             Swal.fire("Error", res.error, "error");
+          }
+       })
+       .withFailureHandler(function (e) {
+          Swal.fire("Error", e.message, "error");
+       })
+       .transferirMasivo(UBICACION_ACTUAL_ID, dest, ITEMS_MASIVOS);
   }
 </script>
 

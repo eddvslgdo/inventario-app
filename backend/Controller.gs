@@ -9,12 +9,11 @@
 // 0. CONFIGURACIÓN Y HERRAMIENTAS
 // ==========================================
 // Usamos un nombre ÚNICO para evitar choque con otros archivos
-const DB_SPREADSHEET_ID = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E";
 
+// BORRAMOS EL ID FIJO Y USAMOS EL GESTOR DE ENTORNOS
 function obtenerSpreadsheet() {
   try {
-    // Intentamos abrir por ID explícito
-    return SpreadsheetApp.openById(DB_SPREADSHEET_ID);
+    return SpreadsheetApp.openById(getActiveDbId());
   } catch (e) {
     // Fallback de emergencia
     return SpreadsheetApp.getActiveSpreadsheet();
@@ -303,34 +302,28 @@ function obtenerDatosUbicaciones() {
 function obtenerDatosProductos() {
   const sInv = obtenerHojaOCrear("INVENTARIO", []);
   if (sInv.getLastRow() < 2) return [];
-
-  const mapProd = {},
-    mapUbic = {},
-    mapPres = {};
+  
+  // Agregamos mapPresVol para poder calcular equivalencias
+  const mapProd = {}, mapUbic = {}, mapPres = {}, mapPresVol = {};
   const sP = obtenerHojaOCrear("PRODUCTOS", []),
-    sU = obtenerHojaOCrear("UBICACIONES", []),
-    sPr = obtenerHojaOCrear("PRESENTACIONES", []);
-
+        sU = obtenerHojaOCrear("UBICACIONES", []),
+        sPr = obtenerHojaOCrear("PRESENTACIONES", []);
+        
   if (sP.getLastRow() > 1) {
-    sP.getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => {
+    sP.getDataRange().getValues().slice(1).forEach((r) => {
         mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: r[3] || "L" };
-      });
+    });
   }
-  if (sU.getLastRow() > 1)
-    sU.getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
-  if (sPr.getLastRow() > 1)
-    sPr
-      .getDataRange()
-      .getValues()
-      .slice(1)
-      .forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
-
+  if (sU.getLastRow() > 1) {
+    sU.getDataRange().getValues().slice(1).forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
+  }
+  if (sPr.getLastRow() > 1) {
+    sPr.getDataRange().getValues().slice(1).forEach((r) => {
+        mapPres[String(r[0]).trim()] = r[1];
+        mapPresVol[String(r[0]).trim()] = Number(r[2]) || 0; // Extraemos el volumen nominal
+    });
+  }
+  
   const dataInv = sInv.getDataRange().getValues();
   let productosMap = {};
 
@@ -340,14 +333,13 @@ function obtenerDatosProductos() {
       const pId = String(dataInv[i][0]).trim();
       const prodObj = mapProd[pId] || { nombre: pId, unidad: "L" };
       const rawName = prodObj.nombre;
-
-      // MAGIA PADRE/HIJO: Si el nombre es "BAYADY1 (PERFECT DUO)"
       let baseName = rawName;
       let subName = "";
       let match = rawName.match(/(.*)\(([^)]+)\)$/);
+      
       if (match) {
-        subName = match[1].trim(); // Ej: BAYADY1
-        baseName = match[2].trim(); // Ej: PERFECT DUO
+        subName = match[1].trim();
+        baseName = match[2].trim();
       }
 
       if (!productosMap[baseName]) {
@@ -364,17 +356,15 @@ function obtenerDatosProductos() {
       const uId = String(dataInv[i][2]).trim();
       const prId = String(dataInv[i][1]).trim();
       const uName = mapUbic[uId] || uId;
-
       let presName = mapPres[prId] || prId;
       const cadStr = _fmtFechaDisplay(dataInv[i][4]);
-
+      
       let loteExistente = productosMap[baseName].lotes.find(
-        (l) =>
-          l.lote === String(dataInv[i][6]).trim() &&
-          l.ubicacion === uName &&
-          l.presentacion === presName &&
-          l.caducidad === cadStr &&
-          l.alias === subName,
+        (l) => l.lote === String(dataInv[i][6]).trim() &&
+               l.ubicacion === uName &&
+               l.presentacion === presName &&
+               l.caducidad === cadStr &&
+               l.alias === subName
       );
       if (loteExistente) {
         loteExistente.volumen += stock;
@@ -383,15 +373,17 @@ function obtenerDatosProductos() {
           lote: String(dataInv[i][6]).trim(),
           volumen: stock,
           ubicacion: uName,
+          ubicacion_id: uId,           // NUEVO
           presentacion: presName,
-          alias: subName, // <--- Pasamos el alias limpio aquí
+          presentacion_id: prId,       // NUEVO
+          alias: subName, 
           caducidad: cadStr,
+          volumen_nominal: mapPresVol[prId] || 0 // NUEVO
         });
       }
     }
   }
 
-  // Ajustamos la unidad visual para el frontend
   return Object.values(productosMap).map((p) => {
     let uLower = String(p.unidad).toLowerCase();
     if (uLower.includes("unid") || uLower.includes("pza")) p.unidad = "Pza";
@@ -1780,6 +1772,74 @@ function borrarUbicacion(id) {
     throw new Error("Ubicación no encontrada.");
   } catch (e) {
     throw new Error(e.message);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ==========================================
+// TRANSFERENCIA MASIVA
+// ==========================================
+function transferirMasivo(origenId, destinoId, itemsMover) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+    const sInv = obtenerHojaOCrear("INVENTARIO", []);
+    const data = sInv.getDataRange().getValues();
+    
+    let nuevasFilas = [];
+
+    // Recorremos cada item que seleccionaste en la pantalla
+    itemsMover.forEach(item => {
+       let restante = Number(item.volumen);
+       
+       for (let i = 1; i < data.length; i++) {
+          if (restante <= 0.001) break;
+
+          if (
+             String(data[i][0]) == String(item.productoId) &&
+             String(data[i][1]) == String(item.presentacionId) &&
+             String(data[i][2]) == String(origenId) &&
+             String(data[i][6]) == String(item.lote)
+          ) {
+             let stockFila = Number(data[i][3]);
+             if (stockFila > 0) {
+                 let restar = Math.min(stockFila, restante);
+                 let nuevoStock = stockFila - restar;
+                 
+                 // Descontamos del origen
+                 sInv.getRange(i + 1, 4).setValue(nuevoStock <= 0.001 ? 0 : nuevoStock);
+                 restante -= restar;
+
+                 // Preparamos la fila para insertar en el destino
+                 nuevasFilas.push([
+                    item.productoId,
+                    item.presentacionId,
+                    destinoId,
+                    Number(restar),
+                    data[i][4], // Caducidad
+                    data[i][5], // Elaboracion
+                    item.lote,
+                    new Date(),
+                    "Transferencia Masiva"
+                 ]);
+             }
+          }
+       }
+       
+       if (restante > 0.001) {
+          throw new Error(`El stock del lote ${item.lote} se acabó antes de completar el movimiento.`);
+       }
+    });
+
+    // Guardamos todas las nuevas entradas en el destino de un solo golpe
+    if (nuevasFilas.length > 0) {
+        nuevasFilas.forEach(fila => sInv.appendRow(fila));
+    }
+
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
   }

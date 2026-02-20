@@ -111,7 +111,7 @@ function renderizarTablaProductos(productos) {
           let filasDetalle = "";
           let productoExpiraPronto = false; 
 
-          p.lotes.forEach(l => {
+         p.lotes.forEach(l => {
               let aliasTag = (l.alias && l.alias.trim() !== "") ? `<span class="alias-tag">Variante: ${l.alias}</span>` : "";
               
               let fCad = parseFechaCaducidad(l.caducidad);
@@ -123,7 +123,6 @@ function renderizarTablaProductos(productos) {
                   let hoyTime = hoy.getTime();
                   let limiteTime = limiteTresMeses.getTime();
 
-                  // FIX: Lógica invertida para evitar el símbolo "<"
                   if (hoyTime > fCadTime) { 
                       cadAlertaHtml = `<span style="color:#dc2626; font-weight:bold;">${l.caducidad} (Vencido)</span>`;
                       rowBg = "background:#fef2f2;";
@@ -135,13 +134,21 @@ function renderizarTablaProductos(productos) {
                   }
               }
 
+              // NUEVO: Botón de Transformación directo en el listado
+              let btnTransf = `<button class="btn-action btn-transf" style="width:28px; height:28px; font-size:0.8rem; margin-left:12px; box-shadow:0 1px 2px rgba(0,0,0,0.1);" title="Transformar Lote" onclick="abrirTransformacion('${p.id}', '${p.nombre}', '${l.lote}', ${l.volumen}, '${l.ubicacion_id}', '${l.presentacion_id}', ${l.volumen_nominal}, '${p.unidad}')">🛠️</button>`;
+
               filasDetalle += `
                   <tr style="${rowBg}">
                       <td class="td-ubic">${l.ubicacion}</td>
                       <td><div class="td-pres">${l.presentacion}</div>${aliasTag}</td>
                       <td><span class="lote-tag">${l.lote}</span></td>
                       <td class="td-cad">${cadAlertaHtml}</td>
-                      <td class="td-cant">${l.volumen} <span style="font-size:0.75rem; color:#888;">${p.unidad}</span></td>
+                      <td class="td-cant">
+                         <div style="display:flex; justify-content:flex-end; align-items:center;">
+                            <span>${l.volumen} <span style="font-size:0.75rem; color:#888;">${p.unidad}</span></span>
+                            ${btnTransf}
+                         </div>
+                      </td>
                   </tr>
               `;
           });
@@ -213,13 +220,12 @@ window.filtrarProductos = function() {
       let encontradosGrupo = 0;
 
       cards.forEach(card => {
-          const titulo = card.querySelector(".prod-title").innerText.toLowerCase();
+          // --- MAGIA: Ahora lee todo el texto de la tarjeta (título, lote, variante, etc.) ---
+          const textoTarjeta = card.innerText.toLowerCase(); 
           const stock = parseFloat(card.getAttribute("data-stock")) || 0;
           const expira = card.getAttribute("data-expira") === "true";
           
-          let pasaTexto = titulo.includes(txt);
-          
-          // FIX: Invertimos el operador para evitar el símbolo "<"
+          let pasaTexto = textoTarjeta.includes(txt);
           let pasaStock = FILTRO_BAJO_STOCK ? (10 > stock) : true; 
           let pasaCaducidad = FILTRO_PROX_CADUCAR ? expira : true;
 
@@ -253,7 +259,7 @@ window.filtrarProductos = function() {
         msg = document.createElement("div");
         msg.id = "msg-no-resultados";
         msg.style.cssText = "text-align:center; padding:40px; color:#64748b; font-size:0.95rem; background:white; border-radius:8px; border:1px solid #e2e8f0; margin-top:15px;";
-        msg.innerHTML = "No se encontraron productos que coincidan con los filtros.";
+        msg.innerHTML = "No se encontraron productos, variantes ni lotes que coincidan con la búsqueda.";
         document.getElementById("contenedor-productos-lista").appendChild(msg);
      }
   } else if (msg) {

@@ -209,11 +209,12 @@ function getTextoSelect(id) {
 function seleccionarProductoDesdeBusqueda() {
     let searchVal = document.getElementById('producto_search').value.trim();
     let hiddenId = document.getElementById('producto');
+    let infoDiv = document.getElementById('info-contextual-entrada'); // El nuevo contenedor
     
-    // Si el usuario borra el texto, limpiamos la memoria y restauramos TODAS las presentaciones
     if(searchVal === "") {
         hiddenId.value = "";
-        filtrarPresentacionesPorUnidad(""); // Restaura la lista completa
+        if(infoDiv) infoDiv.style.display = 'none';
+        filtrarPresentacionesPorUnidad(""); 
         if(typeof calcularTotalEntrada === 'function') calcularTotalEntrada();
         return;
     }
@@ -225,13 +226,38 @@ function seleccionarProductoDesdeBusqueda() {
     if(prod) {
         hiddenId.value = prod.id; 
         document.getElementById('producto_search').value = prod.nombre; 
-        
-        // MAGIA: Filtramos la lista de presentaciones basándonos en la unidad del producto
         filtrarPresentacionesPorUnidad(prod.unidad);
-
         if(typeof calcularTotalEntrada === 'function') calcularTotalEntrada(); 
+        
+        // --- NUEVO: VISIBILIDAD CONTEXTUAL ---
+        if(infoDiv) {
+            infoDiv.style.display = 'block';
+            infoDiv.innerHTML = '<span style="color:#888;">⏳ Buscando existencias en el almacén...</span>';
+            
+            // Reutilizamos la función FIFO para traer el desglose sin crear código backend nuevo
+            api.obtenerSugerenciaFIFO(prod.id, [], function(jsonResp) {
+                try {
+                    let res = JSON.parse(jsonResp);
+                    if(res.success && res.lista_completa && res.lista_completa.length > 0) {
+                        let html = `<strong style="color:#d97706;">💡 Tienes existencias en ${res.lista_completa.length} ubicación(es):</strong><ul style="margin:5px 0 0 0; padding-left:20px;">`;
+                        res.lista_completa.forEach(lote => {
+                            html += `<li><b>${lote.stock} ${prod.unidad}</b> en <b>${lote.nombre_ubicacion}</b> <span style="font-size:0.75rem; color:#888;">(Lote: ${lote.lote} | ${lote.nombre_presentacion})</span></li>`;
+                        });
+                        html += `</ul>`;
+                        infoDiv.innerHTML = html;
+                    } else {
+                        infoDiv.innerHTML = `<span style="color:#27ae60; font-weight:bold;">✨ Producto sin stock actual. Será un primer ingreso.</span>`;
+                    }
+                } catch(e) {
+                    infoDiv.style.display = 'none';
+                }
+            }, function() { infoDiv.style.display = 'none'; });
+        }
+        // ------------------------------------
+
     } else {
         hiddenId.value = "";
+        if(infoDiv) infoDiv.style.display = 'none';
         Swal.fire({
             title: 'Producto no encontrado',
             text: `El producto "${searchVal}" no existe. ¿Deseas registrarlo?`,
@@ -245,7 +271,7 @@ function seleccionarProductoDesdeBusqueda() {
                 abrirModalGenerico('modalProducto'); 
             }
         });
-        filtrarPresentacionesPorUnidad(""); // Restaura lista
+        filtrarPresentacionesPorUnidad(""); 
         if(typeof calcularTotalEntrada === 'function') calcularTotalEntrada();
     }
 }

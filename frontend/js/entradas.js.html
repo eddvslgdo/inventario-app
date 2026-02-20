@@ -126,6 +126,10 @@ function limpiarFormularioEntrada() {
   
   var btnDir = document.getElementById("btn-entrada-directa");
   if(btnDir) { btnDir.disabled = false; btnDir.style.opacity = '1'; }
+
+  // --- NUEVO: Ocultar el recuadro contextual al limpiar ---
+  var infoDiv = document.getElementById("info-contextual-entrada");
+  if (infoDiv) infoDiv.style.display = "none";
 }
 
 function procesarEntradas() {

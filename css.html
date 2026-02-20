@@ -1659,23 +1659,6 @@ tr.fila-bloqueada {
    REMATES VISUALES: TABLA DE BAJAS (SCROLL Y MÓVIL)
    ========================================================= */
 
-/* 1. SCROLL EN ESCRITORIO (Mantiene los encabezados fijos) */
-#tablaBajas {
-    display: block;
-    max-height: 55vh; /* La tabla nunca será más alta que la mitad de la pantalla */
-    overflow-y: auto;
-    overflow-x: hidden;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-#tablaBajas thead th {
-    position: sticky;
-    top: 0;
-    background-color: #f8fafc; /* Fondo para que los datos no se encimen con los títulos al scrollear */
-    z-index: 2;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Sombrita elegante */
-}
-
 /* 2. DISEÑO MÓVIL TIPO "TARJETAS" (Para pantallas pequeñas) */
 @media only screen and (max-width: 768px) {
     #tablaBajas {
