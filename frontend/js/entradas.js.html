@@ -86,27 +86,33 @@ function construirObjetoEntrada() {
   var lote = elLote ? elLote.value.trim() : "";
   if (!lote) { mostrarToast("Falta el Lote", "error"); if(elLote) elLote.focus(); return null; }
   
-  var pId = document.getElementById("producto").value;
+var pId = document.getElementById("producto").value;
   var pName = document.getElementById("producto_search").value;
   if (!pId) { mostrarToast("Selecciona un producto válido", "warning"); return null; }
   
-  var fab = document.getElementById("elaboracion") ? document.getElementById("elaboracion").value : "";
+  // --- INICIO DEL CAMBIO ---
+  var fabRaw = document.getElementById("elaboracion") ? document.getElementById("elaboracion").value : "";
+  var fab = fabRaw;
   
+  // Si el input manda "YYYY-MM" (ej. 2026-02), le agregamos "-01" para que el backend lo entienda como "2026-02-01"
+  if (fabRaw && fabRaw.length === 7) {
+      fab = fabRaw + "-01"; 
+  }
+  // --- FIN DEL CAMBIO ---
+
   return {
     producto_id: pId,
     nombre_producto: pName,
     presentacion_id: document.getElementById("presentacion").value,
     nombre_presentacion: getTextoSelect("presentacion"),
-    
     ubicacion_id: document.getElementById("ubicacion").value,
-    nombre_ubicacion: getTextoSelect("ubicacion"), // <--- ¡ESTA ES LA LÍNEA MÁGICA QUE FALTABA!
-    
+    nombre_ubicacion: getTextoSelect("ubicacion"),
     volumen_L: calculo.total,
     unidad_medida: calculo.unidad,
     piezas: document.getElementById("cantidad").value,
     lote: lote,
     proveedor: document.getElementById("proveedor").value,
-    fecha_elaboracion: fab,
+    fecha_elaboracion: fab, // <--- Aquí mandará "2026-02-01"
     fecha_caducidad: "" 
   };
 }
