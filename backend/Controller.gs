@@ -90,7 +90,7 @@ function obtenerCatalogos() {
       .map((r) => ({
         id: String(r[0]).trim(),
         nombre: r[1],
-        volumen: esPres ? Number(r[2]) || 0 : 0,
+        volumen: esPres ? (Number(String(r[2]).replace(",", ".")) || 0) : 0,
         unidad: esPres ? "" : r[3] || "L", // <--- Aquí ya lee si es L, Kg o Pza
       }))
       .filter((i) => i.id);
@@ -140,7 +140,7 @@ const leer = (s, esPres) => {
     .map((r) => ({
       id: String(r[0]).trim(),
       nombre: r[1],
-      volumen: esPres ? Number(r[2]) || 0 : 0,
+      volumen: esPres ? (Number(String(r[2]).replace(",", ".")) || 0) : 0,
       unidad: esPres ? "" : r[3] || "L", // <--- AHORA LEE LA UNIDAD (L, Kg, Pza)
     }))
     .filter((i) => i.id);

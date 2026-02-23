@@ -41,8 +41,15 @@ function abrirModal() {
 function cerrarModal() { cerrarModalGenerico("modalProducto"); }
 
 // --- CALCULADORA GLOBAL ---
-// --- CALCULADORA GLOBAL ---
-// --- CALCULADORA GLOBAL ---
+function parseDecimalFlexible(valor) {
+  if (valor === null || typeof valor === "undefined") return 0;
+  if (typeof valor === "number") return isNaN(valor) ? 0 : valor;
+
+  const normalizado = String(valor).trim().replace(",", ".");
+  const n = parseFloat(normalizado);
+  return isNaN(n) ? 0 : n;
+}
+
 function calcTotalGenerico(idPres, idCant) {
   const sel = document.getElementById(idPres);
   const inp = document.getElementById(idCant);
@@ -56,7 +63,6 @@ function calcTotalGenerico(idPres, idCant) {
   if (!opt) return 0;
   
   let dataVol = opt.getAttribute("data-volumen");
-  let volUnitario = parseFloat(dataVol);
   
   // FALLBACK ANTI-ERRORES
   if (isNaN(volUnitario) || volUnitario === 0) {
@@ -68,10 +74,8 @@ function calcTotalGenerico(idPres, idCant) {
          }
      }
   }
-  if (isNaN(volUnitario) || volUnitario === 0) volUnitario = 1;
-
-  let cantidad = parseFloat(inp.value);
-  if (isNaN(cantidad)) cantidad = 0;
+    let volUnitario = parseDecimalFlexible(dataVol);
+  let cantidad = parseDecimalFlexible(inp.value);
 
   const total = (cantidad * volUnitario);
   return parseFloat(total.toFixed(2));

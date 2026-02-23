@@ -52,7 +52,7 @@ function getListaPresentaciones() {
     .map(i => ({ 
       id: i.presentacion_id, 
       nombre: i.descripcion,
-      volumen: Number(i.volumen_nominal_L) // <--- ESTO ES NUEVO
+      volumen: Number(String(i.volumen_nominal_L).replace(",", ".")) || 0 // <--- ESTO ES NUEVO
     }));
 }
 
@@ -247,7 +247,7 @@ function getReporteUbicaciones() {
   getDataFromSheet_(SHEETS.PRESENTACIONES).forEach(p => {
     mapPres[p.presentacion_id] = {
       nombre: p.descripcion,
-      volumen: Number(p.volumen_nominal_L || 0) // <--- IMPORTANTE
+      volumen: Number(String(p.volumen_nominal_L || 0).replace(",", ".")) || 0 // <--- IMPORTANTE
     };
   });
 

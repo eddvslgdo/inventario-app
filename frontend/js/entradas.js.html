@@ -3,29 +3,10 @@
 // ==========================================
 
 function calcularTotalEntrada() {
-  var total = 0;
-  var p = document.getElementById("presentacion");
-  var c = document.getElementById("cantidad");
-  
-  // CAMBIO: Validación segura sin usar los signos mayor/menor que
-  if(p && c && p.selectedIndex !== -1 && p.selectedIndex !== 0) {
-      var opt = p.options[p.selectedIndex];
-      var vol = parseFloat(opt.getAttribute("data-volumen"));
-      
-      // FALLBACK ANTI-ERRORES
-      if (isNaN(vol) || vol === 0) {
-          if (opt.text) {
-              var m = opt.text.match(/[\d\.]+/);
-              if (m) {
-                  vol = parseFloat(m[0]);
-                  if (opt.text.toLowerCase().includes("ml")) vol /= 1000;
-              }
-          }
-      }
-      if (isNaN(vol) || vol === 0) vol = 1;
-      
-      total = vol * (parseFloat(c.value) || 0);
-  }
+  var total = (typeof calcTotalGenerico === 'function')
+    ? calcTotalGenerico("presentacion", "cantidad")
+    : 0;
+    
   
   // Buscar unidad real (L, Kg o Pza)
   var unidad = "L";

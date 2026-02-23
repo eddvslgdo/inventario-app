@@ -376,8 +376,9 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
   if(elPres) {
       elPres.value = presId; elPres.disabled = true; // Se bloquea visualmente
       var opt = elPres.options[elPres.selectedIndex];
-      if(opt) {
-         volUnitario = parseFloat(opt.getAttribute("data-volumen"));
+      if(opt) volUnitario = (typeof parseDecimalFlexible === "function")
+          ? parseDecimalFlexible(opt.getAttribute("data-volumen"))
+          : (parseFloat(opt.getAttribute("data-volumen")) || 0);
          
          // FALLBACK ANTI-ERRORES
          if (isNaN(volUnitario) || volUnitario === 0) {
