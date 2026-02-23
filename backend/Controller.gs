@@ -726,7 +726,7 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
     const idPedido = "PED-" + Math.floor(Date.now() / 1000);
     const fechaHoy = new Date();
 
-    if (guardarCliente) {
+if (guardarCliente) {
       const sCli = obtenerHojaOCrear("CLIENTES", [
         "ID",
         "NOMBRE",
@@ -736,8 +736,9 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
         "EMAIL",
       ]);
       let idCli = datosPedido.idCliente;
-      if (!idCli || idCli === "nuevo")
+      if (!idCli || idCli === "nuevo" || idCli === "") {
         idCli = "CLI-" + Math.floor(Math.random() * 10000);
+      }
       sCli.appendRow([
         idCli,
         datosPedido.nombreCliente,
@@ -746,6 +747,10 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
         datosPedido.telefono,
         datosPedido.email,
       ]);
+      
+      // 🔥 CORRECCIÓN CLAVE: Le asignamos el nuevo ID al pedido 
+      // para que quede enlazado permanentemente al cliente en la base de datos.
+      datosPedido.idCliente = idCli;
     }
 
     const sPed = obtenerHojaOCrear("PEDIDOS", [

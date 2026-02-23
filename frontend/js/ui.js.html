@@ -55,8 +55,6 @@ function calcTotalGenerico(idPres, idCant) {
   const inp = document.getElementById(idCant);
   
   if (!sel || !inp) return 0;
-  
-  // CAMBIO: Validación segura sin usar los signos mayor/menor que
   if (sel.selectedIndex === -1 || sel.selectedIndex === 0) return 0; 
   
   const opt = sel.options[sel.selectedIndex];
@@ -64,7 +62,10 @@ function calcTotalGenerico(idPres, idCant) {
   
   let dataVol = opt.getAttribute("data-volumen");
   
-  // FALLBACK ANTI-ERRORES
+  // 👇 CREAMOS LA VARIABLE PRIMERO PARA EVITAR ERRORES
+  let volUnitario = parseDecimalFlexible(dataVol); 
+  
+  // FALLBACK ANTI-ERRORES: Si la base de datos manda 0, saca el número del texto
   if (isNaN(volUnitario) || volUnitario === 0) {
      if (opt.text) {
          let match = opt.text.match(/[\d\.]+/);
@@ -74,7 +75,8 @@ function calcTotalGenerico(idPres, idCant) {
          }
      }
   }
-    let volUnitario = parseDecimalFlexible(dataVol);
+  if (isNaN(volUnitario) || volUnitario === 0) volUnitario = 1;
+
   let cantidad = parseDecimalFlexible(inp.value);
 
   const total = (cantidad * volUnitario);

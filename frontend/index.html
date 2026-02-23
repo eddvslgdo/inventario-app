@@ -841,21 +841,16 @@
             <div style="display: flex; gap: 10px">
               <input
                 type="number"
-                id="sal_cantidad"
+                id="cantidad"
                 min="1"
                 step="1"
-                placeholder="Cantidad"
+                placeholder="Ej: 10"
                 class="input-modern"
-                onkeypress="
-                  return event.charCode >= 48 && event.charCode <= 57;
-                "
-                oninput="
-                  this.value = this.value.replace(/[^0-9]/g, '');
-                  calcularTotalSalida();
-                "
+                onkeypress="return event.charCode >= 48 && event.charCode <= 57;"
+                oninput="this.value = this.value.replace(/[^0-9]/g, ''); calcularTotalEntrada();"
               />
               <div
-                id="sal_infoTotal"
+                id="infoTotal"
                 style="
                   background: #f5f5f5;
                   border: 1px solid #ddd;
@@ -865,7 +860,7 @@
                   align-items: center;
                   justify-content: center;
                   font-weight: bold;
-                  color: #d63031;
+                  color: #007aff;
                   height: 45px;
                 "
               >

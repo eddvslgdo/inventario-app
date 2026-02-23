@@ -277,7 +277,7 @@ function seleccionarProductoDesdeBusqueda() {
     }
 }
 
-// --- 2. NUEVO: FILTRO DINÁMICO DE PRESENTACIONES ---
+// --- 2. FILTRO DINÁMICO DE PRESENTACIONES ---
 function filtrarPresentacionesPorUnidad(unidad) {
     const select = document.getElementById("presentacion");
     if (!select || !window.CACHE_CATALOGOS) return;
@@ -299,33 +299,35 @@ function filtrarPresentacionesPorUnidad(unidad) {
     let uniStr = String(unidad).toLowerCase().trim();
     let compatibles = [];
 
-    // Escaneamos cada presentación para ver si coincide con L, Kg o Piezas
+    // 1. Detectar inteligentemente la unidad del producto
+    let categoria = "L"; // Por defecto asumimos líquidos
+    if (uniStr.includes('kg') || uniStr.includes('kilo') || uniStr.includes('gramo')) {
+        categoria = "Kg";
+    } else if (uniStr.includes('unid') || uniStr.includes('pza') || uniStr.includes('pieza') || uniStr.includes('caja')) {
+        categoria = "Pza";
+    }
+
+    // 2. Filtrar la lista de presentaciones en base a la categoría
     presCache.forEach(p => {
         let n = p.nombre.toLowerCase();
         let pasaFiltro = false;
 
-        if (uniStr === 'kg' || uniStr === 'kilogramos') {
+        if (categoria === "Kg") {
             if (n.includes('kg') || n.includes('kilo') || n.includes('gramo') || n.includes('saco')) pasaFiltro = true;
-        } 
-        else if (uniStr === 'l' || uniStr === 'litros') {
-            // Busca 'l' sola, '1l', 'ml', 'litro', 'galon', 'tambo'
-            if (/\bl\b/.test(n) || /[0-9]l\b/.test(n) || n.includes('ml') || n.includes('litro') || n.includes('galón') || n.includes('tambo')) pasaFiltro = true;
-        } 
-        else if (uniStr === 'unid' || uniStr === 'pza' || uniStr === 'unidad') {
-            if (n.includes('pza') || n.includes('pieza') || n.includes('caja') || n.includes('unid')) pasaFiltro = true;
-        } 
-        else {
-            pasaFiltro = true; // Si es una unidad extraña, mostramos todo para no bloquear
+        } else if (categoria === "Pza") {
+            if (n.includes('pza') || n.includes('pieza') || n.includes('caja') || n.includes('unid') || n.includes('kit')) pasaFiltro = true;
+        } else {
+            // Líquidos (L) - Busca " l", "ml", "litro", "galon", etc.
+            if (/\bl\b/.test(n) || /[0-9]l\b/.test(n) || n.includes('ml') || n.includes('litro') || n.includes('galón') || n.includes('galon') || n.includes('tambo') || n.includes('cubeta')) pasaFiltro = true;
         }
 
         if (pasaFiltro) compatibles.push(p);
     });
 
-    // SISTEMA ANTI-BLOQUEO: Si el filtro fue tan estricto que borró absolutamente todo, 
-    // mejor mostramos la lista completa para permitirle al usuario trabajar.
+    // 3. SISTEMA ANTI-BLOQUEO: Si el filtro fue demasiado estricto, muestra la lista completa
     let listaMostrar = compatibles.length > 0 ? compatibles : presCache;
 
-    // Inyectamos las opciones sobrevivientes
+    // Inyectamos las opciones compatibles
     listaMostrar.forEach(item => {
         let opt = document.createElement("option");
         opt.value = item.id;
