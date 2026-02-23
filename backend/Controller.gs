@@ -15,8 +15,14 @@ function obtenerSpreadsheet() {
   try {
     return SpreadsheetApp.openById(getActiveDbId());
   } catch (e) {
-    // Fallback de emergencia
-    return SpreadsheetApp.getActiveSpreadsheet();
+    throw new Error(
+      "No se pudo abrir la base configurada para el entorno actual (" +
+        getCurrentEnvironment() +
+        "). ID objetivo: " +
+        getActiveDbId() +
+        ". Detalle: " +
+        e.message,
+    );
   }
 }
 

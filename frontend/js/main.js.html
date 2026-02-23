@@ -1,14 +1,17 @@
 function initApp() {
-  // Verificamos si ya había un correo y PIN guardados en este navegador
-  const emailGuardado = localStorage.getItem("inventario_email");
-  const pinGuardado = localStorage.getItem("inventario_pin");
+  cambiarVista('vista-operacion');
   
-  if (emailGuardado) {
-    // Si sí hay, entramos directo
-    ejecutarAutenticacion(emailGuardado, pinGuardado, true);
-  } else {
-    mostrarPantallaLogin();
-  }
+  // 1. Averiguamos el entorno actual antes de cargar los catálogos
+  google.script.run.withSuccessHandler(mode => {
+     updateEnvButton(mode);
+     recargarSelectores(); 
+  }).getCurrentEnvironment();
+
+  google.script.run.withSuccessHandler((canToggle) => {
+    const btn = document.getElementById('btn-env-switch');
+    if (!btn) return;
+    btn.style.display = canToggle ? 'inline-flex' : 'none';
+  }).canToggleEnvironment();
 }
 
 function mostrarPantallaLogin() {
@@ -148,6 +151,7 @@ function cerrarSesion() {
 // ==========================================
 // FIX: FUNCIONES DE ENTORNO REPARADAS
 // ==========================================
+
 function toggleEnvironment() {
    const btn = document.getElementById('btn-env-switch');
    const isProd = btn.innerText.includes('PRODUCCIÓN');
@@ -155,6 +159,7 @@ function toggleEnvironment() {
    
    Swal.fire({
       title: 'Cambiando entorno...',
+      text: 'Conectando con la base de datos...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
    });
@@ -168,6 +173,8 @@ function toggleEnvironment() {
       if(document.getElementById('vista-bajas').style.display !== 'none') cargarCaducados();
       
       Swal.fire('¡Cambiado!', `Estás en la base de:\n${mode === 'PROD' ? '🟢 PRODUCCIÓN' : '🧪 PRUEBAS'}`, 'success');
+         }).withFailureHandler((err) => {
+      Swal.fire('Sin permiso', err.message || 'No autorizado para cambiar entorno.', 'error');
    }).switchEnvironment(newMode);
 }
 

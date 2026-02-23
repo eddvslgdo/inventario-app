@@ -16,26 +16,92 @@ function ahora() {
 const DB_PROD_ID = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E";
 const DB_TEST_ID = "1N7ofFjp98-B3-QvTBNEUzeA7G0V6rMVQVPlEyZ_ZJT4";
 
+const ENV_MODE_DEFAULT = "PROD";
+
+const ADMIN_EMAILS = [
+  // TODO: Reemplazar por correos reales de administración.
+  "admin@tuempresa.com",
+];
+
+function getCurrentUserEmail_() {
+  return String(Session.getActiveUser().getEmail() || "").trim().toLowerCase();
+}
+
+function isEnvironmentAdmin_() {
+  const email = getCurrentUserEmail_();
+  if (!email) return false;
+  return ADMIN_EMAILS.map((e) => String(e).trim().toLowerCase()).includes(email);
+}
+
+function canToggleEnvironment() {
+  return isEnvironmentAdmin_();
+}
+
+function getEnvScopeKey_() {
+  // Clave anónima por usuario/sesión para evitar interferencia entre operadores
+  // incluso cuando el despliegue corre como USER_DEPLOYING.
+  const userKey = Session.getTemporaryActiveUserKey();
+  return userKey ? "ENV_MODE__" + userKey : "ENV_MODE__GLOBAL";
+}
+
 function getActiveDbId() {
-  // Por defecto apunta a PROD si no hay nada configurado
-  const env = PropertiesService.getUserProperties().getProperty('ENV_MODE') || 'PROD';
-  return env === 'TEST' ? DB_TEST_ID : DB_PROD_ID;
+  const env = getCurrentEnvironment();
+  return env === "TEST" ? DB_TEST_ID : DB_PROD_ID;
 }
 
 function switchEnvironment(mode) {
-  if(mode !== 'PROD' && mode !== 'TEST') return;
-  PropertiesService.getUserProperties().setProperty('ENV_MODE', mode);
-  return mode;
+  if (mode !== "PROD" && mode !== "TEST") return;
+
+  if (!isEnvironmentAdmin_() && mode === "TEST") {
+    throw new Error("No autorizado: solo administradores pueden habilitar entorno TEST.");
+  }
+
+  const scriptProps = PropertiesService.getScriptProperties();
+  const safeMode = isEnvironmentAdmin_() ? mode : "PROD";
+  scriptProps.setProperty(getEnvScopeKey_(), safeMode);
+
+  // Compatibilidad hacia atrás con instalaciones existentes.
+  PropertiesService.getUserProperties().setProperty("ENV_MODE", safeMode);
+  return safeMode;
 }
 
 function getCurrentEnvironment() {
-  return PropertiesService.getUserProperties().getProperty('ENV_MODE') || 'PROD';
+  const scriptProps = PropertiesService.getScriptProperties();
+  const userProps = PropertiesService.getUserProperties();
+
+  // Orden de resolución:
+  // 1) Modo por usuario/sesión (aislado)
+  // 2) Modo legacy por usuario
+  // 3) Modo global legacy
+  // 4) Default
+  const resolved =
+    scriptProps.getProperty(getEnvScopeKey_()) ||
+    userProps.getProperty("ENV_MODE") ||
+    scriptProps.getProperty("ENV_MODE") ||
+    ENV_MODE_DEFAULT;
+
+  // Seguridad: usuarios no admin siempre quedan anclados a PROD.
+  if (!isEnvironmentAdmin_()) return "PROD";
+
+  return resolved;
 }
 
+function getEnvironmentDiagnostics() {
+  const env = getCurrentEnvironment();
+  const targetDbId = getActiveDbId();
+  const db = SpreadsheetApp.openById(targetDbId);
 
-// ==========================================
-// GESTIÓN DE SESIÓN POR PIN INTERNO
-// ==========================================
+  return {
+    env: env,
+    targetDbId: targetDbId,
+    connectedDbId: db.getId(),
+    connectedDbName: db.getName(),
+    isIsolated: db.getId() === targetDbId,
+    scopeKey: getEnvScopeKey_(),
+    canToggle: canToggleEnvironment(),
+  };
+}
+
 // ==========================================
 // GESTIÓN DE SESIÓN POR CORREO Y PIN
 // ==========================================
