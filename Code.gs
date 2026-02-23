@@ -22,7 +22,7 @@ function include(filename) {
 }
 
 function getLogoBase64() {
-  const fileId = "1RrKIKRwLqEwWPq9PhWe1r0_ohfplO5EJ";
+  const fileId = "1jwrdSOB9rA62BegzV5sMv_4KTxO4gtjt";
   const file = DriveApp.getFileById(fileId);
   const blob = file.getBlob();
   const base64 = Utilities.base64Encode(blob.getBytes());

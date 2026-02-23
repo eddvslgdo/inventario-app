@@ -1,6 +1,9 @@
 function initApp() {
   cambiarVista('vista-operacion');
   
+  // Obtenemos el usuario guardado en sesión
+  const userEmail = localStorage.getItem("inventario_email");
+
   // 1. Averiguamos el entorno actual antes de cargar los catálogos
   google.script.run.withSuccessHandler(mode => {
      updateEnvButton(mode);
@@ -11,7 +14,7 @@ function initApp() {
     const btn = document.getElementById('btn-env-switch');
     if (!btn) return;
     btn.style.display = canToggle ? 'inline-flex' : 'none';
-  }).canToggleEnvironment();
+  }).canToggleEnvironment(userEmail); // Añadimos userEmail aquí
 }
 
 function mostrarPantallaLogin() {
@@ -42,8 +45,10 @@ function procesarLogin() {
      return Swal.fire("Atención", "Por favor ingresa tu PIN de Administrador", "warning");
   }
   
-  const btn = document.getElementById("btn-login");
-  btn.innerText = "Verificando...";
+const btn = document.getElementById("btn-login");
+  // Aplicamos las clases de animación y quitamos los puntos (el CSS los pondrá solos)
+  btn.innerText = "Verificando"; 
+  btn.classList.add("loading-dots", "btn-pulsing");
   btn.disabled = true;
   
   ejecutarAutenticacion(email, pin, false);
@@ -56,7 +61,7 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
     .withSuccessHandler(res => {
        if (typeof ocultarCargando === "function") ocultarCargando();
        const btn = document.getElementById("btn-login");
-       if (btn) { btn.innerText = "Continuar"; btn.disabled = false; }
+       if (btn) { btn.innerText = "Continuar"; btn.classList.remove("loading-dots", "btn-pulsing"); btn.disabled = false; }
 
        // LA MAGIA DE LA CONTRASEÑA DE ADMIN
        if (res.requiresPin) {
@@ -69,30 +74,30 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
           return; // Detenemos aquí, hasta que el usuario meta el PIN
        }
 
-       if (res.success) {
-          // GUARDAR EN MEMORIA (Para que mañana no le pida login)
+if (res.success) {
           localStorage.setItem("inventario_email", email);
           if (pin) localStorage.setItem("inventario_pin", pin);
+          
+          // NUEVO: Colocar el nombre en el menú superior
+          document.getElementById('lbl-usuario-actual').innerText = res.nombre;
           
           document.getElementById("vista-login").style.display = "none";
           document.getElementById("app-principal").style.display = "block";
           
           if (!esAutomatico) mostrarToast(`Hola, ${res.nombre} 👋`, "success");
           configurarInterfazPorPermisos(res);
-       } else {
-          // BORRAR MEMORIA SI FALLA
-          localStorage.removeItem("inventario_email");
-          localStorage.removeItem("inventario_pin");
-          mostrarPantallaLogin();
-          if (!esAutomatico) Swal.fire("Acceso Denegado", res.error, "error");
        }
     })
-    .withFailureHandler(err => {
+.withFailureHandler(err => {
        if (typeof ocultarCargando === "function") ocultarCargando();
        localStorage.removeItem("inventario_email");
        localStorage.removeItem("inventario_pin");
        const btn = document.getElementById("btn-login");
-       if (btn) { btn.innerText = "Continuar"; btn.disabled = false; }
+       if (btn) { 
+           btn.innerText = "Continuar"; 
+           btn.classList.remove("loading-dots", "btn-pulsing"); // Apaga animación
+           btn.disabled = false; 
+       }
        Swal.fire("Error de Conexión", "No se pudo verificar el acceso.", "error");
     })
     .procesarLoginEmail(email, pin);
@@ -157,6 +162,9 @@ function toggleEnvironment() {
    const isProd = btn.innerText.includes('PRODUCCIÓN');
    const newMode = isProd ? 'TEST' : 'PROD';
    
+   // NUEVO: Obtenemos el usuario de la memoria del navegador
+   const userEmail = localStorage.getItem("inventario_email"); 
+   
    Swal.fire({
       title: 'Cambiando entorno...',
       text: 'Conectando con la base de datos...',
@@ -173,9 +181,9 @@ function toggleEnvironment() {
       if(document.getElementById('vista-bajas').style.display !== 'none') cargarCaducados();
       
       Swal.fire('¡Cambiado!', `Estás en la base de:\n${mode === 'PROD' ? '🟢 PRODUCCIÓN' : '🧪 PRUEBAS'}`, 'success');
-         }).withFailureHandler((err) => {
+   }).withFailureHandler((err) => {
       Swal.fire('Sin permiso', err.message || 'No autorizado para cambiar entorno.', 'error');
-   }).switchEnvironment(newMode);
+   }).switchEnvironment(newMode, userEmail); // NUEVO: Pasamos el userEmail al backend
 }
 
 function updateEnvButton(mode) {
@@ -188,4 +196,70 @@ function updateEnvButton(mode) {
       btn.style.background = '#2ecc71'; 
       btn.innerHTML = '🟢 MODO: PRODUCCIÓN';
    }
+}
+
+// ==========================================
+// MÓDULO DE NOTIFICACIONES Y PERFIL
+// ==========================================
+
+window.toggleMenuUsuario = function() {
+   let panel = document.getElementById("panel-notificaciones");
+   panel.style.display = panel.style.display === "none" ? "block" : "none";
+};
+
+// Cierra el menú si haces clic afuera
+document.addEventListener('click', function(event) {
+    let panel = document.getElementById("panel-notificaciones");
+    let boton = document.querySelector("button[onclick='toggleMenuUsuario()']");
+    if (panel && panel.style.display === "block") {
+        if (!panel.contains(event.target) && !boton.contains(event.target)) {
+            panel.style.display = "none";
+        }
+    }
+});
+
+function actualizarNotificaciones() {
+   if(typeof LISTA_PEDIDOS_CACHE === 'undefined' || !LISTA_PEDIDOS_CACHE) return;
+   
+   let pedidosPendientes = [];
+   let pedidosSinGuia = [];
+
+   // Analizamos el caché de pedidos sin hacer llamadas extra al servidor
+   LISTA_PEDIDOS_CACHE.forEach(p => {
+      let st = p.estatus || "Pendiente";
+      if (st === "Pendiente") pedidosPendientes.push(p);
+      
+      let enProceso = st.includes('Enviado') || st.includes('Camino') || st.includes('Proceso');
+      if (enProceso && (!p.guia || p.guia === "---" || p.guia.trim() === "")) {
+         pedidosSinGuia.push(p);
+      }
+   });
+
+   let totalNotif = pedidosPendientes.length + pedidosSinGuia.length;
+   let badge = document.getElementById("badge-notif");
+   if (badge) {
+       badge.innerText = totalNotif;
+       badge.style.display = totalNotif > 0 ? "inline-block" : "none";
+   }
+
+   let listaHtml = "";
+   if (totalNotif === 0) {
+       listaHtml = "<div style='padding: 20px; text-align: center; color: #94a3b8; font-size: 0.9rem;'>No hay tareas pendientes 🎉</div>";
+   } else {
+       if (pedidosPendientes.length > 0) {
+           listaHtml += `<div style="padding: 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'" onclick="cambiarVista('vista-pedidos'); filtrarEstado('Pendiente', null); toggleMenuUsuario();">
+                            <div style="font-weight: bold; color: #d97706; font-size: 0.95rem;">⏳ ${pedidosPendientes.length} Pedido(s) Pendiente(s)</div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top:3px;">Falta procesar su envío o entrega. Toca para verlos.</div>
+                         </div>`;
+       }
+       if (pedidosSinGuia.length > 0) {
+           listaHtml += `<div style="padding: 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'" onclick="cambiarVista('vista-pedidos'); filtrarEstado('Enviado', null); toggleMenuUsuario();">
+                            <div style="font-weight: bold; color: #dc2626; font-size: 0.95rem;">🎫 ${pedidosSinGuia.length} Envío(s) sin Guía</div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top:3px;">Están en ruta pero les falta el # de rastreo.</div>
+                         </div>`;
+       }
+   }
+   
+   let panelLista = document.getElementById("lista-notificaciones");
+   if(panelLista) panelLista.innerHTML = listaHtml;
 }

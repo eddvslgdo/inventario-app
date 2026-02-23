@@ -388,3 +388,9 @@ function getReportePorProductos() {
   // Convertimos el objeto a array y ordenamos por nombre
   return Object.values(reporte).sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
+
+
+function limpiarCacheLogo() {
+  const cache = CacheService.getScriptCache();
+  cache.remove("logo");
+}

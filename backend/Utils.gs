@@ -18,28 +18,36 @@ const DB_TEST_ID = "1N7ofFjp98-B3-QvTBNEUzeA7G0V6rMVQVPlEyZ_ZJT4";
 
 const ENV_MODE_DEFAULT = "PROD";
 
-const ADMIN_EMAILS = [
-  // TODO: Reemplazar por correos reales de administración.
-  "admin@tuempresa.com",
-];
+// NUEVA FUNCIÓN: Verifica si el usuario es admin leyendo la pestaña PERMISOS
+function esAdminEnPermisos(userEmail) {
+  if (!userEmail) return false;
+
+  const db = SpreadsheetApp.openById(DB_PROD_ID);
+  const sPermisos = db.getSheetByName("PERMISOS");
+  if (!sPermisos) return false;
+
+  const data = sPermisos.getDataRange().getValues();
+  const emailBuscado = String(userEmail).trim().toLowerCase();
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim().toLowerCase() === emailBuscado) {
+      return data[i][8] === true || String(data[i][8]).toUpperCase() === 'TRUE';
+    }
+  }
+  return false;
+}
 
 function getCurrentUserEmail_() {
   return String(Session.getActiveUser().getEmail() || "").trim().toLowerCase();
 }
 
-function isEnvironmentAdmin_() {
-  const email = getCurrentUserEmail_();
-  if (!email) return false;
-  return ADMIN_EMAILS.map((e) => String(e).trim().toLowerCase()).includes(email);
-}
-
-function canToggleEnvironment() {
-  return isEnvironmentAdmin_();
+// Permite evaluar si se puede cambiar de entorno usando el correo del Frontend o el de la sesión
+function canToggleEnvironment(userEmail) {
+  return esAdminEnPermisos(userEmail || getCurrentUserEmail_());
 }
 
 function getEnvScopeKey_() {
   // Clave anónima por usuario/sesión para evitar interferencia entre operadores
-  // incluso cuando el despliegue corre como USER_DEPLOYING.
   const userKey = Session.getTemporaryActiveUserKey();
   return userKey ? "ENV_MODE__" + userKey : "ENV_MODE__GLOBAL";
 }
@@ -49,18 +57,19 @@ function getActiveDbId() {
   return env === "TEST" ? DB_TEST_ID : DB_PROD_ID;
 }
 
-function switchEnvironment(mode) {
+// MODIFICADO: Ahora recibe el userEmail desde el Frontend
+function switchEnvironment(mode, userEmail) {
   if (mode !== "PROD" && mode !== "TEST") return;
 
-  if (!isEnvironmentAdmin_() && mode === "TEST") {
-    throw new Error("No autorizado: solo administradores pueden habilitar entorno TEST.");
+  const esAdmin = esAdminEnPermisos(userEmail);
+
+  if (!esAdmin && mode === "TEST") {
+    throw new Error("No autorizado: solo administradores pueden habilitar entorno TEST. Revisa tu hoja de PERMISOS.");
   }
 
   const scriptProps = PropertiesService.getScriptProperties();
-  const safeMode = isEnvironmentAdmin_() ? mode : "PROD";
+  const safeMode = esAdmin ? mode : "PROD";
   scriptProps.setProperty(getEnvScopeKey_(), safeMode);
-
-  // Compatibilidad hacia atrás con instalaciones existentes.
   PropertiesService.getUserProperties().setProperty("ENV_MODE", safeMode);
   return safeMode;
 }
@@ -69,19 +78,14 @@ function getCurrentEnvironment() {
   const scriptProps = PropertiesService.getScriptProperties();
   const userProps = PropertiesService.getUserProperties();
 
-  // Orden de resolución:
-  // 1) Modo por usuario/sesión (aislado)
-  // 2) Modo legacy por usuario
-  // 3) Modo global legacy
-  // 4) Default
   const resolved =
     scriptProps.getProperty(getEnvScopeKey_()) ||
     userProps.getProperty("ENV_MODE") ||
     scriptProps.getProperty("ENV_MODE") ||
     ENV_MODE_DEFAULT;
 
-  // Seguridad: usuarios no admin siempre quedan anclados a PROD.
-  if (!isEnvironmentAdmin_()) return "PROD";
+  // CORRECCIÓN: Usamos esAdminEnPermisos en lugar de la función antigua
+  if (!esAdminEnPermisos(getCurrentUserEmail_())) return "PROD";
 
   return resolved;
 }
@@ -107,7 +111,6 @@ function getEnvironmentDiagnostics() {
 // ==========================================
 function procesarLoginEmail(email, pin) {
   // Siempre validamos contra Producción
-  const DB_PROD_ID = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E"; 
   const db = SpreadsheetApp.openById(DB_PROD_ID);
   const sPermisos = db.getSheetByName("PERMISOS");
   
@@ -165,7 +168,6 @@ function procesarLoginEmail(email, pin) {
 // MÓDULO DE ADMINISTRACIÓN DE USUARIOS
 // ==========================================
 function obtenerListaUsuarios() {
-  const DB_PROD_ID = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E"; 
   const db = SpreadsheetApp.openById(DB_PROD_ID);
   const s = db.getSheetByName("PERMISOS");
   if (!s) return [];
@@ -195,7 +197,6 @@ function guardarUsuario(u) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
-    const DB_PROD_ID = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E"; 
     const db = SpreadsheetApp.openById(DB_PROD_ID);
     const s = db.getSheetByName("PERMISOS");
     const data = s.getDataRange().getValues();
@@ -238,7 +239,6 @@ function eliminarUsuario(correoAEliminar, correoActualAdmin) {
        throw new Error("Sistema de seguridad: No puedes eliminar tu propio usuario administrador.");
     }
 
-    const DB_PROD_ID = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E"; 
     const db = SpreadsheetApp.openById(DB_PROD_ID);
     const s = db.getSheetByName("PERMISOS");
     const data = s.getDataRange().getValues();
@@ -254,5 +254,29 @@ function eliminarUsuario(correoAEliminar, correoActualAdmin) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
+  }
+}
+
+// ==========================================
+// BITÁCORA DE ACTIVIDAD (TRAZABILIDAD)
+// ==========================================
+function registrarEnBitacora(usuario, accion, detalle) {
+  try {
+    // Usamos la base de datos activa (Prod o Test)
+    const db = SpreadsheetApp.openById(getActiveDbId());
+    let sBitacora = db.getSheetByName("BITACORA_ACTIVIDAD");
+    
+    // Si la hoja está vacía, le pone encabezados automáticos
+    if (sBitacora.getLastRow() === 0) {
+      sBitacora.appendRow(["FECHA", "USUARIO", "ACCIÓN", "DETALLE"]);
+      sBitacora.getRange("A1:D1").setFontWeight("bold").setBackground("#f3f3f3");
+    }
+    
+    // Escribimos el movimiento
+    sBitacora.appendRow([new Date(), usuario, accion, detalle]);
+    return true;
+  } catch(e) {
+    console.error("Error en bitácora: " + e.message);
+    return false;
   }
 }

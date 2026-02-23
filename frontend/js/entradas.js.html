@@ -153,6 +153,7 @@ function ejecutarGuardadoMasivo() {
 
   google.script.run
     .withSuccessHandler(function() {
+      logActividad("ENTRADA MASIVA", `Ingresó ${COLA_ENTRADAS.length} lotes nuevos al almacén.`);
        COLA_ENTRADAS = []; 
        renderizarColaEntrada();
        limpiarFormularioEntrada();

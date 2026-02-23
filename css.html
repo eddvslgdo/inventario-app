@@ -2251,6 +2251,36 @@ tr.fila-bloqueada {
 .toolbar-btn-export:active { transform: translateY(0); }
 .toolbar-btn-export .icon { font-size: 1.05rem; }
 
+/* Animación moderna de "Cargando" para botones */
+.loading-dots::after {
+  content: '';
+  display: inline-block;
+  animation: typing-dots 1.5s steps(4, end) infinite;
+  width: 1em;
+  text-align: left;
+}
+
+@keyframes typing-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+  100% { content: ''; }
+}
+
+/* Efecto de pulso suave para el botón mientras carga */
+.btn-pulsing {
+  animation: btn-pulse 1.5s infinite;
+  pointer-events: none; /* Bloquea clics extra */
+  opacity: 0.8;
+}
+
+@keyframes btn-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4); }
+  50% { transform: scale(0.98); box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+}
+
 </style>
 
 

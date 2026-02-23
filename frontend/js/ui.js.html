@@ -171,3 +171,12 @@ function ocultarCargando() {
     loader.style.display = "none";
   }
 }
+
+
+// --- HERRAMIENTA DE AUDITORÍA ---
+function logActividad(accion, detalle) {
+  // Sacamos el correo del usuario que inició sesión
+  const usuario = localStorage.getItem("inventario_email") || "Usuario Desconocido";
+  // Se lo mandamos al backend silenciosamente
+  google.script.run.registrarEnBitacora(usuario, accion, detalle);
+}
