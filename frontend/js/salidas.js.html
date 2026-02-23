@@ -106,7 +106,7 @@ function confirmarPedidoCompleto() {
 
   if(typeof mostrarCargando === 'function') mostrarCargando("Guardando pedido...");
 
-  google.script.run
+google.script.run
     .withSuccessHandler(function(res) {
       if(typeof ocultarCargando === 'function') ocultarCargando();
       
@@ -118,6 +118,9 @@ function confirmarPedidoCompleto() {
               text: 'ID: ' + res.idPedido, 
               icon: 'success' 
           });
+          
+          // NUEVO: Registrar en Bitácora el nuevo pedido
+          logActividad("NUEVO PEDIDO", `Creó el pedido ${res.idPedido} para el cliente: ${nombre} (${COLA_SALIDAS.length} partidas)`);
           
           COLA_SALIDAS = []; 
           renderizarColaSalida();
@@ -133,6 +136,7 @@ function confirmarPedidoCompleto() {
       btn.disabled = false;
       btn.innerText = txtOriginal;
     })
+    
     .withFailureHandler(function(err) {
       if(typeof ocultarCargando === 'function') ocultarCargando();
       console.error(err);
@@ -372,21 +376,33 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
   if(elPres) {
       elPres.value = presId; elPres.disabled = true; // Se bloquea visualmente
       var opt = elPres.options[elPres.selectedIndex];
-      if(opt) volUnitario = parseFloat(opt.getAttribute("data-volumen")) || 0;
+      if(opt) {
+         volUnitario = parseFloat(opt.getAttribute("data-volumen"));
+         
+         // FALLBACK ANTI-ERRORES
+         if (isNaN(volUnitario) || volUnitario === 0) {
+             if (opt.text) {
+                 var match = opt.text.match(/[\d\.]+/);
+                 if (match) {
+                     volUnitario = parseFloat(match[0]);
+                     if (opt.text.toLowerCase().includes("ml")) volUnitario /= 1000;
+                 }
+             }
+         }
+         if (isNaN(volUnitario) || volUnitario === 0) volUnitario = 1;
+      }
   }
   
   var elUbic = document.getElementById("sal_ubicacion");
-  if(elUbic) { elUbic.value = ubicId; elUbic.disabled = true; // Se bloquea visualmente
-  }
+  if(elUbic) { elUbic.value = ubicId; elUbic.disabled = true; }
 
   var inputCant = document.getElementById("sal_cantidad");
   if (inputCant) {
       inputCant.value = "";
       
-      var maxPiezas = 9999;
+      var maxPiezas = 999999;
       if (volUnitario > 0) {
-          var calculo = Math.floor(stockMax / volUnitario);
-          maxPiezas = Math.max(0, calculo);
+          maxPiezas = Math.floor(stockMax / volUnitario);
       }
       
       inputCant.placeholder = "Máx: " + maxPiezas + " pzas";
@@ -399,6 +415,9 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
   filas.forEach(function(f) { f.style.backgroundColor = "transparent"; });
   var activa = document.getElementById("fila-lote-" + indiceFila);
   if (activa) activa.style.backgroundColor = "#e8f0fe"; 
+  
+  // Refrescar cálculo a cero
+  if (typeof calcularTotalSalida === 'function') calcularTotalSalida();
 }
 
 // INICIALIZAR AL CARGAR

@@ -7,21 +7,46 @@ function calcularTotalEntrada() {
   var p = document.getElementById("presentacion");
   var c = document.getElementById("cantidad");
   
-  if(p && c && p.selectedIndex >= 0) {
-      var vol = parseFloat(p.options[p.selectedIndex].getAttribute("data-volumen") || 0);
+  // CAMBIO: Validación segura sin usar los signos mayor/menor que
+  if(p && c && p.selectedIndex !== -1 && p.selectedIndex !== 0) {
+      var opt = p.options[p.selectedIndex];
+      var vol = parseFloat(opt.getAttribute("data-volumen"));
+      
+      // FALLBACK ANTI-ERRORES
+      if (isNaN(vol) || vol === 0) {
+          if (opt.text) {
+              var m = opt.text.match(/[\d\.]+/);
+              if (m) {
+                  vol = parseFloat(m[0]);
+                  if (opt.text.toLowerCase().includes("ml")) vol /= 1000;
+              }
+          }
+      }
+      if (isNaN(vol) || vol === 0) vol = 1;
+      
       total = vol * (parseFloat(c.value) || 0);
   }
   
-  // Buscar unidad real (L o Kg)
+  // Buscar unidad real (L, Kg o Pza)
   var unidad = "L";
   var prodId = document.getElementById("producto").value;
   if(window.CACHE_CATALOGOS && prodId) {
       var prodData = window.CACHE_CATALOGOS.productos.find(x => x.id === prodId);
-      if(prodData && prodData.unidad) unidad = prodData.unidad;
+      if(prodData && prodData.unidad) {
+          let uLow = prodData.unidad.toLowerCase();
+          if (uLow.includes("unid") || uLow.includes("pza") || uLow.includes("pieza")) unidad = "Pza";
+          else if (uLow.includes("kg") || uLow.includes("kilo")) unidad = "Kg";
+      }
   }
   
   var el = document.getElementById("infoTotal");
-  if(el) el.innerText = total.toFixed(2) + " " + unidad;
+  if(el) {
+      if (unidad === 'Pza') {
+         el.innerText = Math.round(total) + " " + unidad;
+      } else {
+         el.innerText = total.toFixed(2) + " " + unidad;
+      }
+  }
   return { total: total, unidad: unidad };
 }
 

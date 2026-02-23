@@ -61,9 +61,12 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
     .withSuccessHandler(res => {
        if (typeof ocultarCargando === "function") ocultarCargando();
        const btn = document.getElementById("btn-login");
-       if (btn) { btn.innerText = "Continuar"; btn.classList.remove("loading-dots", "btn-pulsing"); btn.disabled = false; }
+       if (btn) { 
+           btn.innerText = "Continuar"; 
+           btn.classList.remove("loading-dots", "btn-pulsing"); 
+           btn.disabled = false; 
+       }
 
-       // LA MAGIA DE LA CONTRASEÑA DE ADMIN
        if (res.requiresPin) {
           document.getElementById("input-correo").style.display = "none";
           document.getElementById("input-pin-admin").style.display = "block";
@@ -71,31 +74,66 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
           document.getElementById("btn-login-back").style.display = "block";
           document.getElementById("btn-login").innerText = "Ingresar";
           document.getElementById("login-subtitle").innerText = "🔒 Ingresa tu PIN de Administrador";
-          return; // Detenemos aquí, hasta que el usuario meta el PIN
+          return; 
        }
 
-if (res.success) {
+       if (res.success) {
           localStorage.setItem("inventario_email", email);
           if (pin) localStorage.setItem("inventario_pin", pin);
           
-          // NUEVO: Colocar el nombre en el menú superior
           document.getElementById('lbl-usuario-actual').innerText = res.nombre;
-          
           document.getElementById("vista-login").style.display = "none";
           document.getElementById("app-principal").style.display = "block";
           
           if (!esAutomatico) mostrarToast(`Hola, ${res.nombre} 👋`, "success");
           configurarInterfazPorPermisos(res);
+       
+       // NUEVO FLUJO DE REGISTRO
+       } else if (res.notFound) {
+          Swal.fire({
+             title: 'Usuario no registrado',
+             text: `El correo "${email}" no tiene acceso. ¿Deseas solicitar registro en el sistema?`,
+             icon: 'question',
+             showCancelButton: true,
+             confirmButtonColor: '#007aff',
+             cancelButtonColor: '#64748b',
+             confirmButtonText: 'Sí, registrarme'
+          }).then((result) => {
+             if (result.isConfirmed) {
+                mostrarCargando("Creando usuario...");
+                google.script.run
+                  .withSuccessHandler(regRes => {
+                     ocultarCargando();
+                     if (regRes.success) {
+                        Swal.fire("¡Registro Exitoso!", "Tu usuario ha sido creado. Inicia sesión ahora para ver el estatus de tu cuenta.", "success");
+                     } else {
+                        Swal.fire("Error", regRes.error, "error");
+                     }
+                  })
+                  .withFailureHandler(err => {
+                     ocultarCargando();
+                     Swal.fire("Error", err.message, "error");
+                  })
+                  .registrarUsuarioPendiente(email);
+             }
+          });
+          localStorage.removeItem("inventario_email");
+          localStorage.removeItem("inventario_pin");
+       } else {
+          localStorage.removeItem("inventario_email");
+          localStorage.removeItem("inventario_pin");
+          mostrarPantallaLogin();
+          if (!esAutomatico) Swal.fire("Acceso Denegado", res.error, "error");
        }
     })
-.withFailureHandler(err => {
+    .withFailureHandler(err => {
        if (typeof ocultarCargando === "function") ocultarCargando();
        localStorage.removeItem("inventario_email");
        localStorage.removeItem("inventario_pin");
        const btn = document.getElementById("btn-login");
        if (btn) { 
            btn.innerText = "Continuar"; 
-           btn.classList.remove("loading-dots", "btn-pulsing"); // Apaga animación
+           btn.classList.remove("loading-dots", "btn-pulsing"); 
            btn.disabled = false; 
        }
        Swal.fire("Error de Conexión", "No se pudo verificar el acceso.", "error");
@@ -125,14 +163,16 @@ function configurarInterfazPorPermisos(info) {
   else if (info.permisos.envios) cambiarVista('vista-pedidos');
   else if (info.permisos.salidas) cambiarVista('vista-salidas');
   else if (info.permisos.productos) cambiarVista('vista-productos');
-  else if (info.permisos.ubicaciones) cambiarVista('vista-ubicaciones');
+else if (info.permisos.ubicaciones) cambiarVista('vista-ubicaciones');
   else if (info.permisos.bajas) cambiarVista('vista-bajas');
   else {
-      // Candado extra: Si entra alguien sin NINGÚN permiso, ocultamos todo.
+      // NUEVO: Candado extra - Si no tiene NINGÚN permiso, le mostramos la pantalla de "Cuenta en revisión"
       document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
-      Swal.fire("Sin accesos", "Tu usuario no tiene permisos operativos asignados.", "warning");
+      let vistaRevision = document.getElementById('vista-sin-permisos');
+      if (vistaRevision) vistaRevision.style.display = 'flex';
+      
+      Swal.fire("En espera de autorización", "Un Administrador debe otorgarte permisos para operar el sistema.", "info");
   }
-
   // 4. Arrancar datos
   updateEnvButton(info.entorno);
   recargarSelectores();

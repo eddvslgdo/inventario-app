@@ -16,9 +16,6 @@ function ahora() {
 const DB_PROD_ID = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E";
 const DB_TEST_ID = "1N7ofFjp98-B3-QvTBNEUzeA7G0V6rMVQVPlEyZ_ZJT4";
 
-const ENV_MODE_DEFAULT = "PROD";
-
-// NUEVA FUNCIÓN: Verifica si el usuario es admin leyendo la pestaña PERMISOS
 function esAdminEnPermisos(userEmail) {
   if (!userEmail) return false;
 
@@ -37,19 +34,20 @@ function esAdminEnPermisos(userEmail) {
   return false;
 }
 
-function getCurrentUserEmail_() {
-  return String(Session.getActiveUser().getEmail() || "").trim().toLowerCase();
-}
-
-// Permite evaluar si se puede cambiar de entorno usando el correo del Frontend o el de la sesión
 function canToggleEnvironment(userEmail) {
-  return esAdminEnPermisos(userEmail || getCurrentUserEmail_());
+  return esAdminEnPermisos(userEmail);
 }
 
+// Genera una llave única temporal y anónima por cada navegador que abre la app
 function getEnvScopeKey_() {
-  // Clave anónima por usuario/sesión para evitar interferencia entre operadores
   const userKey = Session.getTemporaryActiveUserKey();
   return userKey ? "ENV_MODE__" + userKey : "ENV_MODE__GLOBAL";
+}
+
+function getCurrentEnvironment() {
+  // SOLO lee la clave temporal del navegador actual, evitando cruces de usuarios
+  const scriptProps = PropertiesService.getScriptProperties();
+  return scriptProps.getProperty(getEnvScopeKey_()) || "PROD";
 }
 
 function getActiveDbId() {
@@ -57,54 +55,22 @@ function getActiveDbId() {
   return env === "TEST" ? DB_TEST_ID : DB_PROD_ID;
 }
 
-// MODIFICADO: Ahora recibe el userEmail desde el Frontend
 function switchEnvironment(mode, userEmail) {
   if (mode !== "PROD" && mode !== "TEST") return;
 
   const esAdmin = esAdminEnPermisos(userEmail);
 
   if (!esAdmin && mode === "TEST") {
-    throw new Error("No autorizado: solo administradores pueden habilitar entorno TEST. Revisa tu hoja de PERMISOS.");
+    throw new Error("No autorizado: solo administradores pueden habilitar entorno TEST.");
   }
 
-  const scriptProps = PropertiesService.getScriptProperties();
   const safeMode = esAdmin ? mode : "PROD";
-  scriptProps.setProperty(getEnvScopeKey_(), safeMode);
-  PropertiesService.getUserProperties().setProperty("ENV_MODE", safeMode);
+  
+  // Guarda el entorno SOLO para la sesión actual del navegador
+  PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), safeMode);
   return safeMode;
 }
 
-function getCurrentEnvironment() {
-  const scriptProps = PropertiesService.getScriptProperties();
-  const userProps = PropertiesService.getUserProperties();
-
-  const resolved =
-    scriptProps.getProperty(getEnvScopeKey_()) ||
-    userProps.getProperty("ENV_MODE") ||
-    scriptProps.getProperty("ENV_MODE") ||
-    ENV_MODE_DEFAULT;
-
-  // CORRECCIÓN: Usamos esAdminEnPermisos en lugar de la función antigua
-  if (!esAdminEnPermisos(getCurrentUserEmail_())) return "PROD";
-
-  return resolved;
-}
-
-function getEnvironmentDiagnostics() {
-  const env = getCurrentEnvironment();
-  const targetDbId = getActiveDbId();
-  const db = SpreadsheetApp.openById(targetDbId);
-
-  return {
-    env: env,
-    targetDbId: targetDbId,
-    connectedDbId: db.getId(),
-    connectedDbName: db.getName(),
-    isIsolated: db.getId() === targetDbId,
-    scopeKey: getEnvScopeKey_(),
-    canToggle: canToggleEnvironment(),
-  };
-}
 
 // ==========================================
 // GESTIÓN DE SESIÓN POR CORREO Y PIN
@@ -125,30 +91,20 @@ function procesarLoginEmail(email, pin) {
     // Si encuentra el correo en la base de datos
     if (emailDb === emailInput && emailDb !== "") {
       let esAdmin = data[i][8] === true || String(data[i][8]).toUpperCase() === 'TRUE';
-      let pinDb = String(data[i][1]).trim(); // Columna B (El PIN secreto)
+      let pinDb = String(data[i][1]).trim();
       
-      // 1. Si es admin y NO mandó PIN, el backend avisa que requiere la contraseña
-      if (esAdmin && (!pin || String(pin).trim() === "")) {
-         return { requiresPin: true };
-      }
+      if (esAdmin && (!pin || String(pin).trim() === "")) return { requiresPin: true };
+      if (esAdmin && String(pin).trim() !== pinDb) return { success: false, error: "PIN incorrecto. Acceso de administrador denegado." };
       
-      // 2. Si es admin y mandó PIN, lo validamos
-      if (esAdmin && String(pin).trim() !== pinDb) {
-         return { success: false, error: "PIN incorrecto. Acceso de administrador denegado." };
-      }
-      
-      // 3. Login Exitoso (Para Operadores normales, o Admins con PIN correcto)
-      let env = PropertiesService.getUserProperties().getProperty('ENV_MODE') || 'PROD';
-      if (!esAdmin) {
-        env = 'PROD'; // Los operadores siempre van a Producción forzosamente
-        PropertiesService.getUserProperties().setProperty('ENV_MODE', 'PROD');
-      }
+      // REGLA DE ORO: SIEMPRE que alguien inicia sesión, forzamos el entorno a PROD.
+      // Esto elimina el error de quedarse atorado en TEST tras cambiar de usuario.
+      PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), "PROD");
 
       return {
         success: true,
-        nombre: emailDb.split("@")[0], // Usa la primera parte del correo como nombre
+        nombre: emailDb.split("@")[0], 
         esAdmin: esAdmin,
-        entorno: env,
+        entorno: "PROD", // Siempre inicia en PROD
         permisos: {
           entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === 'TRUE',
           salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === 'TRUE',
@@ -161,7 +117,36 @@ function procesarLoginEmail(email, pin) {
     }
   }
   
-  return { success: false, error: "Este correo no está registrado en el sistema." };
+return { success: false, notFound: true, error: "Este correo no está registrado en el sistema." };
+}
+
+// NUEVO: Función para registrar un usuario sin permisos operativos
+function registrarUsuarioPendiente(email) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const db = SpreadsheetApp.openById(DB_PROD_ID);
+    const s = db.getSheetByName("PERMISOS");
+    const data = s.getDataRange().getValues();
+    
+    const emailBuscado = String(email).trim().toLowerCase();
+    
+    // Verificamos por seguridad que no exista ya
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === emailBuscado) {
+        return { success: false, error: "El usuario ya existe." };
+      }
+    }
+    
+    // Agregamos a la hoja: [CORREO, PIN(vacío), Entradas, Salidas, Ubic, Prod, Envios, Bajas, EsAdmin] (Todo en false)
+    s.appendRow([emailBuscado, "", false, false, false, false, false, false, false]); 
+    
+    return { success: true };
+  } catch(e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ==========================================
@@ -176,7 +161,7 @@ function obtenerListaUsuarios() {
   let usuarios = [];
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0]) { // Si hay correo
+    if (data[i][0]) { 
       usuarios.push({
         correo: String(data[i][0]).trim(),
         pin: data[i][1],
@@ -204,7 +189,6 @@ function guardarUsuario(u) {
     let fila = -1;
     const correoBusqueda = String(u.correo).trim().toLowerCase();
     
-    // Buscamos si el usuario ya existe para actualizarlo
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).trim().toLowerCase() === correoBusqueda) {
         fila = i + 1;
@@ -219,9 +203,9 @@ function guardarUsuario(u) {
     ];
     
     if (fila > 0) {
-      s.getRange(fila, 1, 1, 9).setValues([rowData]); // Actualiza
+      s.getRange(fila, 1, 1, 9).setValues([rowData]); 
     } else {
-      s.appendRow(rowData); // Nuevo usuario
+      s.appendRow(rowData); 
     }
     return { success: true };
   } catch(e) {
@@ -262,11 +246,16 @@ function eliminarUsuario(correoAEliminar, correoActualAdmin) {
 // ==========================================
 function registrarEnBitacora(usuario, accion, detalle) {
   try {
-    // Usamos la base de datos activa (Prod o Test)
+    // Busca la base de datos activa (Prod o Test)
     const db = SpreadsheetApp.openById(getActiveDbId());
     let sBitacora = db.getSheetByName("BITACORA_ACTIVIDAD");
     
-    // Si la hoja está vacía, le pone encabezados automáticos
+    // MEJORA: Si la hoja NO existe en este Excel, ¡la crea automáticamente!
+    if (!sBitacora) {
+      sBitacora = db.insertSheet("BITACORA_ACTIVIDAD");
+    }
+    
+    // Si la hoja está vacía (recién creada), le pone encabezados automáticos
     if (sBitacora.getLastRow() === 0) {
       sBitacora.appendRow(["FECHA", "USUARIO", "ACCIÓN", "DETALLE"]);
       sBitacora.getRange("A1:D1").setFontWeight("bold").setBackground("#f3f3f3");

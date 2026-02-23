@@ -41,20 +41,35 @@ function abrirModal() {
 function cerrarModal() { cerrarModalGenerico("modalProducto"); }
 
 // --- CALCULADORA GLOBAL ---
+// --- CALCULADORA GLOBAL ---
+// --- CALCULADORA GLOBAL ---
 function calcTotalGenerico(idPres, idCant) {
   const sel = document.getElementById(idPres);
   const inp = document.getElementById(idCant);
   
   if (!sel || !inp) return 0;
-  if (sel.selectedIndex === -1) return 0; // Validación segura
+  
+  // CAMBIO: Validación segura sin usar los signos mayor/menor que
+  if (sel.selectedIndex === -1 || sel.selectedIndex === 0) return 0; 
   
   const opt = sel.options[sel.selectedIndex];
   if (!opt) return 0;
   
   let dataVol = opt.getAttribute("data-volumen");
   let volUnitario = parseFloat(dataVol);
-  if (isNaN(volUnitario)) volUnitario = 0;
   
+  // FALLBACK ANTI-ERRORES
+  if (isNaN(volUnitario) || volUnitario === 0) {
+     if (opt.text) {
+         let match = opt.text.match(/[\d\.]+/);
+         if (match) {
+             volUnitario = parseFloat(match[0]);
+             if(opt.text.toLowerCase().includes("ml")) volUnitario /= 1000;
+         }
+     }
+  }
+  if (isNaN(volUnitario) || volUnitario === 0) volUnitario = 1;
+
   let cantidad = parseFloat(inp.value);
   if (isNaN(cantidad)) cantidad = 0;
 
