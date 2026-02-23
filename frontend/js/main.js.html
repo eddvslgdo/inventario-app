@@ -98,29 +98,32 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
 function configurarInterfazPorPermisos(info) {
   // 1. Mostrar Botones Exclusivos SOLO si es Admin
   const btnEnv = document.getElementById('btn-env-switch');
-  const btnAdmin = document.getElementById('nav-admin'); // <--- Buscamos el botón
+  const btnAdmin = document.getElementById('nav-admin');
   
-  if (info.esAdmin) {
-      if (btnEnv) btnEnv.style.display = 'block';
-      if (btnAdmin) btnAdmin.style.display = 'inline-block'; // <--- Lo encendemos
-  } else {
-      if (btnEnv) btnEnv.style.display = 'none';
-      if (btnAdmin) btnAdmin.style.display = 'none';
-  }
+  if (btnEnv) btnEnv.style.display = info.esAdmin ? 'block' : 'none';
+  if (btnAdmin) btnAdmin.style.display = info.esAdmin ? 'inline-block' : 'none';
   
-  // 2. Encender botones de Menú Operativos
-  if (info.permisos.entradas) document.getElementById('nav-entradas').style.display = 'inline-block';
-  if (info.permisos.salidas) document.getElementById('nav-salidas').style.display = 'inline-block';
-  if (info.permisos.ubicaciones) document.getElementById('nav-ubicaciones').style.display = 'inline-block';
-  if (info.permisos.productos) document.getElementById('nav-productos').style.display = 'inline-block';
-  if (info.permisos.envios) document.getElementById('nav-pedidos').style.display = 'inline-block';
-  if (info.permisos.bajas) document.getElementById('nav-bajas').style.display = 'inline-block';
+  // 2. Encender o APAGAR botones de Menú Operativos (AQUÍ ESTABA EL ERROR)
+  // Ahora forzamos explícitamente a que se oculten si no tienen permiso
+  document.getElementById('nav-entradas').style.display = info.permisos.entradas ? 'inline-block' : 'none';
+  document.getElementById('nav-salidas').style.display = info.permisos.salidas ? 'inline-block' : 'none';
+  document.getElementById('nav-ubicaciones').style.display = info.permisos.ubicaciones ? 'inline-block' : 'none';
+  document.getElementById('nav-productos').style.display = info.permisos.productos ? 'inline-block' : 'none';
+  document.getElementById('nav-pedidos').style.display = info.permisos.envios ? 'inline-block' : 'none';
+  document.getElementById('nav-bajas').style.display = info.permisos.bajas ? 'inline-block' : 'none';
   
   // 3. Forzar redirección a la primera vista que tenga habilitada
   if (info.permisos.entradas) cambiarVista('vista-operacion');
   else if (info.permisos.envios) cambiarVista('vista-pedidos');
   else if (info.permisos.salidas) cambiarVista('vista-salidas');
-  else cambiarVista('vista-productos'); 
+  else if (info.permisos.productos) cambiarVista('vista-productos');
+  else if (info.permisos.ubicaciones) cambiarVista('vista-ubicaciones');
+  else if (info.permisos.bajas) cambiarVista('vista-bajas');
+  else {
+      // Candado extra: Si entra alguien sin NINGÚN permiso, ocultamos todo.
+      document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
+      Swal.fire("Sin accesos", "Tu usuario no tiene permisos operativos asignados.", "warning");
+  }
 
   // 4. Arrancar datos
   updateEnvButton(info.entorno);

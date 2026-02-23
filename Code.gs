@@ -20,3 +20,15 @@ function include(filename) {
     return 'console.error("❌ Error al cargar ' + filename + ': ' + e.message + '");';
   }
 }
+
+function getLogoBase64() {
+  const fileId = "1RrKIKRwLqEwWPq9PhWe1r0_ohfplO5EJ";
+  const file = DriveApp.getFileById(fileId);
+  const blob = file.getBlob();
+  const base64 = Utilities.base64Encode(blob.getBytes());
+  
+  return {
+    data: base64,
+    type: blob.getContentType()
+  };
+}
