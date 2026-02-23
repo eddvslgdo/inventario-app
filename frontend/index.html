@@ -413,1822 +413,2118 @@
   </head>
 
   <body>
-    <button
-      id="btn-env-switch"
-      onclick="toggleEnvironment()"
-      style="
-        position: fixed;
-        top: 15px;
-        right: 20px;
-        width: auto !important;
-        margin: 0;
-        z-index: 9999;
-        border-radius: 30px;
-        font-weight: 800;
-        font-size: 0.85rem;
-        padding: 8px 20px;
-        border: none;
-        cursor: pointer;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-        letter-spacing: 0.5px;
-        transition: transform 0.2s;
-      "
-    >
-      🟢 MODO: PRODUCCIÓN
-    </button>
+<div id="vista-login" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #f2f2f7;">
+      <div class="card" style="text-align: center; max-width: 350px; width: 90%; padding: 40px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+<img src="https://drive.google.com/file/d/1IzVQ_ZKN_y3hS5PJzM8_lwme_V40HRw-/view?usp=sharing" alt="Logo SGI" style="width: 120px; height: auto; margin-bottom: 15px; border-radius: 8px;">
+<h2 style="margin: 0 0 5px 0; color: #1e293b;">SGI ADYUVANTES</h2>
+        </h2>
+        <p id="login-subtitle" style="color: #64748b; font-size: 0.9rem; margin-bottom: 25px;">Ingresa tu correo asignado</p>
+        
+        <input type="email" id="input-correo" class="input-modern" placeholder="Ej: usuario@empresa.com" style="text-align: center; font-size: 1.05rem; margin-bottom: 15px;" onkeypress="if(event.key === 'Enter') procesarLogin();" autocomplete="off" />
+        
+        <input type="password" id="input-pin-admin" class="input-modern" placeholder="PIN Secreto" style="display: none; text-align: center; font-size: 1.5rem; letter-spacing: 5px; margin-bottom: 15px;" onkeypress="if(event.key === 'Enter') procesarLogin();" />
+        
+        <button onclick="procesarLogin()" id="btn-login" class="btn-field" style="background: #007aff; color: white; border: none; width: 100%;">
+          Continuar
+        </button>
 
-    <div class="nav-bar">
-      <button class="nav-btn active" onclick="cambiarVista('vista-operacion')">
-        📦 Entradas
-      </button>
-      <button class="nav-btn" onclick="cambiarVista('vista-salidas')">
-        🚚 Salidas
-      </button>
-      <button class="nav-btn" onclick="cambiarVista('vista-ubicaciones')">
-        📍 Ubicaciones
-      </button>
-      <button class="nav-btn" onclick="cambiarVista('vista-productos')">
-        📊 Productos
-      </button>
-      <button class="nav-btn" onclick="cambiarVista('vista-pedidos')">
-        📦 Envíos
-      </button>
-      <button class="nav-btn" onclick="cambiarVista('vista-bajas')">
-        🗑️ Bajas
-      </button>
-    </div>
-
-    <div id="vista-operacion" class="vista">
-      <div class="card">
-        <div
-          style="
-            background: #e3f2fd;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border-left: 5px solid #007aff;
-          "
-        >
-          <h2 style="margin: 0; color: #007aff">Registro de Entradas</h2>
-          <small style="color: #555">Recepción de mercancía a almacén</small>
-        </div>
-
-        <div class="form-group">
-          <label>Producto</label>
-          <div style="display: flex; gap: 10px">
-            <input
-              type="text"
-              id="producto_search"
-              list="lista-productos-datalist"
-              class="input-modern"
-              placeholder="Escribe para buscar o agregar..."
-              onchange="seleccionarProductoDesdeBusqueda()"
-              autocomplete="off"
-            />
-            <datalist id="lista-productos-datalist"></datalist>
-            <input type="hidden" id="producto" />
-
-            <button
-              type="button"
-              onclick="abrirModal()"
-              class="btn-field"
-              style="
-                width: 50px;
-                background: #007aff;
-                color: white;
-                border: none;
-                font-size: 1.5rem;
-              "
-            >
-              +
-            </button>
-          </div>
-        </div>
-        <div
-          id="info-contextual-entrada"
-          style="
-            display: none;
-            margin-top: -5px;
-            margin-bottom: 15px;
-            background: #fff8e1;
-            border: 1px solid #ffe082;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            color: #555;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-          "
-        ></div>
-
-        <div class="form-group">
-          <label>Presentación</label>
-          <div style="display: flex; gap: 10px">
-            <select id="presentacion" class="input-modern">
-              <option>Cargando...</option>
-            </select>
-            <button
-              type="button"
-              onclick="abrirModalGenerico('modalPresentacion')"
-              class="btn-field"
-              style="
-                width: 50px;
-                background: #5856d6;
-                color: white;
-                border: none;
-                font-size: 1.5rem;
-              "
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Cantidad (Piezas)</label>
-          <div style="display: flex; gap: 10px">
-            <input
-              type="number"
-              id="cantidad"
-              min="1"
-              step="1"
-              placeholder="Ej: 5"
-              class="input-modern"
-              onkeypress="return event.charCode >= 48 && event.charCode <= 57;"
-              oninput="
-                this.value = this.value.replace(/[^0-9]/g, '');
-                calcularTotalEntrada();
-              "
-            />
-            <div
-              id="infoTotal"
-              style="
-                background: #eef1f6;
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                min-width: 80px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                color: #555;
-                height: 45px;
-              "
-            >
-              0 L
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Lote *</label>
-          <input type="text" id="lote" class="input-modern" />
-        </div>
-
-        <div class="form-group">
-          <label>Proveedor</label>
-          <input type="text" id="proveedor" class="input-modern" />
-        </div>
-
-        <div class="form-group">
-          <label>Fecha Fabricación</label>
-          <input type="month" id="elaboracion" class="input-modern" />
-        </div>
-
-        <div class="form-group">
-          <label>Ubicación Destino</label>
-          <div style="display: flex; gap: 10px">
-            <select id="ubicacion" class="input-modern">
-              <option>Cargando...</option>
-            </select>
-            <button
-              type="button"
-              onclick="abrirModalGenerico('modalUbicacion')"
-              class="btn-field"
-              style="
-                width: 50px;
-                background: #ff9500;
-                color: white;
-                border: none;
-                font-size: 1.5rem;
-              "
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 25px">
-          <button
-            id="btn-entrada-directa"
-            onclick="guardarEntradaDirecta()"
-            class="btn-field"
-            style="flex: 1; background: #007aff; color: white; border: none"
-          >
-            ⚡ Entrada Directa
-          </button>
-          <button
-            onclick="agregarColaEntrada()"
-            class="btn-field"
-            style="
-              flex: 1;
-              background: #fff;
-              color: #007aff;
-              border: 2px solid #007aff;
-            "
-          >
-            ⬇️ Agregar a Lista
-          </button>
-        </div>
-
-        <div
-          id="area-cola-entradas"
-          style="
-            margin-top: 20px;
-            display: none;
-            border-top: 2px dashed #ddd;
-            padding-top: 15px;
-          "
-        >
-          <h4 style="margin-bottom: 10px; color: #333">
-            📦 Lista de Ingreso (<span id="contadorColaEnt">0</span>)
-          </h4>
-          <div style="overflow-x: auto">
-            <table
-              style="width: 100%; border-collapse: collapse; font-size: 0.85rem"
-            >
-              <tbody id="tablaColaEntradaBody"></tbody>
-            </table>
-          </div>
-          <button
-            onclick="procesarEntradas()"
-            class="btn-field"
-            style="
-              width: 100%;
-              background: #2ecc71;
-              color: white;
-              border: none;
-              margin-top: 15px;
-            "
-          >
-            💾 GUARDAR TODO
-          </button>
-        </div>
+        <button onclick="reiniciarLogin()" id="btn-login-back" style="display:none; background: transparent; border: none; color: #64748b; margin-top: 15px; cursor: pointer; text-decoration: underline; font-size: 0.85rem; width: 100%;">Usar otro correo</button>
       </div>
     </div>
 
-    <div id="vista-salidas" class="vista" style="display: none">
-      <div class="card">
-        <div
-          style="
-            background: #ffebee;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 5px solid #d63031;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          "
-        >
-          <div>
-            <h2 style="margin: 0; color: #d63031">Salidas</h2>
-            <small style="color: #555">Selecciona un lote de la lista 👇</small>
-          </div>
-          <div style="font-size: 2rem">🚚</div>
-        </div>
-
-        <div class="form-group">
-          <label>Producto a Enviar</label>
-          <input
-            type="text"
-            id="sal_producto_search"
-            list="lista-productos-salida-datalist"
-            class="input-modern"
-            placeholder="Buscar producto (solo con stock)..."
-            onchange="seleccionarProductoSalidaDesdeBusqueda()"
-            autocomplete="off"
-          />
-          <datalist id="lista-productos-salida-datalist"></datalist>
-          <input type="hidden" id="sal_producto" />
-        </div>
-
-        <div
-          id="div-disponibilidad"
-          style="display: none; margin-bottom: 20px"
-        ></div>
-
-        <div style="display: flex; gap: 15px">
-          <div class="form-group" style="flex: 1">
-            <label>Presentación</label>
-            <select id="sal_presentacion" class="input-modern"></select>
-          </div>
-          <div class="form-group" style="flex: 1">
-            <label>Ubicación</label>
-            <select id="sal_ubicacion" class="input-modern"></select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Lote Seleccionado</label>
-          <input
-            type="text"
-            id="sal_lote"
-            class="input-modern"
-            style="
-              font-family: monospace;
-              color: #d63031;
-              font-weight: bold;
-              background: #fff5f5;
-            "
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Cantidad (Piezas)</label>
-          <div style="display: flex; gap: 10px">
-            <input
-              type="number"
-              id="cantidad"
-              min="1"
-              step="1"
-              placeholder="Ej: 5"
-              class="input-modern"
-              onkeypress="return event.charCode >= 48 && event.charCode <= 57;"
-              oninput="
-                this.value = this.value.replace(/[^0-9]/g, '');
-                calcularTotalEntrada();
-              "
-            />
-            <div
-              id="sal_infoTotal"
-              style="
-                background: #f5f5f5;
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                min-width: 90px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                color: #d63031;
-                height: 45px;
-              "
-            >
-              0 L
-            </div>
-          </div>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 25px">
-          <button
-            onclick="agregarColaSalida()"
-            class="btn-field"
-            style="
-              flex: 1;
-              background: white;
-              color: #d63031;
-              border: 2px solid #d63031;
-            "
-          >
-            ➕ Agregar a Pedido
-          </button>
-        </div>
-
-        <div
-          id="area-cola-salidas"
-          style="
-            margin-top: 25px;
-            display: none;
-            background: #fff5f5;
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid #ffcccc;
-          "
-        >
-          <h4 style="margin: 0 0 10px 0; color: #c0392b">
-            📋 Pedido Actual (<span id="contadorColaSal">0</span>)
-          </h4>
-          <div style="overflow-x: auto; margin-bottom: 15px">
-            <table
-              style="width: 100%; border-collapse: collapse; font-size: 0.85rem"
-            >
-              <tbody id="tablaColaSalidaBody"></tbody>
-            </table>
-          </div>
-          <button
-            onclick="procesarSalidas()"
-            class="btn-field"
-            style="width: 100%; background: #333; color: white; border: none"
-          >
-            🚀 FINALIZAR PEDIDO
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="vista-ubicaciones" class="vista" style="display: none">
-      <div style="max-width: 1100px; margin: 0 auto; width: 100%">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            background: white;
-            padding: 20px 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            border: 1px solid #eef2f6;
-          "
-        >
-          <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b">
-            📍 Mapa de Almacén
-          </h2>
-          <button
-            onclick="abrirModalGenerico('modalUbicacion')"
-            class="btn-field"
-            style="
-              width: auto;
-              padding: 0 20px;
-              margin: 0;
-              background: #f59e0b;
-              color: white;
-              border: none;
-              box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);
-            "
-          >
-            + Nueva Ubicación
-          </button>
-        </div>
-
-        <div
-          id="loading-ubicaciones"
-          style="text-align: center; margin: 40px; color: #64748b"
-        >
-          <div class="modern-spinner"></div>
-          <p style="margin-top: 15px">Sincronizando almacén...</p>
-        </div>
-
-        <div
-          id="grid-ubicaciones"
-          class="grid-layout"
-          style="
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-            gap: 20px;
-          "
-        ></div>
-      </div>
-    </div>
-
-    <div
-      id="vista-productos"
-      class="vista"
-      style="display: none; width: 100%; justify-content: center"
-    >
-      <div
-        class="card"
+    <div id="app-principal" style="display: none">
+      <button
+        id="btn-env-switch"
+        onclick="toggleEnvironment()"
         style="
-          max-width: 900px;
-          width: 100%;
-          background: transparent;
-          box-shadow: none;
-          padding: 0;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: column;
+          display: none;
+          position: fixed;
+          top: 15px;
+          right: 20px;
+          width: auto !important;
+          margin: 0;
+          z-index: 9999;
+          border-radius: 30px;
+          font-weight: 800;
+          font-size: 0.85rem;
+          padding: 8px 20px;
+          border: none;
+          cursor: pointer;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+          letter-spacing: 0.5px;
+          transition: transform 0.2s;
         "
       >
-        <div
-          style="
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-            border: 1px solid #e2e8f0;
-            margin-bottom: 20px;
-            overflow: hidden;
-            width: 100%;
-          "
+        🟢 MODO: PRODUCCIÓN
+      </button>
+
+      <div class="nav-bar">
+        <button
+          id="nav-entradas"
+          class="nav-btn active"
+          onclick="cambiarVista('vista-operacion')"
+          style="display: none"
         >
+          📦 Entradas
+        </button>
+        <button
+          id="nav-salidas"
+          class="nav-btn"
+          onclick="cambiarVista('vista-salidas')"
+          style="display: none"
+        >
+          🚚 Salidas
+        </button>
+        <button
+          id="nav-ubicaciones"
+          class="nav-btn"
+          onclick="cambiarVista('vista-ubicaciones')"
+          style="display: none"
+        >
+          📍 Ubicaciones
+        </button>
+        <button
+          id="nav-productos"
+          class="nav-btn"
+          onclick="cambiarVista('vista-productos')"
+          style="display: none"
+        >
+          📊 Productos
+        </button>
+        <button
+          id="nav-pedidos"
+          class="nav-btn"
+          onclick="cambiarVista('vista-pedidos')"
+          style="display: none"
+        >
+          📦 Envíos
+        </button>
+        <button
+          id="nav-bajas"
+          class="nav-btn"
+          onclick="cambiarVista('vista-bajas')"
+          style="display: none"
+        >
+          🗑️ Bajas
+        </button>
+
+        <button id="nav-admin" class="nav-btn" onclick="cambiarVista('vista-admin')" style="display:none; background:#1e293b; color:white;">⚙️ Admin</button>
+
+        <button
+          class="nav-btn"
+          onclick="cerrarSesion()"
+          style="background: #ff3b30; color: white; display: inline-block"
+        >
+          🚪 Salir
+        </button>
+      </div>
+
+      <button
+        id="nav-admin"
+        class="nav-btn"
+        onclick="cambiarVista('vista-admin')"
+        style="display: none; background: #34495e; color: white"
+      >
+        ⚙️ Admin
+      </button>
+
+      <div id="vista-operacion" class="vista">
+        <div class="card">
           <div
             style="
-              display: flex;
-              align-items: center;
-              gap: 15px;
-              padding: 20px 25px;
-              border-bottom: 1px solid #f1f5f9;
+              background: #e3f2fd;
+              padding: 10px;
+              border-radius: 8px;
+              margin-bottom: 15px;
+              border-left: 5px solid #007aff;
             "
           >
-            <div
-              style="
-                font-size: 2.5rem;
-                line-height: 1;
-                filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
-              "
-            >
-              📦
-            </div>
-            <div>
-              <h2
-                style="
-                  margin: 0 0 4px 0;
-                  font-size: 1.35rem;
-                  color: #1e293b;
-                  font-weight: 800;
-                  letter-spacing: -0.5px;
-                "
-              >
-                Inventario Global
-              </h2>
-              <span style="color: #64748b; font-size: 0.9rem; font-weight: 500"
-                >Gestión y monitoreo de productos en tiempo real</span
-              >
-            </div>
+            <h2 style="margin: 0; color: #007aff">Registro de Entradas</h2>
+            <small style="color: #555">Recepción de mercancía a almacén</small>
           </div>
 
-          <div
-            style="
-              display: flex;
-              gap: 12px;
-              align-items: center;
-              padding: 15px 25px;
-              flex-wrap: nowrap;
-              overflow-x: auto;
-            "
-          >
-            <div style="display: flex; gap: 10px; flex-shrink: 0">
-              <button
-                id="btnFiltroStock"
-                onclick="toggleFiltroStock()"
-                style="
-                  background: #ffffff;
-                  border: 1px solid #e2e8f0;
-                  color: #334155;
-                  padding: 0 16px;
-                  border-radius: 8px;
-                  font-size: 0.85rem;
-                  cursor: pointer;
-                  font-weight: 600;
-                  transition: all 0.2s;
-                  display: flex;
-                  align-items: center;
-                  gap: 6px;
-                  height: 42px;
-                  box-sizing: border-box;
-                  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-                "
-              >
-                <span style="font-size: 1rem; color: #f59e0b">⚠️</span> Bajo
-                Stock
-              </button>
-              <button
-                id="btnFiltroCaducidad"
-                onclick="toggleFiltroCaducidad()"
-                style="
-                  background: #ffffff;
-                  border: 1px solid #e2e8f0;
-                  color: #334155;
-                  padding: 0 16px;
-                  border-radius: 8px;
-                  font-size: 0.85rem;
-                  cursor: pointer;
-                  font-weight: 600;
-                  transition: all 0.2s;
-                  display: flex;
-                  align-items: center;
-                  gap: 6px;
-                  height: 42px;
-                  box-sizing: border-box;
-                  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-                "
-              >
-                <span style="font-size: 1rem; color: #d97706">⏳</span> Por
-                Caducar
-              </button>
-            </div>
-
-            <div style="flex: 1; min-width: 150px; position: relative">
-              <span
-                style="
-                  position: absolute;
-                  left: 14px;
-                  top: 50%;
-                  transform: translateY(-50%);
-                  color: #64748b;
-                  font-size: 0.95rem;
-                "
-                >🔍</span
-              >
+          <div class="form-group">
+            <label>Producto</label>
+            <div style="display: flex; gap: 10px">
               <input
                 type="text"
-                id="buscadorProductos"
-                placeholder="Buscar por nombre o variante..."
+                id="producto_search"
+                list="lista-productos-datalist"
                 class="input-modern"
-                style="
-                  margin: 0;
-                  border: 1px solid #e2e8f0;
-                  height: 42px;
-                  width: 100%;
-                  padding-left: 40px;
-                  box-sizing: border-box;
-                  border-radius: 8px;
-                  font-size: 0.9rem;
-                  outline: none;
-                  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.01);
-                "
-                onkeyup="filtrarProductos()"
+                placeholder="Escribe para buscar o agregar..."
+                onchange="seleccionarProductoDesdeBusqueda()"
                 autocomplete="off"
               />
-            </div>
+              <datalist id="lista-productos-datalist"></datalist>
+              <input type="hidden" id="producto" />
 
-            <button
-              onclick="exportarInventarioCSV()"
-              style="
-                background: #22c55e;
-                color: white;
-                border: none;
-                padding: 0 20px;
-                height: 42px;
-                font-size: 0.9rem;
-                font-weight: 700;
-                border-radius: 8px;
-                cursor: pointer;
-                box-shadow: 0 2px 4px rgba(34, 197, 94, 0.25);
-                transition: transform 0.2s;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                white-space: nowrap;
-                box-sizing: border-box;
-                flex-shrink: 0;
-                width: auto;
-              "
-            >
-              <span style="font-size: 1.05rem">📄</span> Exportar Excel
-            </button>
-          </div>
-        </div>
-        <div id="contenedor-productos-lista" style="width: 100%"></div>
-      </div>
-    </div>
-
-    <div id="vista-pedidos" class="vista" style="display: none">
-      <div class="envios-fixed-header">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-          "
-        >
-          <div>
-            <h2 style="margin: 0; color: #1e293b; font-size: 1.5rem">
-              📦 Gestión de Envíos
-            </h2>
-            <div style="color: #64748b; font-size: 0.9rem">
-              Control logístico y rastreo
+              <button
+                type="button"
+                onclick="abrirModal()"
+                class="btn-field"
+                style="
+                  width: 50px;
+                  background: #007aff;
+                  color: white;
+                  border: none;
+                  font-size: 1.5rem;
+                "
+              >
+                +
+              </button>
             </div>
           </div>
-        </div>
-
-        <div class="toolbar-container">
-          <div class="search-box-styled">
-            <span class="search-icon-pos">🔍</span>
-            <input
-              type="text"
-              id="buscadorPedidos"
-              placeholder="Buscar cliente, guía, ID..."
-              onkeyup="filtrarTablaPedidos()"
-            />
-          </div>
-
-          <div class="date-group-styled">
-            <div class="date-item">
-              <span class="lbl-date">DESDE</span>
-              <input
-                type="date"
-                id="filtroFechaDesde"
-                class="input-date-minimal"
-                onchange="filtrarTablaPedidos()"
-              />
-            </div>
-
-            <div class="date-separator"></div>
-
-            <div class="date-item">
-              <span class="lbl-date">HASTA</span>
-              <input
-                type="date"
-                id="filtroFechaHasta"
-                class="input-date-minimal"
-                onchange="filtrarTablaPedidos()"
-              />
-            </div>
-          </div>
-
           <div
-            class="filter-tabs"
-            style="background: #f1f3f5; padding: 3px; border-radius: 8px"
-          >
-            <button
-              class="filter-tab active"
-              onclick="filtrarEstado('Todos', this)"
-            >
-              Todos
-            </button>
-            <button
-              class="filter-tab"
-              onclick="filtrarEstado('Pendiente', this)"
-            >
-              Pendientes
-            </button>
-            <button class="filter-tab" onclick="filtrarEstado('Enviado', this)">
-              Enviados
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="envios-scroll-body">
-        <div
-          id="loading-pedidos"
-          style="text-align: center; padding: 60px; color: #64748b"
-        >
-          <div class="spinner"></div>
-          <p style="margin-top: 15px; font-weight: 500">Sincronizando...</p>
-        </div>
-
-        <table
-          class="modern-table"
-          id="tablaPedidosMain"
-          style="display: none; width: 100%"
-        >
-          <thead class="sticky-thead">
-            <tr>
-              <th style="width: 15%">ID / Fecha</th>
-              <th style="width: 25%">Cliente</th>
-              <th style="width: 30%">Detalle</th>
-              <th style="width: 15%">Estatus</th>
-              <th style="width: 15%; text-align: right">Acción</th>
-            </tr>
-          </thead>
-          <tbody id="tablaPedidosBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-<div id="vista-bajas" class="vista" style="display: none; padding-top: 10px;">
-      <div class="card" style="max-width: 1000px; width: 100%; padding: 0; display: flex; flex-direction: column; max-height: 86vh; overflow: hidden; border-radius: 12px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        
-        <div style="background: #fff3cd; padding: 20px; border-bottom: 1px solid #ffeeba; flex-shrink: 0;">
-          <h2 style="margin: 0; color: #856404; font-size: 1.4rem;">🗑️ Materiales Caducados</h2>
-          <small style="color: #856404">Selecciona los lotes vencidos que deseas desincorporar del inventario.</small>
-        </div>
-
-        <div id="loading-bajas" style="text-align: center; margin: 20px; color: #666; display: none; flex-shrink: 0;">
-          <div class="spinner"></div>
-          <p>Buscando lotes vencidos...</p>
-        </div>
-
-        <div style="flex: 1 1 auto; overflow-y: auto; background: white;">
-          <table class="modern-table" id="tablaBajas" style="width: 100%; display: none; margin: 0;">
-            <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-              <tr>
-                <th style="width: 5%; text-align: center; padding: 12px 10px;">
-                  <input type="checkbox" id="chkAllBajas" onchange="toggleAllBajas(this)" style="transform: scale(1.2); cursor: pointer" />
-                </th>
-                <th style="padding: 12px 10px;">Producto</th>
-                <th style="padding: 12px 10px;">Presentación</th>
-                <th style="padding: 12px 10px;">Lote</th>
-                <th style="padding: 12px 10px;">Ubicación</th>
-                <th style="padding: 12px 10px;">Caducidad</th>
-                <th style="text-align: right; padding: 12px 10px;">Stock Disp.</th>
-              </tr>
-            </thead>
-            <tbody id="tablaBajasBody"></tbody>
-          </table>
-        </div>
-
-        <div style="padding: 15px 20px; background: white; border-top: 1px solid #e2e8f0; flex-shrink: 0; display: flex; justify-content: flex-end; box-shadow: 0 -2px 10px rgba(0,0,0,0.03); z-index: 15;">
-          <button onclick="prepararBaja()" class="btn-field" style="background: #dc3545; color: white; border: none; width: auto; padding: 0 30px; box-shadow: 0 4px 6px rgba(220, 53, 69, 0.2);">
-            ➡️ Preparar Baja Seleccionada
-          </button>
-        </div>
-
-        <div id="area-cola-bajas" style="display: none; flex-shrink: 0; background: #fff5f5; border-top: 2px dashed #ffcccc; max-height: 40vh;">
-            <div style="display: flex; flex-direction: column; height: 100%;">
-                
-                <div style="padding: 15px 20px 10px 20px; flex-shrink: 0;">
-                    <h4 style="margin: 0; color: #c0392b">📋 Lotes a Desincorporar (<span id="contadorColaBajas">0</span>)</h4>
-                </div>
-                
-                <div style="flex: 1 1 auto; overflow-y: auto; padding: 0 20px;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem">
-                      <tbody id="tablaColaBajasBody"></tbody>
-                    </table>
-                </div>
-                
-                <div style="padding: 15px 20px; flex-shrink: 0; border-top: 1px solid #ffcccc; background: #fff5f5;">
-                    <button onclick="confirmarBajaFinal()" class="btn-field" style="width: 100%; background: #333; color: white; border: none; font-size: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                      📄 CONFIRMAR Y GENERAR REPORTES
-                    </button>
-                </div>
-                
-            </div>
-        </div>
-
-      </div>
-    </div>
-    
-    <div
-      id="modalProducto"
-      class="modal-overlay"
-      style="display: none; z-index: 1005"
-    >
-      <div class="modal-content">
-        <div class="form-group">
-          <label>Nombre *</label>
-          <input type="text" id="nuevoNombre" class="input-modern" />
-        </div>
-
-        <div class="form-group">
-          <label>Descripción</label>
-          <input type="text" id="nuevaDescripcion" class="input-modern" />
-        </div>
-
-        <div class="form-group">
-          <label>Unidad *</label>
-          <select id="nuevaUnidad" class="input-modern">
-            <option value="L">Litros (L)</option>
-            <option value="Kg">Kilogramos (Kg)</option>
-            <option value="Unid">Unidad (Pza)</option>
-          </select>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 20px">
-          <button
-            onclick="cerrarModal()"
-            class="btn-field"
-            style="flex: 1; background: #e5e5ea; border: none; color: #333"
-          >
-            Cancelar
-          </button>
-          <button
-            onclick="guardarProducto()"
-            class="btn-field"
-            style="flex: 1; background: #007aff; color: white; border: none"
-          >
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="modalPresentacion" class="modal-overlay" style="display: none">
-      <div class="modal-content">
-        <h3>Nueva Presentación</h3>
-        <div class="form-group">
-          <label>Descripción</label>
-          <input
-            type="text"
-            id="nuevaPresDesc"
-            class="input-modern"
-            placeholder="Ej: Saco 25kg"
-          />
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 20px">
-          <button
-            onclick="cerrarModalGenerico('modalPresentacion')"
-            class="btn-field"
-            style="flex: 1; background: #e5e5ea; border: none; color: #333"
-          >
-            Cancelar
-          </button>
-          <button
-            onclick="guardarPresentacion()"
-            class="btn-field"
-            style="flex: 1; background: #5856d6; color: white; border: none"
-          >
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="modalUbicacion" class="modal-overlay" style="display: none">
-      <div class="modal-content">
-        <h3>Nueva Ubicación</h3>
-        <div class="form-group">
-          <label>Nombre</label>
-          <input
-            type="text"
-            id="nuevaUbicNombre"
-            class="input-modern"
-            placeholder="Ej: Estante B"
-          />
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 20px">
-          <button
-            onclick="cerrarModalGenerico('modalUbicacion')"
-            class="btn-field"
-            style="flex: 1; background: #e5e5ea; border: none; color: #333"
-          >
-            Cancelar
-          </button>
-          <button
-            onclick="guardarUbicacion()"
-            class="btn-field"
-            style="flex: 1; background: #ff9500; color: white; border: none"
-          >
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="modalEditarUbicacion" class="modal-overlay" style="display: none">
-      <div
-        class="modal-content"
-        style="max-width: 400px; padding-top: 0; overflow: hidden"
-      >
-        <div
-          style="
-            background: #007aff;
-            padding: 15px;
-            margin: 0 -20px 20px -20px;
-            text-align: center;
-          "
-        >
-          <h3 style="margin: 0; color: white">Editar Nombre</h3>
-        </div>
-        <div class="form-group">
-          <label>Nuevo Nombre:</label>
-          <input type="text" id="inputEditarNombre" class="input-modern" />
-        </div>
-        <div style="display: flex; gap: 10px">
-          <button
-            onclick="cerrarModalGenerico('modalEditarUbicacion')"
-            class="btn-field"
-            style="flex: 1; background: #e5e5ea; border: none"
-          >
-            Cancelar
-          </button>
-          <button
-            onclick="guardarEdicionUbicacion()"
-            class="btn-field"
-            style="flex: 1; background: #007aff; color: white; border: none"
-          >
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-
-<div id="modalDetalleUbicacion" class="modal-overlay" style="display: none; z-index: 1000;">
-      <div class="modal-content" style="max-width: 800px; width: 95%; padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh;">
-        
-        <div style="background: #f8fafc; padding: 20px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0;">
-          <h3 id="tituloDetalle" style="margin: 0; color: #1e293b; font-size: 1.25rem;">📍 Detalle Ubicación</h3>
-        </div>
-
-        <div style="flex: 1 1 auto; overflow-y: auto; padding: 0; background: white;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-            <thead style="position: sticky; top: 0; background: #ffffff; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-              <tr style="text-align: left; border-bottom: 2px solid #007aff;">
-                <th style="padding: 12px 10px; width: 40px; text-align: center;">
-                    <input type="checkbox" id="chkAllUbic" onchange="toggleAllUbicItems(this)" style="transform: scale(1.2); cursor: pointer;">
-                </th>
-                <th style="padding: 12px 10px; color: #007aff">Producto</th>
-                <th style="padding: 12px 10px; color: #007aff">Lote</th>
-                <th style="padding: 12px 10px; color: #007aff">Caducidad</th>
-                <th style="padding: 12px 10px; text-align: right; color: #007aff">Stock</th>
-                <th style="padding: 12px 10px; text-align: center; color: #007aff">Acción</th>
-              </tr>
-            </thead>
-            <tbody id="tablaDetalleBody"></tbody>
-          </table>
-        </div>
-        
-        <div style="background: #ffffff; padding: 15px 20px; border-top: 1px solid #e2e8f0; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <button onclick="cerrarModalGenerico('modalDetalleUbicacion')" class="btn-field" style="background: #f1f5f9; color: #475569; width: auto; display: inline-flex; border: 1px solid #cbd5e1;">
-             Cerrar Detalle
-          </button>
-          <button onclick="prepararTransferenciaMasiva()" class="btn-field" style="background: #007aff; color: white; width: auto; display: inline-flex; box-shadow: 0 4px 6px rgba(0,122,255,0.2);">
-             🚚 Transferir Seleccionados
-          </button>
-        </div>
-
-      </div>
-    </div>
-
-    <div
-      id="modalTransferenciaMasiva"
-      class="modal-overlay"
-      style="display: none; z-index: 1005"
-    >
-      <div class="modal-content" style="max-width: 400px">
-        <div style="text-align: center; margin-bottom: 20px">
-          <span style="font-size: 3rem">🚚</span>
-          <h3 style="margin: 10px 0 5px 0">Mover en Bloque</h3>
-          <p style="color: #666; font-size: 0.9rem; margin: 0">
-            Vas a mover
-            <strong
-              id="lblCantMasivaTransf"
-              style="color: #007aff; font-size: 1.1rem"
-              >0</strong
-            >
-            lote(s).
-          </p>
-        </div>
-
-        <div class="form-group">
-          <label>¿A dónde los vas a mover?</label>
-          <select id="selDestinoMasivo" class="input-modern"></select>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 25px">
-          <button
-            onclick="cerrarModalGenerico('modalTransferenciaMasiva')"
-            class="btn-field"
-            style="flex: 1; background: #f1f3f5; border: none"
-          >
-            Cancelar
-          </button>
-          <button
-            onclick="confirmarTransferenciaMasiva()"
-            class="btn-field"
-            style="flex: 1; background: #007aff; color: white; border: none"
-          >
-            Confirmar Mover
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="modalReubicacion" class="modal-overlay" style="display: none">
-      <div class="modal-content" style="max-width: 400px">
-        <div style="text-align: center; margin-bottom: 20px">
-          <span style="font-size: 3rem">🚚</span>
-          <h3>Ubicación con Existencias</h3>
-          <p style="color: #666">Para eliminar, primero mueve el contenido.</p>
-        </div>
-        <div class="form-group">
-          <label>Mover todo a:</label>
-          <select id="selectDestinoReubicacion" class="input-modern"></select>
-        </div>
-        <div style="display: flex; gap: 10px">
-          <button
-            onclick="cerrarModalGenerico('modalReubicacion')"
-            class="btn-field"
-            style="flex: 1; background: #e5e5ea; border: none"
-          >
-            Cancelar
-          </button>
-          <button
-            onclick="confirmarReubicacion()"
-            class="btn-field"
-            style="flex: 1; background: #ff3b30; color: white; border: none"
-          >
-            Mover y Eliminar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div
-      id="modalTransferencia"
-      class="modal-overlay"
-      style="display: none; z-index: 1001"
-    >
-      <div
-        class="modal-content"
-        style="
-          max-width: 450px;
-          border-radius: 12px;
-          padding: 0;
-          overflow: hidden;
-        "
-      >
-        <div style="background: #007aff; padding: 15px 20px">
-          <h3
+            id="info-contextual-entrada"
             style="
-              margin: 0;
-              color: white;
-              font-size: 1.1rem;
-              text-align: center;
-            "
-          >
-            Transferir Mercancía
-          </h3>
-        </div>
-        <div style="padding: 25px">
-          <div
-            style="
-              background: #f0f8ff;
+              display: none;
+              margin-top: -5px;
+              margin-bottom: 15px;
+              background: #fff8e1;
+              border: 1px solid #ffe082;
               padding: 12px;
               border-radius: 8px;
-              margin-bottom: 20px;
-              border: 1px solid #cce5ff;
+              font-size: 0.85rem;
+              color: #555;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
             "
-          >
-            <strong
-              id="txtProductoTransf"
-              style="
-                display: block;
-                font-size: 1rem;
-                margin-bottom: 4px;
-                color: #004085;
-              "
-              >Producto</strong
-            >
-            <span id="txtLoteTransf" style="color: #666; font-size: 0.9rem"
-              >Lote: ---</span
-            >
-          </div>
+          ></div>
+
           <div class="form-group">
-            <label>¿Cuántas piezas vas a mover?</label>
-            <div style="display: flex; gap: 10px; align-items: center">
+            <label>Presentación</label>
+            <div style="display: flex; gap: 10px">
+              <select id="presentacion" class="input-modern">
+                <option>Cargando...</option>
+              </select>
+              <button
+                type="button"
+                onclick="abrirModalGenerico('modalPresentacion')"
+                class="btn-field"
+                style="
+                  width: 50px;
+                  background: #5856d6;
+                  color: white;
+                  border: none;
+                  font-size: 1.5rem;
+                "
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Cantidad (Piezas)</label>
+            <div style="display: flex; gap: 10px">
               <input
                 type="number"
-                id="cantTransferir"
-                placeholder="0"
+                id="cantidad"
                 min="1"
                 step="1"
+                placeholder="Ej: 5"
+                class="input-modern"
                 onkeypress="
                   return event.charCode >= 48 && event.charCode <= 57;
                 "
-                class="input-modern"
-                oninput="calcularSimulacionTransferencia()"
+                oninput="
+                  this.value = this.value.replace(/[^0-9]/g, '');
+                  calcularTotalEntrada();
+                "
               />
-              <span style="font-weight: bold; color: #555; font-size: 1.1rem"
-                >Pzas.</span
+              <div
+                id="infoTotal"
+                style="
+                  background: #eef1f6;
+                  border: 1px solid #ddd;
+                  border-radius: 8px;
+                  min-width: 80px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-weight: bold;
+                  color: #555;
+                  height: 45px;
+                "
               >
+                0 L
+              </div>
             </div>
           </div>
-          <div
-            style="
-              font-size: 0.85rem;
-              color: #666;
-              margin-bottom: 25px;
-              display: flex;
-              justify-content: space-between;
-              padding: 0 5px;
-            "
-          >
-            <span
-              >Equivale a:
-              <strong id="lblEquivalencia" style="color: #007aff"
-                >0 L</strong
-              ></span
-            >
-            <span>Quedarán: <strong id="lblRestante">---</strong></span>
-          </div>
+
           <div class="form-group">
-            <label>Destino:</label>
-            <select id="selDestinoTransf" class="input-modern"></select>
+            <label>Lote *</label>
+            <input type="text" id="lote" class="input-modern" />
           </div>
-          <div style="display: flex; gap: 12px">
+
+          <div class="form-group">
+            <label>Proveedor</label>
+            <input type="text" id="proveedor" class="input-modern" />
+          </div>
+
+          <div class="form-group">
+            <label>Fecha Fabricación</label>
+            <input type="month" id="elaboracion" class="input-modern" />
+          </div>
+
+          <div class="form-group">
+            <label>Ubicación Destino</label>
+            <div style="display: flex; gap: 10px">
+              <select id="ubicacion" class="input-modern">
+                <option>Cargando...</option>
+              </select>
+              <button
+                type="button"
+                onclick="abrirModalGenerico('modalUbicacion')"
+                class="btn-field"
+                style="
+                  width: 50px;
+                  background: #ff9500;
+                  color: white;
+                  border: none;
+                  font-size: 1.5rem;
+                "
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 25px">
             <button
-              onclick="cerrarModalGenerico('modalTransferencia')"
-              class="btn-field"
-              style="flex: 1; background: #f1f3f5; border: none"
-            >
-              CANCELAR
-            </button>
-            <button
-              onclick="confirmarTransferencia()"
+              id="btn-entrada-directa"
+              onclick="guardarEntradaDirecta()"
               class="btn-field"
               style="flex: 1; background: #007aff; color: white; border: none"
             >
-              CONFIRMAR ➡️
+              ⚡ Entrada Directa
+            </button>
+            <button
+              onclick="agregarColaEntrada()"
+              class="btn-field"
+              style="
+                flex: 1;
+                background: #fff;
+                color: #007aff;
+                border: 2px solid #007aff;
+              "
+            >
+              ⬇️ Agregar a Lista
+            </button>
+          </div>
+
+          <div
+            id="area-cola-entradas"
+            style="
+              margin-top: 20px;
+              display: none;
+              border-top: 2px dashed #ddd;
+              padding-top: 15px;
+            "
+          >
+            <h4 style="margin-bottom: 10px; color: #333">
+              📦 Lista de Ingreso (<span id="contadorColaEnt">0</span>)
+            </h4>
+            <div style="overflow-x: auto">
+              <table
+                style="
+                  width: 100%;
+                  border-collapse: collapse;
+                  font-size: 0.85rem;
+                "
+              >
+                <tbody id="tablaColaEntradaBody"></tbody>
+              </table>
+            </div>
+            <button
+              onclick="procesarEntradas()"
+              class="btn-field"
+              style="
+                width: 100%;
+                background: #2ecc71;
+                color: white;
+                border: none;
+                margin-top: 15px;
+              "
+            >
+              💾 GUARDAR TODO
             </button>
           </div>
         </div>
       </div>
-    </div>
 
-    <div
-      id="modalTransformacion"
-      class="modal-overlay"
-      style="display: none; z-index: 1002"
-    >
-      <div
-        class="modal-content"
-        style="max-width: 500px; padding: 0; overflow: hidden"
-      >
-        <div style="background: #9b59b6; padding: 15px 20px">
-          <h3 style="margin: 0; color: white; text-align: center">
-            🛠️ Transformar / Reetiquetar
-          </h3>
-        </div>
-        <div style="padding: 20px">
+      <div id="vista-salidas" class="vista" style="display: none">
+        <div class="card">
           <div
             style="
-              background: #f3e5f5;
-              padding: 10px;
+              background: #ffebee;
+              padding: 15px;
               border-radius: 8px;
               margin-bottom: 20px;
-              border-left: 4px solid #9b59b6;
+              border-left: 5px solid #d63031;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
             "
           >
-            <small
-              style="
-                color: #8e24aa;
-                font-weight: bold;
-                text-transform: uppercase;
-              "
-              >Origen:</small
-            >
-            <div id="lblTransfOrigen" style="font-weight: 600; color: #333">
-              Producto A
-            </div>
-            <div id="lblTransfLote" style="font-size: 0.85rem; color: #666">
-              Lote: ---
-            </div>
-          </div>
-          <div style="display: flex; gap: 15px; margin-bottom: 15px">
-            <div style="flex: 1">
-              <label
-                style="font-weight: bold; display: block; margin-bottom: 5px"
-                >A tomar (Piezas):</label
-              >
-              <input
-                type="number"
-                id="cantTransfPiezas"
-                min="1"
-                step="1"
-                onkeypress="
-                  return event.charCode >= 48 && event.charCode <= 57;
-                "
-                placeholder="0"
-                class="input-modern"
-                oninput="calcTransf()"
-              />
-            </div>
-            <div style="flex: 1; padding-top: 28px">
-              <span style="color: #666">= </span
-              ><strong id="lblTransfLitros" style="color: #9b59b6"
-                >0.00 L</strong
+            <div>
+              <h2 style="margin: 0; color: #d63031">Salidas</h2>
+              <small style="color: #555"
+                >Selecciona un lote de la lista 👇</small
               >
             </div>
-          </div>
-          <hr style="border: 0; border-top: 1px dashed #ccc; margin: 15px 0" />
-          <h4 style="margin: 0 0 10px 0; color: #333">¿En qué se convierte?</h4>
-
-          <div class="form-group">
-            <label>Nuevo Producto (Destino):</label>
-            <div style="display: flex; gap: 8px; align-items: center">
-              <input
-                type="text"
-                id="transf_producto_search"
-                list="lista-transf-productos"
-                class="input-modern"
-                placeholder="Escribe para buscar o crear sub-producto..."
-                onchange="seleccionarProductoTransf()"
-                autocomplete="off"
-              />
-              <datalist id="lista-transf-productos"></datalist>
-              <input type="hidden" id="selTransfNuevoProd" />
-            </div>
+            <div style="font-size: 2rem">🚚</div>
           </div>
 
           <div class="form-group">
-            <label>Nueva Presentación:</label>
-            <select
-              id="selTransfNuevaPres"
-              class="input-modern"
-              onchange="calcTransf()"
-            ></select>
-          </div>
-
-          <div class="form-group">
-            <label>Nuevo Lote (Opcional):</label>
+            <label>Producto a Enviar</label>
             <input
               type="text"
-              id="inputTransfNuevoLote"
+              id="sal_producto_search"
+              list="lista-productos-salida-datalist"
               class="input-modern"
-              placeholder="Deja vacío para conservar el mismo lote"
+              placeholder="Buscar producto (solo con stock)..."
+              onchange="seleccionarProductoSalidaDesdeBusqueda()"
+              autocomplete="off"
+            />
+            <datalist id="lista-productos-salida-datalist"></datalist>
+            <input type="hidden" id="sal_producto" />
+          </div>
+
+          <div
+            id="div-disponibilidad"
+            style="display: none; margin-bottom: 20px"
+          ></div>
+
+          <div style="display: flex; gap: 15px">
+            <div class="form-group" style="flex: 1">
+              <label>Presentación</label>
+              <select id="sal_presentacion" class="input-modern"></select>
+            </div>
+            <div class="form-group" style="flex: 1">
+              <label>Ubicación</label>
+              <select id="sal_ubicacion" class="input-modern"></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Lote Seleccionado</label>
+            <input
+              type="text"
+              id="sal_lote"
+              class="input-modern"
+              style="
+                font-family: monospace;
+                color: #d63031;
+                font-weight: bold;
+                background: #fff5f5;
+              "
             />
           </div>
 
+          <div class="form-group">
+            <label>Cantidad (Piezas)</label>
+            <div style="display: flex; gap: 10px">
+              <input
+                type="number"
+                id="cantidad"
+                min="1"
+                step="1"
+                placeholder="Ej: 5"
+                class="input-modern"
+                onkeypress="
+                  return event.charCode >= 48 && event.charCode <= 57;
+                "
+                oninput="
+                  this.value = this.value.replace(/[^0-9]/g, '');
+                  calcularTotalEntrada();
+                "
+              />
+              <div
+                id="sal_infoTotal"
+                style="
+                  background: #f5f5f5;
+                  border: 1px solid #ddd;
+                  border-radius: 8px;
+                  min-width: 90px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-weight: bold;
+                  color: #d63031;
+                  height: 45px;
+                "
+              >
+                0 L
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 25px">
+            <button
+              onclick="agregarColaSalida()"
+              class="btn-field"
+              style="
+                flex: 1;
+                background: white;
+                color: #d63031;
+                border: 2px solid #d63031;
+              "
+            >
+              ➕ Agregar a Pedido
+            </button>
+          </div>
+
           <div
+            id="area-cola-salidas"
             style="
-              margin-top: 15px;
-              text-align: right;
-              font-size: 0.9rem;
-              color: #555;
+              margin-top: 25px;
+              display: none;
+              background: #fff5f5;
+              padding: 15px;
+              border-radius: 12px;
+              border: 1px solid #ffcccc;
             "
           >
-            Resultado estimado:
-            <strong id="lblTransfResultado" style="color: #2ecc71"
-              >0 Piezas nuevas</strong
+            <h4 style="margin: 0 0 10px 0; color: #c0392b">
+              📋 Pedido Actual (<span id="contadorColaSal">0</span>)
+            </h4>
+            <div style="overflow-x: auto; margin-bottom: 15px">
+              <table
+                style="
+                  width: 100%;
+                  border-collapse: collapse;
+                  font-size: 0.85rem;
+                "
+              >
+                <tbody id="tablaColaSalidaBody"></tbody>
+              </table>
+            </div>
+            <button
+              onclick="procesarSalidas()"
+              class="btn-field"
+              style="width: 100%; background: #333; color: white; border: none"
             >
+              🚀 FINALIZAR PEDIDO
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="vista-ubicaciones" class="vista" style="display: none">
+        <div style="max-width: 1100px; margin: 0 auto; width: 100%">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 25px;
+              background: white;
+              padding: 20px 30px;
+              border-radius: 12px;
+              box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+              border: 1px solid #eef2f6;
+            "
+          >
+            <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b">
+              📍 Mapa de Almacén
+            </h2>
+            <button
+              onclick="abrirModalGenerico('modalUbicacion')"
+              class="btn-field"
+              style="
+                width: auto;
+                padding: 0 20px;
+                margin: 0;
+                background: #f59e0b;
+                color: white;
+                border: none;
+                box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);
+              "
+            >
+              + Nueva Ubicación
+            </button>
+          </div>
+
+          <div
+            id="loading-ubicaciones"
+            style="text-align: center; margin: 40px; color: #64748b"
+          >
+            <div class="modern-spinner"></div>
+            <p style="margin-top: 15px">Sincronizando almacén...</p>
+          </div>
+
+          <div
+            id="grid-ubicaciones"
+            class="grid-layout"
+            style="
+              display: grid;
+              grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+              gap: 20px;
+            "
+          ></div>
+        </div>
+      </div>
+
+      <div
+        id="vista-productos"
+        class="vista"
+        style="display: none; width: 100%; justify-content: center"
+      >
+        <div
+          class="card"
+          style="
+            max-width: 900px;
+            width: 100%;
+            background: transparent;
+            box-shadow: none;
+            padding: 0;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+          "
+        >
+          <div
+            style="
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+              border: 1px solid #e2e8f0;
+              margin-bottom: 20px;
+              overflow: hidden;
+              width: 100%;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                padding: 20px 25px;
+                border-bottom: 1px solid #f1f5f9;
+              "
+            >
+              <div
+                style="
+                  font-size: 2.5rem;
+                  line-height: 1;
+                  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
+                "
+              >
+                📦
+              </div>
+              <div>
+                <h2
+                  style="
+                    margin: 0 0 4px 0;
+                    font-size: 1.35rem;
+                    color: #1e293b;
+                    font-weight: 800;
+                    letter-spacing: -0.5px;
+                  "
+                >
+                  Inventario Global
+                </h2>
+                <span
+                  style="color: #64748b; font-size: 0.9rem; font-weight: 500"
+                  >Gestión y monitoreo de productos en tiempo real</span
+                >
+              </div>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                padding: 15px 25px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+              "
+            >
+              <div style="display: flex; gap: 10px; flex-shrink: 0">
+                <button
+                  id="btnFiltroStock"
+                  onclick="toggleFiltroStock()"
+                  style="
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    color: #334155;
+                    padding: 0 16px;
+                    border-radius: 8px;
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    height: 42px;
+                    box-sizing: border-box;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+                  "
+                >
+                  <span style="font-size: 1rem; color: #f59e0b">⚠️</span> Bajo
+                  Stock
+                </button>
+                <button
+                  id="btnFiltroCaducidad"
+                  onclick="toggleFiltroCaducidad()"
+                  style="
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    color: #334155;
+                    padding: 0 16px;
+                    border-radius: 8px;
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    height: 42px;
+                    box-sizing: border-box;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+                  "
+                >
+                  <span style="font-size: 1rem; color: #d97706">⏳</span> Por
+                  Caducar
+                </button>
+              </div>
+
+              <div style="flex: 1; min-width: 150px; position: relative">
+                <span
+                  style="
+                    position: absolute;
+                    left: 14px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: #64748b;
+                    font-size: 0.95rem;
+                  "
+                  >🔍</span
+                >
+                <input
+                  type="text"
+                  id="buscadorProductos"
+                  placeholder="Buscar por nombre o variante..."
+                  class="input-modern"
+                  style="
+                    margin: 0;
+                    border: 1px solid #e2e8f0;
+                    height: 42px;
+                    width: 100%;
+                    padding-left: 40px;
+                    box-sizing: border-box;
+                    border-radius: 8px;
+                    font-size: 0.9rem;
+                    outline: none;
+                    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.01);
+                  "
+                  onkeyup="filtrarProductos()"
+                  autocomplete="off"
+                />
+              </div>
+
+              <button
+                onclick="exportarInventarioCSV()"
+                style="
+                  background: #22c55e;
+                  color: white;
+                  border: none;
+                  padding: 0 20px;
+                  height: 42px;
+                  font-size: 0.9rem;
+                  font-weight: 700;
+                  border-radius: 8px;
+                  cursor: pointer;
+                  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.25);
+                  transition: transform 0.2s;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  white-space: nowrap;
+                  box-sizing: border-box;
+                  flex-shrink: 0;
+                  width: auto;
+                "
+              >
+                <span style="font-size: 1.05rem">📄</span> Exportar Excel
+              </button>
+            </div>
+          </div>
+          <div id="contenedor-productos-lista" style="width: 100%"></div>
+        </div>
+      </div>
+
+      <div id="vista-pedidos" class="vista" style="display: none">
+        <div class="envios-fixed-header">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 15px;
+            "
+          >
+            <div>
+              <h2 style="margin: 0; color: #1e293b; font-size: 1.5rem">
+                📦 Gestión de Envíos
+              </h2>
+              <div style="color: #64748b; font-size: 0.9rem">
+                Control logístico y rastreo
+              </div>
+            </div>
+          </div>
+
+          <div class="toolbar-container">
+            <div class="search-box-styled">
+              <span class="search-icon-pos">🔍</span>
+              <input
+                type="text"
+                id="buscadorPedidos"
+                placeholder="Buscar cliente, guía, ID..."
+                onkeyup="filtrarTablaPedidos()"
+              />
+            </div>
+
+            <div class="date-group-styled">
+              <div class="date-item">
+                <span class="lbl-date">DESDE</span>
+                <input
+                  type="date"
+                  id="filtroFechaDesde"
+                  class="input-date-minimal"
+                  onchange="filtrarTablaPedidos()"
+                />
+              </div>
+
+              <div class="date-separator"></div>
+
+              <div class="date-item">
+                <span class="lbl-date">HASTA</span>
+                <input
+                  type="date"
+                  id="filtroFechaHasta"
+                  class="input-date-minimal"
+                  onchange="filtrarTablaPedidos()"
+                />
+              </div>
+            </div>
+
+            <div
+              class="filter-tabs"
+              style="background: #f1f3f5; padding: 3px; border-radius: 8px"
+            >
+              <button
+                class="filter-tab active"
+                onclick="filtrarEstado('Todos', this)"
+              >
+                Todos
+              </button>
+              <button
+                class="filter-tab"
+                onclick="filtrarEstado('Pendiente', this)"
+              >
+                Pendientes
+              </button>
+              <button
+                class="filter-tab"
+                onclick="filtrarEstado('Enviado', this)"
+              >
+                Enviados
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="envios-scroll-body">
+          <div
+            id="loading-pedidos"
+            style="text-align: center; padding: 60px; color: #64748b"
+          >
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; font-weight: 500">Sincronizando...</p>
+          </div>
+
+          <table
+            class="modern-table"
+            id="tablaPedidosMain"
+            style="display: none; width: 100%"
+          >
+            <thead class="sticky-thead">
+              <tr>
+                <th style="width: 15%">ID / Fecha</th>
+                <th style="width: 25%">Cliente</th>
+                <th style="width: 30%">Detalle</th>
+                <th style="width: 15%">Estatus</th>
+                <th style="width: 15%; text-align: right">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaPedidosBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div
+        id="vista-bajas"
+        class="vista"
+        style="display: none; padding-top: 10px"
+      >
+        <div
+          class="card"
+          style="
+            max-width: 1000px;
+            width: 100%;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            max-height: 86vh;
+            overflow: hidden;
+            border-radius: 12px;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          "
+        >
+          <div
+            style="
+              background: #fff3cd;
+              padding: 20px;
+              border-bottom: 1px solid #ffeeba;
+              flex-shrink: 0;
+            "
+          >
+            <h2 style="margin: 0; color: #856404; font-size: 1.4rem">
+              🗑️ Materiales Caducados
+            </h2>
+            <small style="color: #856404"
+              >Selecciona los lotes vencidos que deseas desincorporar del
+              inventario.</small
+            >
+          </div>
+
+          <div
+            id="loading-bajas"
+            style="
+              text-align: center;
+              margin: 20px;
+              color: #666;
+              display: none;
+              flex-shrink: 0;
+            "
+          >
+            <div class="spinner"></div>
+            <p>Buscando lotes vencidos...</p>
+          </div>
+
+          <div style="flex: 1 1 auto; overflow-y: auto; background: white">
+            <table
+              class="modern-table"
+              id="tablaBajas"
+              style="width: 100%; display: none; margin: 0"
+            >
+              <thead
+                style="
+                  position: sticky;
+                  top: 0;
+                  background: #f8f9fa;
+                  z-index: 10;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                "
+              >
+                <tr>
+                  <th style="width: 5%; text-align: center; padding: 12px 10px">
+                    <input
+                      type="checkbox"
+                      id="chkAllBajas"
+                      onchange="toggleAllBajas(this)"
+                      style="transform: scale(1.2); cursor: pointer"
+                    />
+                  </th>
+                  <th style="padding: 12px 10px">Producto</th>
+                  <th style="padding: 12px 10px">Presentación</th>
+                  <th style="padding: 12px 10px">Lote</th>
+                  <th style="padding: 12px 10px">Ubicación</th>
+                  <th style="padding: 12px 10px">Caducidad</th>
+                  <th style="text-align: right; padding: 12px 10px">
+                    Stock Disp.
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="tablaBajasBody"></tbody>
+            </table>
+          </div>
+
+          <div
+            style="
+              padding: 15px 20px;
+              background: white;
+              border-top: 1px solid #e2e8f0;
+              flex-shrink: 0;
+              display: flex;
+              justify-content: flex-end;
+              box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+              z-index: 15;
+            "
+          >
+            <button
+              onclick="prepararBaja()"
+              class="btn-field"
+              style="
+                background: #dc3545;
+                color: white;
+                border: none;
+                width: auto;
+                padding: 0 30px;
+                box-shadow: 0 4px 6px rgba(220, 53, 69, 0.2);
+              "
+            >
+              ➡️ Preparar Baja Seleccionada
+            </button>
+          </div>
+
+          <div
+            id="area-cola-bajas"
+            style="
+              display: none;
+              flex-shrink: 0;
+              background: #fff5f5;
+              border-top: 2px dashed #ffcccc;
+              max-height: 40vh;
+            "
+          >
+            <div style="display: flex; flex-direction: column; height: 100%">
+              <div style="padding: 15px 20px 10px 20px; flex-shrink: 0">
+                <h4 style="margin: 0; color: #c0392b">
+                  📋 Lotes a Desincorporar (<span id="contadorColaBajas">0</span
+                  >)
+                </h4>
+              </div>
+
+              <div style="flex: 1 1 auto; overflow-y: auto; padding: 0 20px">
+                <table
+                  style="
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 0.85rem;
+                  "
+                >
+                  <tbody id="tablaColaBajasBody"></tbody>
+                </table>
+              </div>
+
+              <div
+                style="
+                  padding: 15px 20px;
+                  flex-shrink: 0;
+                  border-top: 1px solid #ffcccc;
+                  background: #fff5f5;
+                "
+              >
+                <button
+                  onclick="confirmarBajaFinal()"
+                  class="btn-field"
+                  style="
+                    width: 100%;
+                    background: #333;
+                    color: white;
+                    border: none;
+                    font-size: 1rem;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+                  "
+                >
+                  📄 CONFIRMAR Y GENERAR REPORTES
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="vista-admin" class="vista" style="display: none; padding-top: 10px;">
+      <div class="card" style="max-width: 900px; width: 100%; padding: 0; display: flex; flex-direction: column; max-height: 86vh; overflow: hidden; border-radius: 12px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        
+        <div style="background: #1e293b; padding: 20px; border-bottom: 1px solid #0f172a; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+             <h2 style="margin: 0; color: white; font-size: 1.4rem;">⚙️ Gestión de Accesos</h2>
+             <small style="color: #94a3b8;">Controla quién puede entrar y qué puede ver.</small>
+          </div>
+          <button onclick="abrirModalUsuario()" class="btn-field" style="background: #3b82f6; color: white; border: none; width: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+            + Nuevo Usuario
+          </button>
+        </div>
+
+        <div id="loading-admin" style="text-align: center; margin: 20px; color: #666; display: none; flex-shrink: 0;">
+          <div class="spinner"></div><p>Cargando usuarios...</p>
+        </div>
+
+        <div style="flex: 1 1 auto; overflow-y: auto; background: white; padding: 15px;">
+          <table class="modern-table" style="width: 100%; margin: 0;">
+            <thead style="position: sticky; top: -15px; background: white; z-index: 10;">
+              <tr>
+                <th>Usuario / Correo</th>
+                <th style="text-align: center;">Es Admin</th>
+                <th>Permisos Activos</th>
+                <th style="text-align: right;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaUsuariosBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalUsuario" class="modal-overlay" style="display: none; z-index: 2005;">
+      <div class="modal-content" style="max-width: 450px;">
+        <h3 style="margin-top: 0; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">👤 Detalle de Usuario</h3>
+        
+        <div class="form-group">
+          <label>Correo Electrónico *</label>
+          <input type="email" id="adm_correo" class="input-modern" placeholder="usuario@empresa.com" autocomplete="off" />
+        </div>
+        
+        <div class="form-group" style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <label style="color: #0f172a; display: flex; align-items: center; justify-content: space-between;">
+             <span>🔑 PIN Secreto</span>
+             <input type="checkbox" id="adm_esAdmin" style="transform: scale(1.3); cursor: pointer;" onchange="document.getElementById('pin_hint').style.display = this.checked ? 'block' : 'none';">
+             <span style="font-size:0.8rem; font-weight:bold; color:#d63031;">Hacer Administrador</span>
+          </label>
+          <input type="password" id="adm_pin" class="input-modern" placeholder="Solo necesario si es Admin" style="margin-top: 10px;" autocomplete="off" />
+          <small id="pin_hint" style="display:none; color: #d63031; margin-top: 5px;">⚠️ Obligatorio para Administradores.</small>
+        </div>
+
+        <h4 style="margin: 15px 0 10px 0; color: #475569; font-size: 0.95rem;">Permisos de Operación:</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f1f5f9; padding: 15px; border-radius: 8px;">
+           <label style="display:flex; gap:8px; cursor:pointer;"><input type="checkbox" id="chk_entradas" style="transform:scale(1.2);"> 📦 Entradas</label>
+           <label style="display:flex; gap:8px; cursor:pointer;"><input type="checkbox" id="chk_salidas" style="transform:scale(1.2);"> 🚚 Salidas</label>
+           <label style="display:flex; gap:8px; cursor:pointer;"><input type="checkbox" id="chk_ubicaciones" style="transform:scale(1.2);"> 📍 Ubicaciones</label>
+           <label style="display:flex; gap:8px; cursor:pointer;"><input type="checkbox" id="chk_productos" style="transform:scale(1.2);"> 📊 Productos</label>
+           <label style="display:flex; gap:8px; cursor:pointer;"><input type="checkbox" id="chk_envios" style="transform:scale(1.2);"> 📦 Envíos</label>
+           <label style="display:flex; gap:8px; cursor:pointer;"><input type="checkbox" id="chk_bajas" style="transform:scale(1.2);"> 🗑️ Bajas</label>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+          <button onclick="cerrarModalGenerico('modalUsuario')" class="btn-field" style="flex: 1; background: #e2e8f0; color: #333; border: none;">Cancelar</button>
+          <button onclick="guardarUsuarioAdmin()" class="btn-field" style="flex: 1; background: #10b981; color: white; border: none;">💾 Guardar</button>
+        </div>
+      </div>
+    </div>
+
+      <div
+        id="modalProducto"
+        class="modal-overlay"
+        style="display: none; z-index: 1005"
+      >
+        <div class="modal-content">
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input type="text" id="nuevoNombre" class="input-modern" />
+          </div>
+
+          <div class="form-group">
+            <label>Descripción</label>
+            <input type="text" id="nuevaDescripcion" class="input-modern" />
+          </div>
+
+          <div class="form-group">
+            <label>Unidad *</label>
+            <select id="nuevaUnidad" class="input-modern">
+              <option value="L">Litros (L)</option>
+              <option value="Kg">Kilogramos (Kg)</option>
+              <option value="Unid">Unidad (Pza)</option>
+            </select>
           </div>
 
           <div style="display: flex; gap: 10px; margin-top: 20px">
             <button
-              onclick="cerrarModalGenerico('modalTransformacion')"
+              onclick="cerrarModal()"
+              class="btn-field"
+              style="flex: 1; background: #e5e5ea; border: none; color: #333"
+            >
+              Cancelar
+            </button>
+            <button
+              onclick="guardarProducto()"
+              class="btn-field"
+              style="flex: 1; background: #007aff; color: white; border: none"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="modalPresentacion" class="modal-overlay" style="display: none">
+        <div class="modal-content">
+          <h3>Nueva Presentación</h3>
+          <div class="form-group">
+            <label>Descripción</label>
+            <input
+              type="text"
+              id="nuevaPresDesc"
+              class="input-modern"
+              placeholder="Ej: Saco 25kg"
+            />
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button
+              onclick="cerrarModalGenerico('modalPresentacion')"
+              class="btn-field"
+              style="flex: 1; background: #e5e5ea; border: none; color: #333"
+            >
+              Cancelar
+            </button>
+            <button
+              onclick="guardarPresentacion()"
+              class="btn-field"
+              style="flex: 1; background: #5856d6; color: white; border: none"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="modalUbicacion" class="modal-overlay" style="display: none">
+        <div class="modal-content">
+          <h3>Nueva Ubicación</h3>
+          <div class="form-group">
+            <label>Nombre</label>
+            <input
+              type="text"
+              id="nuevaUbicNombre"
+              class="input-modern"
+              placeholder="Ej: Estante B"
+            />
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button
+              onclick="cerrarModalGenerico('modalUbicacion')"
+              class="btn-field"
+              style="flex: 1; background: #e5e5ea; border: none; color: #333"
+            >
+              Cancelar
+            </button>
+            <button
+              onclick="guardarUbicacion()"
+              class="btn-field"
+              style="flex: 1; background: #ff9500; color: white; border: none"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="modalEditarUbicacion"
+        class="modal-overlay"
+        style="display: none"
+      >
+        <div
+          class="modal-content"
+          style="max-width: 400px; padding-top: 0; overflow: hidden"
+        >
+          <div
+            style="
+              background: #007aff;
+              padding: 15px;
+              margin: 0 -20px 20px -20px;
+              text-align: center;
+            "
+          >
+            <h3 style="margin: 0; color: white">Editar Nombre</h3>
+          </div>
+          <div class="form-group">
+            <label>Nuevo Nombre:</label>
+            <input type="text" id="inputEditarNombre" class="input-modern" />
+          </div>
+          <div style="display: flex; gap: 10px">
+            <button
+              onclick="cerrarModalGenerico('modalEditarUbicacion')"
+              class="btn-field"
+              style="flex: 1; background: #e5e5ea; border: none"
+            >
+              Cancelar
+            </button>
+            <button
+              onclick="guardarEdicionUbicacion()"
+              class="btn-field"
+              style="flex: 1; background: #007aff; color: white; border: none"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="modalDetalleUbicacion"
+        class="modal-overlay"
+        style="display: none; z-index: 1000"
+      >
+        <div
+          class="modal-content"
+          style="
+            max-width: 800px;
+            width: 95%;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 85vh;
+          "
+        >
+          <div
+            style="
+              background: #f8fafc;
+              padding: 20px;
+              border-bottom: 1px solid #e2e8f0;
+              flex-shrink: 0;
+            "
+          >
+            <h3
+              id="tituloDetalle"
+              style="margin: 0; color: #1e293b; font-size: 1.25rem"
+            >
+              📍 Detalle Ubicación
+            </h3>
+          </div>
+
+          <div
+            style="
+              flex: 1 1 auto;
+              overflow-y: auto;
+              padding: 0;
+              background: white;
+            "
+          >
+            <table
+              style="width: 100%; border-collapse: collapse; font-size: 0.9rem"
+            >
+              <thead
+                style="
+                  position: sticky;
+                  top: 0;
+                  background: #ffffff;
+                  z-index: 10;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                "
+              >
+                <tr style="text-align: left; border-bottom: 2px solid #007aff">
+                  <th
+                    style="padding: 12px 10px; width: 40px; text-align: center"
+                  >
+                    <input
+                      type="checkbox"
+                      id="chkAllUbic"
+                      onchange="toggleAllUbicItems(this)"
+                      style="transform: scale(1.2); cursor: pointer"
+                    />
+                  </th>
+                  <th style="padding: 12px 10px; color: #007aff">Producto</th>
+                  <th style="padding: 12px 10px; color: #007aff">Lote</th>
+                  <th style="padding: 12px 10px; color: #007aff">Caducidad</th>
+                  <th
+                    style="
+                      padding: 12px 10px;
+                      text-align: right;
+                      color: #007aff;
+                    "
+                  >
+                    Stock
+                  </th>
+                  <th
+                    style="
+                      padding: 12px 10px;
+                      text-align: center;
+                      color: #007aff;
+                    "
+                  >
+                    Acción
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="tablaDetalleBody"></tbody>
+            </table>
+          </div>
+
+          <div
+            style="
+              background: #ffffff;
+              padding: 15px 20px;
+              border-top: 1px solid #e2e8f0;
+              flex-shrink: 0;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 10px;
+            "
+          >
+            <button
+              onclick="cerrarModalGenerico('modalDetalleUbicacion')"
+              class="btn-field"
+              style="
+                background: #f1f5f9;
+                color: #475569;
+                width: auto;
+                display: inline-flex;
+                border: 1px solid #cbd5e1;
+              "
+            >
+              Cerrar Detalle
+            </button>
+            <button
+              onclick="prepararTransferenciaMasiva()"
+              class="btn-field"
+              style="
+                background: #007aff;
+                color: white;
+                width: auto;
+                display: inline-flex;
+                box-shadow: 0 4px 6px rgba(0, 122, 255, 0.2);
+              "
+            >
+              🚚 Transferir Seleccionados
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="modalTransferenciaMasiva"
+        class="modal-overlay"
+        style="display: none; z-index: 1005"
+      >
+        <div class="modal-content" style="max-width: 400px">
+          <div style="text-align: center; margin-bottom: 20px">
+            <span style="font-size: 3rem">🚚</span>
+            <h3 style="margin: 10px 0 5px 0">Mover en Bloque</h3>
+            <p style="color: #666; font-size: 0.9rem; margin: 0">
+              Vas a mover
+              <strong
+                id="lblCantMasivaTransf"
+                style="color: #007aff; font-size: 1.1rem"
+                >0</strong
+              >
+              lote(s).
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label>¿A dónde los vas a mover?</label>
+            <select id="selDestinoMasivo" class="input-modern"></select>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 25px">
+            <button
+              onclick="cerrarModalGenerico('modalTransferenciaMasiva')"
               class="btn-field"
               style="flex: 1; background: #f1f3f5; border: none"
             >
               Cancelar
             </button>
             <button
-              onclick="confirmarTransformacion()"
+              onclick="confirmarTransferenciaMasiva()"
               class="btn-field"
-              style="flex: 1; background: #9b59b6; color: white; border: none"
+              style="flex: 1; background: #007aff; color: white; border: none"
             >
-              🛠️ Transformar
+              Confirmar Mover
             </button>
           </div>
         </div>
       </div>
-    </div>
 
-    <div
-      id="modalConfirmarMasivo"
-      class="modal-overlay"
-      style="display: none; z-index: 1005"
-    >
-      <div
-        class="modal-content"
-        style="max-width: 350px; text-align: center; padding: 25px"
-      >
-        <div style="font-size: 3rem; margin-bottom: 10px">💾</div>
-        <h3 style="margin: 0 0 10px 0; color: #333">¿Guardar Cambios?</h3>
-        <p style="color: #666; margin-bottom: 20px">
-          Vas a procesar
-          <strong id="lblCantMasiva" style="color: #007aff; font-size: 1.2rem"
-            >0</strong
-          >
-          partidas.
-        </p>
-        <div style="display: flex; gap: 10px">
-          <button
-            onclick="cerrarModalGenerico('modalConfirmarMasivo')"
-            class="btn-field"
-            style="flex: 1; background: #f1f3f5; border: none; color: #555"
-          >
-            Cancelar
-          </button>
-          <button
-            onclick="ejecutarGuardadoMasivo()"
-            class="btn-field"
-            style="flex: 1; background: #2ecc71; border: none; color: white"
-          >
-            Sí, Guardar
-          </button>
+      <div id="modalReubicacion" class="modal-overlay" style="display: none">
+        <div class="modal-content" style="max-width: 400px">
+          <div style="text-align: center; margin-bottom: 20px">
+            <span style="font-size: 3rem">🚚</span>
+            <h3>Ubicación con Existencias</h3>
+            <p style="color: #666">
+              Para eliminar, primero mueve el contenido.
+            </p>
+          </div>
+          <div class="form-group">
+            <label>Mover todo a:</label>
+            <select id="selectDestinoReubicacion" class="input-modern"></select>
+          </div>
+          <div style="display: flex; gap: 10px">
+            <button
+              onclick="cerrarModalGenerico('modalReubicacion')"
+              class="btn-field"
+              style="flex: 1; background: #e5e5ea; border: none"
+            >
+              Cancelar
+            </button>
+            <button
+              onclick="confirmarReubicacion()"
+              class="btn-field"
+              style="flex: 1; background: #ff3b30; color: white; border: none"
+            >
+              Mover y Eliminar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div
-      id="modalLogistica"
-      class="modal-overlay"
-      style="display: none; z-index: 2000"
-    >
       <div
-        class="modal-content"
-        style="
-          max-width: 900px;
-          padding: 0;
-          border-radius: 16px;
-          overflow: hidden;
-        "
+        id="modalTransferencia"
+        class="modal-overlay"
+        style="display: none; z-index: 1001"
       >
-        <div class="modal-header-checkout">
-          <h3>🚀 Finalizar Envío / Checkout</h3>
-          <button
-            onclick="cerrarModalGenerico('modalLogistica')"
-            style="
-              background: none;
-              border: none;
-              color: white;
-              font-size: 1.8rem;
-              cursor: pointer;
-              opacity: 0.8;
-            "
-          >
-            &times;
-          </button>
-        </div>
-
-        <div class="checkout-grid">
-          <div class="checkout-section">
-            <h4 class="checkout-title title-blue">👤 Datos del Destinatario</h4>
-
-            <div class="form-group">
-              <label
-                for="log_cliente_select"
-                style="font-weight: bold; color: #007aff"
-                >🔍 Buscar / Autocompletar:</label
-              >
-              <select
-                id="log_cliente_select"
-                class="input-modern input-compact"
-                onchange="alSeleccionarCliente()"
-                style="
-                  background: #f0f8ff;
-                  border-color: #b3d7ff;
-                  font-weight: 500;
-                "
-              >
-                <option value="">-- Nuevo / Manual --</option>
-              </select>
-            </div>
-
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
-            >
-              <div>
-                <label>Nombre Contacto *</label
-                ><input
-                  type="text"
-                  id="log_nombre"
-                  class="input-modern input-compact"
-                />
-              </div>
-              <div>
-                <label>Empresa / Negocio</label
-                ><input
-                  type="text"
-                  id="log_empresa"
-                  class="input-modern input-compact"
-                />
-              </div>
-            </div>
-
-            <div class="form-group" style="margin-top: 10px">
-              <label>Dirección Completa de Envío *</label>
-              <input
-                type="text"
-                id="log_direccion"
-                class="input-modern input-compact"
-                placeholder="Calle, Número, Colonia, Ciudad..."
-              />
-            </div>
-
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
-            >
-              <div>
-                <label>Teléfono</label
-                ><input
-                  type="text"
-                  id="log_telefono"
-                  class="input-modern input-compact"
-                />
-              </div>
-              <div>
-                <label>Email</label
-                ><input
-                  type="text"
-                  id="log_email"
-                  class="input-modern input-compact"
-                />
-              </div>
-            </div>
-
-            <div class="save-client-box">
-              <input
-                type="checkbox"
-                id="log_guardar_cliente"
-                style="transform: scale(1.2)"
-              />
-              <label
-                for="log_guardar_cliente"
-                style="
-                  margin: 0;
-                  font-weight: 500;
-                  color: #004085;
-                  cursor: pointer;
-                "
-                >Guardar estos datos en la agenda de clientes</label
-              >
-            </div>
-          </div>
-
-          <div class="checkout-section" style="border-top: 3px solid #d63031">
-            <h4 class="checkout-title title-red">🚚 Datos de Logística</h4>
-
-            <div class="form-group">
-              <label>Tipo de Envío</label>
-              <select id="log_tipo_envio" class="input-modern input-compact">
-                <option value="Nacional" selected>Nacional</option>
-                <option value="Internacional">Internacional</option>
-                <option value="Local">Entrega Local / Mostrador</option>
-              </select>
-            </div>
-
-            <div
-              style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px"
-            >
-              <div>
-                <label>Paquetería / Servicio</label
-                ><input
-                  type="text"
-                  id="log_paqueteria"
-                  class="input-modern input-compact"
-                  placeholder="Ej. DHL Express"
-                />
-              </div>
-              <div>
-                <label>Costo ($)</label
-                ><input
-                  type="number"
-                  id="log_costo"
-                  class="input-modern input-compact"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
-            <div
-              class="form-group"
+        <div
+          class="modal-content"
+          style="
+            max-width: 450px;
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+          "
+        >
+          <div style="background: #007aff; padding: 15px 20px">
+            <h3
               style="
-                margin-top: 15px;
-                background: #fff5f5;
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px dashed #d63031;
+                margin: 0;
+                color: white;
+                font-size: 1.1rem;
+                text-align: center;
               "
             >
-              <label
-                style="font-weight: bold; color: #c0392b; font-size: 0.9rem"
-                >🎫 Número de Guía / Rastreo (Tracking)</label
-              >
-              <input
-                type="text"
-                id="log_guia"
-                class="input-modern"
-                placeholder="Escanea o escribe la guía..."
+              Transferir Mercancía
+            </h3>
+          </div>
+          <div style="padding: 25px">
+            <div
+              style="
+                background: #f0f8ff;
+                padding: 12px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                border: 1px solid #cce5ff;
+              "
+            >
+              <strong
+                id="txtProductoTransf"
                 style="
-                  font-family: monospace;
-                  font-size: 1.1rem;
-                  font-weight: bold;
-                  letter-spacing: 1px;
-                  text-transform: uppercase;
-                  border-color: #d63031;
+                  display: block;
+                  font-size: 1rem;
+                  margin-bottom: 4px;
+                  color: #004085;
                 "
-              />
-              <small style="display: block; margin-top: 5px; color: #888"
-                >Si no la tienes, déjalo vacío (se marcará PENDIENTE).</small
+                >Producto</strong
               >
+              <span id="txtLoteTransf" style="color: #666; font-size: 0.9rem"
+                >Lote: ---</span
+              >
+            </div>
+            <div class="form-group">
+              <label>¿Cuántas piezas vas a mover?</label>
+              <div style="display: flex; gap: 10px; align-items: center">
+                <input
+                  type="number"
+                  id="cantTransferir"
+                  placeholder="0"
+                  min="1"
+                  step="1"
+                  onkeypress="
+                    return event.charCode >= 48 && event.charCode <= 57;
+                  "
+                  class="input-modern"
+                  oninput="calcularSimulacionTransferencia()"
+                />
+                <span style="font-weight: bold; color: #555; font-size: 1.1rem"
+                  >Pzas.</span
+                >
+              </div>
+            </div>
+            <div
+              style="
+                font-size: 0.85rem;
+                color: #666;
+                margin-bottom: 25px;
+                display: flex;
+                justify-content: space-between;
+                padding: 0 5px;
+              "
+            >
+              <span
+                >Equivale a:
+                <strong id="lblEquivalencia" style="color: #007aff"
+                  >0 L</strong
+                ></span
+              >
+              <span>Quedarán: <strong id="lblRestante">---</strong></span>
+            </div>
+            <div class="form-group">
+              <label>Destino:</label>
+              <select id="selDestinoTransf" class="input-modern"></select>
+            </div>
+            <div style="display: flex; gap: 12px">
+              <button
+                onclick="cerrarModalGenerico('modalTransferencia')"
+                class="btn-field"
+                style="flex: 1; background: #f1f3f5; border: none"
+              >
+                CANCELAR
+              </button>
+              <button
+                onclick="confirmarTransferencia()"
+                class="btn-field"
+                style="flex: 1; background: #007aff; color: white; border: none"
+              >
+                CONFIRMAR ➡️
+              </button>
             </div>
           </div>
         </div>
-        <div class="modal-footer-checkout">
-          <button
-            onclick="confirmarPedidoCompleto()"
-            class="btn-field btn-finish-order"
-          >
-            ✅ CONFIRMAR Y FINALIZAR ORDEN
-          </button>
+      </div>
+
+      <div
+        id="modalTransformacion"
+        class="modal-overlay"
+        style="display: none; z-index: 1002"
+      >
+        <div
+          class="modal-content"
+          style="max-width: 500px; padding: 0; overflow: hidden"
+        >
+          <div style="background: #9b59b6; padding: 15px 20px">
+            <h3 style="margin: 0; color: white; text-align: center">
+              🛠️ Transformar / Reetiquetar
+            </h3>
+          </div>
+          <div style="padding: 20px">
+            <div
+              style="
+                background: #f3e5f5;
+                padding: 10px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                border-left: 4px solid #9b59b6;
+              "
+            >
+              <small
+                style="
+                  color: #8e24aa;
+                  font-weight: bold;
+                  text-transform: uppercase;
+                "
+                >Origen:</small
+              >
+              <div id="lblTransfOrigen" style="font-weight: 600; color: #333">
+                Producto A
+              </div>
+              <div id="lblTransfLote" style="font-size: 0.85rem; color: #666">
+                Lote: ---
+              </div>
+            </div>
+            <div style="display: flex; gap: 15px; margin-bottom: 15px">
+              <div style="flex: 1">
+                <label
+                  style="font-weight: bold; display: block; margin-bottom: 5px"
+                  >A tomar (Piezas):</label
+                >
+                <input
+                  type="number"
+                  id="cantTransfPiezas"
+                  min="1"
+                  step="1"
+                  onkeypress="
+                    return event.charCode >= 48 && event.charCode <= 57;
+                  "
+                  placeholder="0"
+                  class="input-modern"
+                  oninput="calcTransf()"
+                />
+              </div>
+              <div style="flex: 1; padding-top: 28px">
+                <span style="color: #666">= </span
+                ><strong id="lblTransfLitros" style="color: #9b59b6"
+                  >0.00 L</strong
+                >
+              </div>
+            </div>
+            <hr
+              style="border: 0; border-top: 1px dashed #ccc; margin: 15px 0"
+            />
+            <h4 style="margin: 0 0 10px 0; color: #333">
+              ¿En qué se convierte?
+            </h4>
+
+            <div class="form-group">
+              <label>Nuevo Producto (Destino):</label>
+              <div style="display: flex; gap: 8px; align-items: center">
+                <input
+                  type="text"
+                  id="transf_producto_search"
+                  list="lista-transf-productos"
+                  class="input-modern"
+                  placeholder="Escribe para buscar o crear sub-producto..."
+                  onchange="seleccionarProductoTransf()"
+                  autocomplete="off"
+                />
+                <datalist id="lista-transf-productos"></datalist>
+                <input type="hidden" id="selTransfNuevoProd" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Nueva Presentación:</label>
+              <select
+                id="selTransfNuevaPres"
+                class="input-modern"
+                onchange="calcTransf()"
+              ></select>
+            </div>
+
+            <div class="form-group">
+              <label>Nuevo Lote (Opcional):</label>
+              <input
+                type="text"
+                id="inputTransfNuevoLote"
+                class="input-modern"
+                placeholder="Deja vacío para conservar el mismo lote"
+              />
+            </div>
+
+            <div
+              style="
+                margin-top: 15px;
+                text-align: right;
+                font-size: 0.9rem;
+                color: #555;
+              "
+            >
+              Resultado estimado:
+              <strong id="lblTransfResultado" style="color: #2ecc71"
+                >0 Piezas nuevas</strong
+              >
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px">
+              <button
+                onclick="cerrarModalGenerico('modalTransformacion')"
+                class="btn-field"
+                style="flex: 1; background: #f1f3f5; border: none"
+              >
+                Cancelar
+              </button>
+              <button
+                onclick="confirmarTransformacion()"
+                class="btn-field"
+                style="flex: 1; background: #9b59b6; color: white; border: none"
+              >
+                🛠️ Transformar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div
-      id="modalDetallePedido"
-      class="modal-overlay"
-      style="display: none; z-index: 2001"
-    >
       <div
-        class="modal-content"
+        id="modalConfirmarMasivo"
+        class="modal-overlay"
+        style="display: none; z-index: 1005"
+      >
+        <div
+          class="modal-content"
+          style="max-width: 350px; text-align: center; padding: 25px"
+        >
+          <div style="font-size: 3rem; margin-bottom: 10px">💾</div>
+          <h3 style="margin: 0 0 10px 0; color: #333">¿Guardar Cambios?</h3>
+          <p style="color: #666; margin-bottom: 20px">
+            Vas a procesar
+            <strong id="lblCantMasiva" style="color: #007aff; font-size: 1.2rem"
+              >0</strong
+            >
+            partidas.
+          </p>
+          <div style="display: flex; gap: 10px">
+            <button
+              onclick="cerrarModalGenerico('modalConfirmarMasivo')"
+              class="btn-field"
+              style="flex: 1; background: #f1f3f5; border: none; color: #555"
+            >
+              Cancelar
+            </button>
+            <button
+              onclick="ejecutarGuardadoMasivo()"
+              class="btn-field"
+              style="flex: 1; background: #2ecc71; border: none; color: white"
+            >
+              Sí, Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="modalLogistica"
+        class="modal-overlay"
+        style="display: none; z-index: 2000"
+      >
+        <div
+          class="modal-content"
+          style="
+            max-width: 900px;
+            padding: 0;
+            border-radius: 16px;
+            overflow: hidden;
+          "
+        >
+          <div class="modal-header-checkout">
+            <h3>🚀 Finalizar Envío / Checkout</h3>
+            <button
+              onclick="cerrarModalGenerico('modalLogistica')"
+              style="
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.8rem;
+                cursor: pointer;
+                opacity: 0.8;
+              "
+            >
+              &times;
+            </button>
+          </div>
+
+          <div class="checkout-grid">
+            <div class="checkout-section">
+              <h4 class="checkout-title title-blue">
+                👤 Datos del Destinatario
+              </h4>
+
+              <div class="form-group">
+                <label
+                  for="log_cliente_select"
+                  style="font-weight: bold; color: #007aff"
+                  >🔍 Buscar / Autocompletar:</label
+                >
+                <select
+                  id="log_cliente_select"
+                  class="input-modern input-compact"
+                  onchange="alSeleccionarCliente()"
+                  style="
+                    background: #f0f8ff;
+                    border-color: #b3d7ff;
+                    font-weight: 500;
+                  "
+                >
+                  <option value="">-- Nuevo / Manual --</option>
+                </select>
+              </div>
+
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+              >
+                <div>
+                  <label>Nombre Contacto *</label
+                  ><input
+                    type="text"
+                    id="log_nombre"
+                    class="input-modern input-compact"
+                  />
+                </div>
+                <div>
+                  <label>Empresa / Negocio</label
+                  ><input
+                    type="text"
+                    id="log_empresa"
+                    class="input-modern input-compact"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 10px">
+                <label>Dirección Completa de Envío *</label>
+                <input
+                  type="text"
+                  id="log_direccion"
+                  class="input-modern input-compact"
+                  placeholder="Calle, Número, Colonia, Ciudad..."
+                />
+              </div>
+
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+              >
+                <div>
+                  <label>Teléfono</label
+                  ><input
+                    type="text"
+                    id="log_telefono"
+                    class="input-modern input-compact"
+                  />
+                </div>
+                <div>
+                  <label>Email</label
+                  ><input
+                    type="text"
+                    id="log_email"
+                    class="input-modern input-compact"
+                  />
+                </div>
+              </div>
+
+              <div class="save-client-box">
+                <input
+                  type="checkbox"
+                  id="log_guardar_cliente"
+                  style="transform: scale(1.2)"
+                />
+                <label
+                  for="log_guardar_cliente"
+                  style="
+                    margin: 0;
+                    font-weight: 500;
+                    color: #004085;
+                    cursor: pointer;
+                  "
+                  >Guardar estos datos en la agenda de clientes</label
+                >
+              </div>
+            </div>
+
+            <div class="checkout-section" style="border-top: 3px solid #d63031">
+              <h4 class="checkout-title title-red">🚚 Datos de Logística</h4>
+
+              <div class="form-group">
+                <label>Tipo de Envío</label>
+                <select id="log_tipo_envio" class="input-modern input-compact">
+                  <option value="Nacional" selected>Nacional</option>
+                  <option value="Internacional">Internacional</option>
+                  <option value="Local">Entrega Local / Mostrador</option>
+                </select>
+              </div>
+
+              <div
+                style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px"
+              >
+                <div>
+                  <label>Paquetería / Servicio</label
+                  ><input
+                    type="text"
+                    id="log_paqueteria"
+                    class="input-modern input-compact"
+                    placeholder="Ej. DHL Express"
+                  />
+                </div>
+                <div>
+                  <label>Costo ($)</label
+                  ><input
+                    type="number"
+                    id="log_costo"
+                    class="input-modern input-compact"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div
+                class="form-group"
+                style="
+                  margin-top: 15px;
+                  background: #fff5f5;
+                  padding: 15px;
+                  border-radius: 8px;
+                  border: 1px dashed #d63031;
+                "
+              >
+                <label
+                  style="font-weight: bold; color: #c0392b; font-size: 0.9rem"
+                  >🎫 Número de Guía / Rastreo (Tracking)</label
+                >
+                <input
+                  type="text"
+                  id="log_guia"
+                  class="input-modern"
+                  placeholder="Escanea o escribe la guía..."
+                  style="
+                    font-family: monospace;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
+                    border-color: #d63031;
+                  "
+                />
+                <small style="display: block; margin-top: 5px; color: #888"
+                  >Si no la tienes, déjalo vacío (se marcará PENDIENTE).</small
+                >
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer-checkout">
+            <button
+              onclick="confirmarPedidoCompleto()"
+              class="btn-field btn-finish-order"
+            >
+              ✅ CONFIRMAR Y FINALIZAR ORDEN
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="modalDetallePedido"
+        class="modal-overlay"
+        style="display: none; z-index: 2001"
+      >
+        <div
+          class="modal-content"
+          style="
+            max-width: 750px;
+            padding: 0;
+            border-radius: 16px;
+            overflow: hidden;
+          "
+        >
+          <div
+            style="
+              background: #333;
+              padding: 15px 25px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <h3 style="margin: 0; color: white; font-size: 1.1rem">
+              📦 Gestión de Envío
+            </h3>
+            <button
+              onclick="cerrarModalGenerico('modalDetallePedido')"
+              style="
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.8rem;
+                cursor: pointer;
+                opacity: 0.7;
+              "
+            >
+              &times;
+            </button>
+          </div>
+
+          <div id="contenido-modal-pedido"></div>
+        </div>
+      </div>
+
+      <div
+        id="global-loader"
         style="
-          max-width: 750px;
-          padding: 0;
-          border-radius: 16px;
-          overflow: hidden;
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.8);
+          z-index: 9999;
+          justify-content: center;
+          align-items: center;
+          flex-direction: column;
         "
       >
         <div
+          class="spinner"
           style="
-            background: #333;
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007aff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
           "
-        >
-          <h3 style="margin: 0; color: white; font-size: 1.1rem">
-            📦 Gestión de Envío
-          </h3>
-          <button
-            onclick="cerrarModalGenerico('modalDetallePedido')"
-            style="
-              background: none;
-              border: none;
-              color: white;
-              font-size: 1.8rem;
-              cursor: pointer;
-              opacity: 0.7;
-            "
-          >
-            &times;
-          </button>
-        </div>
-
-        <div id="contenido-modal-pedido"></div>
+        ></div>
+        <p style="margin-top: 15px; font-weight: bold; color: #555">
+          Procesando...
+        </p>
       </div>
-    </div>
 
-    <div
-      id="global-loader"
-      style="
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.8);
-        z-index: 9999;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-      "
-    >
-      <div
-        class="spinner"
-        style="
-          border: 5px solid #f3f3f3;
-          border-top: 5px solid #007aff;
-          border-radius: 50%;
-          width: 50px;
-          height: 50px;
-          animation: spin 1s linear infinite;
-        "
-      ></div>
-      <p style="margin-top: 15px; font-weight: bold; color: #555">
-        Procesando...
-      </p>
-    </div>
+      <div id="toast-container"></div>
+      <?!= include('frontend/js.loader'); ?>
 
-    <div id="toast-container"></div>
-    <?!= include('frontend/js.loader'); ?>
+      <script>
+        // ==========================================
+        // LÓGICA DE BAJAS POR CADUCIDAD (FASES 1 Y 2)
+        // ==========================================
 
-    <script>
-      // ==========================================
-      // LÓGICA DE BAJAS POR CADUCIDAD (FASES 1 Y 2)
-      // ==========================================
+        let CACHE_CADUCADOS = [];
+        let COLA_BAJAS = [];
 
-      let CACHE_CADUCADOS = [];
-      let COLA_BAJAS = [];
-
-      function formatearCantidadUnidad(valor, unidad) {
-        const num = Number(valor) || 0;
-        const u = unidad || "L";
-        return u === "Pza"
-          ? `${Math.round(num)} ${u}`
-          : `${num.toFixed(2)} ${u}`;
-      }
-
-      // --- FASE 1: CARGA Y VISUALIZACIÓN ---
-
-      function cargarCaducados() {
-        const loading = document.getElementById("loading-bajas");
-        const tabla = document.getElementById("tablaBajas");
-        const tbody = document.getElementById("tablaBajasBody");
-
-        if (loading) loading.style.display = "block";
-        if (tabla) tabla.style.display = "none";
-        if (tbody) tbody.innerHTML = "";
-
-        google.script.run
-          .withSuccessHandler(function (data) {
-            if (loading) loading.style.display = "none";
-            CACHE_CADUCADOS = data || [];
-            renderTablaBajas();
-          })
-          .withFailureHandler(function (err) {
-            if (loading) loading.style.display = "none";
-            mostrarToast("Error al cargar caducados: " + err.message, "error");
-          })
-          .obtenerMaterialesCaducados();
-      }
-
-      function renderTablaBajas() {
-        const tabla = document.getElementById("tablaBajas");
-        const tbody = document.getElementById("tablaBajasBody");
-        const chkAll = document.getElementById("chkAllBajas");
-        if (!tbody) return;
-
-        tbody.innerHTML = "";
-        if (chkAll) chkAll.checked = false;
-
-        if (CACHE_CADUCADOS.length === 0) {
-          tabla.style.display = "table";
-          tbody.innerHTML =
-            '<tr><td colspan="7" style="text-align:center; padding:40px; color:#28a745; font-size:1.1rem; font-weight:bold;">✅ ¡Excelente! No hay materiales caducados en tu inventario.</td></tr>';
-          return;
+        function formatearCantidadUnidad(valor, unidad) {
+          const num = Number(valor) || 0;
+          const u = unidad || "L";
+          return u === "Pza"
+            ? `${Math.round(num)} ${u}`
+            : `${num.toFixed(2)} ${u}`;
         }
 
-        tabla.style.display = "table";
+        // --- FASE 1: CARGA Y VISUALIZACIÓN ---
 
-        CACHE_CADUCADOS.forEach((item, index) => {
-          // CORRECCIÓN: Filtro estricto (Producto + Presentación + Lote + Ubicación)
-          const yaAgregado = COLA_BAJAS.some(
-            (i) =>
-              i.producto === item.producto &&
-              i.presentacion === item.presentacion &&
-              i.lote === item.lote &&
-              i.ubicacion === item.ubicacion,
-          );
+        function cargarCaducados() {
+          const loading = document.getElementById("loading-bajas");
+          const tabla = document.getElementById("tablaBajas");
+          const tbody = document.getElementById("tablaBajasBody");
 
-          const trStyle = yaAgregado
-            ? "opacity: 0.5; background-color: #f1f5f9; pointer-events: none;"
-            : "";
-          const chkAttr = yaAgregado ? "disabled checked" : "";
+          if (loading) loading.style.display = "block";
+          if (tabla) tabla.style.display = "none";
+          if (tbody) tbody.innerHTML = "";
 
-          const tr = document.createElement("tr");
-          tr.style.cssText = trStyle;
-
-          let prName = (item.presentacion || "").toLowerCase();
-          let unidadDisp = prName.includes("kg")
-            ? "Kg"
-            : prName.includes("pza") || prName.includes("unid")
-              ? "Pza"
-              : "L";
-          let volDisp =
-            unidadDisp === "Pza" ? Math.round(item.volumen) : item.volumen;
-
-          tr.innerHTML = `
-          <td style="text-align: center;"><input type="checkbox" class="chk-baja" data-index="${index}" ${chkAttr} style="transform: scale(1.2); cursor:pointer;"></td>
-          <td style="font-weight: 600; color: #333;">${item.producto}</td>
-          <td style="font-size: 0.85rem; color: #666;">${item.presentacion}</td>
-          <td style="font-family: monospace; color: #d63031; font-weight: bold; background:#fff5f5; padding:2px 6px; border-radius:4px;">${item.lote}</td>
-          <td style="font-size: 0.85rem;">${item.ubicacion}</td>
-          <td style="color: #dc3545; font-weight: bold;">${item.caducidadStr}</td>
-          <td style="text-align: right; font-weight: bold; color: #007aff;">${volDisp} ${unidadDisp}</td>
-        `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      function toggleAllBajas(source) {
-        // Solo agarramos los checkboxes que NO estén deshabilitados
-        const checkboxes = document.querySelectorAll(
-          ".chk-baja:not(:disabled)",
-        );
-        checkboxes.forEach((chk) => (chk.checked = source.checked));
-      }
-
-      // --- FASE 2: EL CARRITO DE BAJAS ---
-
-      function prepararBaja() {
-        const checkboxes = document.querySelectorAll(
-          ".chk-baja:checked:not(:disabled)",
-        );
-        if (checkboxes.length === 0) {
-          return Swal.fire(
-            "Atención",
-            "Selecciona al menos un material válido para dar de baja.",
-            "warning",
-          );
+          google.script.run
+            .withSuccessHandler(function (data) {
+              if (loading) loading.style.display = "none";
+              CACHE_CADUCADOS = data || [];
+              renderTablaBajas();
+            })
+            .withFailureHandler(function (err) {
+              if (loading) loading.style.display = "none";
+              mostrarToast(
+                "Error al cargar caducados: " + err.message,
+                "error",
+              );
+            })
+            .obtenerMaterialesCaducados();
         }
 
-        checkboxes.forEach((chk) => {
-          const idx = chk.getAttribute("data-index");
-          const item = CACHE_CADUCADOS[idx];
+        function renderTablaBajas() {
+          const tabla = document.getElementById("tablaBajas");
+          const tbody = document.getElementById("tablaBajasBody");
+          const chkAll = document.getElementById("chkAllBajas");
+          if (!tbody) return;
 
-          // CORRECCIÓN: Filtro estricto para evitar duplicados reales
-          const existe = COLA_BAJAS.find(
-            (i) =>
-              i.producto === item.producto &&
-              i.presentacion === item.presentacion &&
-              i.lote === item.lote &&
-              i.ubicacion === item.ubicacion,
-          );
-
-          if (!existe) {
-            COLA_BAJAS.push(item);
-          }
-        });
-
-        renderColaBajas();
-        renderTablaBajas();
-        mostrarToast("Agregados a la lista de desincorporación 👇", "success");
-      }
-      function renderColaBajas() {
-        const area = document.getElementById("area-cola-bajas");
-        const tbody = document.getElementById("tablaColaBajasBody");
-        const contador = document.getElementById("contadorColaBajas");
-
-        if (contador) contador.innerText = COLA_BAJAS.length;
-
-        if (COLA_BAJAS.length === 0) {
-          if (area) area.style.display = "none";
-          return;
-        }
-
-        if (area) area.style.display = "block";
-        if (tbody) {
           tbody.innerHTML = "";
-          COLA_BAJAS.forEach((item, i) => {
+          if (chkAll) chkAll.checked = false;
+
+          if (CACHE_CADUCADOS.length === 0) {
+            tabla.style.display = "table";
+            tbody.innerHTML =
+              '<tr><td colspan="7" style="text-align:center; padding:40px; color:#28a745; font-size:1.1rem; font-weight:bold;">✅ ¡Excelente! No hay materiales caducados en tu inventario.</td></tr>';
+            return;
+          }
+
+          tabla.style.display = "table";
+
+          CACHE_CADUCADOS.forEach((item, index) => {
+            // CORRECCIÓN: Filtro estricto (Producto + Presentación + Lote + Ubicación)
+            const yaAgregado = COLA_BAJAS.some(
+              (i) =>
+                i.producto === item.producto &&
+                i.presentacion === item.presentacion &&
+                i.lote === item.lote &&
+                i.ubicacion === item.ubicacion,
+            );
+
+            const trStyle = yaAgregado
+              ? "opacity: 0.5; background-color: #f1f5f9; pointer-events: none;"
+              : "";
+            const chkAttr = yaAgregado ? "disabled checked" : "";
+
             const tr = document.createElement("tr");
-            tr.style.borderBottom = "1px solid #eee";
+            tr.style.cssText = trStyle;
 
             let prName = (item.presentacion || "").toLowerCase();
             let unidadDisp = prName.includes("kg")
@@ -2240,6 +2536,94 @@
               unidadDisp === "Pza" ? Math.round(item.volumen) : item.volumen;
 
             tr.innerHTML = `
+          <td style="text-align: center;"><input type="checkbox" class="chk-baja" data-index="${index}" ${chkAttr} style="transform: scale(1.2); cursor:pointer;"></td>
+          <td style="font-weight: 600; color: #333;">${item.producto}</td>
+          <td style="font-size: 0.85rem; color: #666;">${item.presentacion}</td>
+          <td style="font-family: monospace; color: #d63031; font-weight: bold; background:#fff5f5; padding:2px 6px; border-radius:4px;">${item.lote}</td>
+          <td style="font-size: 0.85rem;">${item.ubicacion}</td>
+          <td style="color: #dc3545; font-weight: bold;">${item.caducidadStr}</td>
+          <td style="text-align: right; font-weight: bold; color: #007aff;">${volDisp} ${unidadDisp}</td>
+        `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        function toggleAllBajas(source) {
+          // Solo agarramos los checkboxes que NO estén deshabilitados
+          const checkboxes = document.querySelectorAll(
+            ".chk-baja:not(:disabled)",
+          );
+          checkboxes.forEach((chk) => (chk.checked = source.checked));
+        }
+
+        // --- FASE 2: EL CARRITO DE BAJAS ---
+
+        function prepararBaja() {
+          const checkboxes = document.querySelectorAll(
+            ".chk-baja:checked:not(:disabled)",
+          );
+          if (checkboxes.length === 0) {
+            return Swal.fire(
+              "Atención",
+              "Selecciona al menos un material válido para dar de baja.",
+              "warning",
+            );
+          }
+
+          checkboxes.forEach((chk) => {
+            const idx = chk.getAttribute("data-index");
+            const item = CACHE_CADUCADOS[idx];
+
+            // CORRECCIÓN: Filtro estricto para evitar duplicados reales
+            const existe = COLA_BAJAS.find(
+              (i) =>
+                i.producto === item.producto &&
+                i.presentacion === item.presentacion &&
+                i.lote === item.lote &&
+                i.ubicacion === item.ubicacion,
+            );
+
+            if (!existe) {
+              COLA_BAJAS.push(item);
+            }
+          });
+
+          renderColaBajas();
+          renderTablaBajas();
+          mostrarToast(
+            "Agregados a la lista de desincorporación 👇",
+            "success",
+          );
+        }
+        function renderColaBajas() {
+          const area = document.getElementById("area-cola-bajas");
+          const tbody = document.getElementById("tablaColaBajasBody");
+          const contador = document.getElementById("contadorColaBajas");
+
+          if (contador) contador.innerText = COLA_BAJAS.length;
+
+          if (COLA_BAJAS.length === 0) {
+            if (area) area.style.display = "none";
+            return;
+          }
+
+          if (area) area.style.display = "block";
+          if (tbody) {
+            tbody.innerHTML = "";
+            COLA_BAJAS.forEach((item, i) => {
+              const tr = document.createElement("tr");
+              tr.style.borderBottom = "1px solid #eee";
+
+              let prName = (item.presentacion || "").toLowerCase();
+              let unidadDisp = prName.includes("kg")
+                ? "Kg"
+                : prName.includes("pza") || prName.includes("unid")
+                  ? "Pza"
+                  : "L";
+              let volDisp =
+                unidadDisp === "Pza" ? Math.round(item.volumen) : item.volumen;
+
+              tr.innerHTML = `
             <td style="width: 60%; padding: 10px 2px; vertical-align: middle;">
                <div style="font-weight:600; font-size:0.9rem; color:#333;">
                   ${item.producto} <span style="font-weight:normal; color:#666; font-size:0.8rem;">(${item.presentacion})</span>
@@ -2256,75 +2640,76 @@
                <button onclick="eliminarDeBajas(${i})" style="border:none; background:transparent; cursor:pointer; font-size:1.3rem; color:#dc3545;" title="Quitar de la lista">🗑️</button>
             </td>
           `;
-            tbody.appendChild(tr);
-          });
+              tbody.appendChild(tr);
+            });
+          }
         }
-      }
 
-      function eliminarDeBajas(index) {
-        COLA_BAJAS.splice(index, 1);
-        renderColaBajas();
+        function eliminarDeBajas(index) {
+          COLA_BAJAS.splice(index, 1);
+          renderColaBajas();
 
-        // ESTA ES LA CLAVE: Volver a dibujar arriba para quitarles lo gris
-        renderTablaBajas();
+          // ESTA ES LA CLAVE: Volver a dibujar arriba para quitarles lo gris
+          renderTablaBajas();
 
-        mostrarToast("Lote removido de la lista.", "info");
-      }
+          mostrarToast("Lote removido de la lista.", "info");
+        }
 
-      function confirmarBajaFinal() {
-        if (COLA_BAJAS.length === 0)
-          return Swal.fire("Error", "La lista está vacía", "error");
+        function confirmarBajaFinal() {
+          if (COLA_BAJAS.length === 0)
+            return Swal.fire("Error", "La lista está vacía", "error");
 
-        Swal.fire({
-          title: "¿Confirmar Desincorporación?",
-          text: `Se darán de baja ${COLA_BAJAS.length} lote(s). Esto descontará el stock inmediatamente y creará un archivo Excel/PDF en tu cuenta.`,
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonColor: "#d63031",
-          cancelButtonColor: "#6c757d",
-          confirmButtonText: "Sí, Ejecutar Baja",
-        }).then((result) => {
-          if (result.isConfirmed) {
-            // Usamos la misma función del loader global para que se vea cargando
-            if (typeof mostrarCargando === "function")
-              mostrarCargando("Generando reportes y descontando stock...");
+          Swal.fire({
+            title: "¿Confirmar Desincorporación?",
+            text: `Se darán de baja ${COLA_BAJAS.length} lote(s). Esto descontará el stock inmediatamente y creará un archivo Excel/PDF en tu cuenta.`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d63031",
+            cancelButtonColor: "#6c757d",
+            confirmButtonText: "Sí, Ejecutar Baja",
+          }).then((result) => {
+            if (result.isConfirmed) {
+              // Usamos la misma función del loader global para que se vea cargando
+              if (typeof mostrarCargando === "function")
+                mostrarCargando("Generando reportes y descontando stock...");
 
-            google.script.run
-              .withSuccessHandler(function (res) {
-                if (typeof ocultarCargando === "function") ocultarCargando();
+              google.script.run
+                .withSuccessHandler(function (res) {
+                  if (typeof ocultarCargando === "function") ocultarCargando();
 
-                if (res && res.success) {
-                  Swal.fire({
-                    title: "¡Baja Exitosa!",
-                    html: `
+                  if (res && res.success) {
+                    Swal.fire({
+                      title: "¡Baja Exitosa!",
+                      html: `
                              <p style="margin-bottom:20px; color:#555;">El inventario ha sido actualizado correctamente.</p>
                              <div style="display:flex; gap:10px; justify-content:center;">
                                 <a href="${res.urlExcel}" target="_blank" style="flex:1; padding:12px; background:#10b981; color:white; border-radius:8px; text-decoration:none; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1);">📊 Ver Hoja / Excel</a>
                                 <a href="${res.urlPDF}" target="_blank" style="flex:1; padding:12px; background:#ef4444; color:white; border-radius:8px; text-decoration:none; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1);">📄 Bajar PDF</a>
                              </div>
                           `,
-                    icon: "success",
-                    showConfirmButton: false, // Quitamos el OK, que le den clic a los botones
-                    showCloseButton: true,
-                  }).then(() => {
-                    COLA_BAJAS = [];
-                    renderColaBajas();
-                    cargarCaducados(); // Recargar la tabla de arriba
-                    if (typeof cargarDashboardProductos === "function")
-                      cargarDashboardProductos();
-                  });
-                } else {
-                  Swal.fire("Error", res.error, "error");
-                }
-              })
-              .withFailureHandler(function (err) {
-                if (typeof ocultarCargando === "function") ocultarCargando();
-                Swal.fire("Error", err.message, "error");
-              })
-              .procesarBajaOficial(COLA_BAJAS);
-          }
-        });
-      }
-    </script>
+                      icon: "success",
+                      showConfirmButton: false, // Quitamos el OK, que le den clic a los botones
+                      showCloseButton: true,
+                    }).then(() => {
+                      COLA_BAJAS = [];
+                      renderColaBajas();
+                      cargarCaducados(); // Recargar la tabla de arriba
+                      if (typeof cargarDashboardProductos === "function")
+                        cargarDashboardProductos();
+                    });
+                  } else {
+                    Swal.fire("Error", res.error, "error");
+                  }
+                })
+                .withFailureHandler(function (err) {
+                  if (typeof ocultarCargando === "function") ocultarCargando();
+                  Swal.fire("Error", err.message, "error");
+                })
+                .procesarBajaOficial(COLA_BAJAS);
+            }
+          });
+        }
+      </script>
+    </div>
   </body>
 </html>

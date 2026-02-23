@@ -45,6 +45,7 @@ if (vistaId === 'vista-operacion') {
   if (vistaId === 'vista-ubicaciones' && typeof cargarDashboardUbicaciones === 'function') cargarDashboardUbicaciones();
   if (vistaId === 'vista-productos' && typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
   if (vistaId === 'vista-pedidos' && typeof cargarDashboardPedidos === 'function') cargarDashboardPedidos();
+  if (vistaId === 'vista-admin' && typeof cargarDashboardAdmin === 'function') cargarDashboardAdmin();
 };
 
 function recargarSelectores() {
@@ -368,4 +369,145 @@ function seleccionarProductoSalidaDesdeBusqueda() {
         if (typeof limpiarCamposSalidaParcial === 'function') limpiarCamposSalidaParcial();
         if (divDisp) { divDisp.innerHTML = ""; divDisp.style.display = "none"; }
     }
+}
+
+// ==========================================
+// LÓGICA DEL PANEL DE ADMINISTRACIÓN
+// ==========================================
+let CACHE_USUARIOS = [];
+
+function cargarDashboardAdmin() {
+    document.getElementById("loading-admin").style.display = "block";
+    document.getElementById("tablaUsuariosBody").innerHTML = "";
+
+    google.script.run
+      .withSuccessHandler(function (usuarios) {
+          document.getElementById("loading-admin").style.display = "none";
+          CACHE_USUARIOS = usuarios;
+          renderTablaUsuarios();
+      })
+      .withFailureHandler(function (e) {
+          document.getElementById("loading-admin").style.display = "none";
+          Swal.fire("Error", e.message, "error");
+      })
+      .obtenerListaUsuarios();
+}
+
+function renderTablaUsuarios() {
+    const tbody = document.getElementById("tablaUsuariosBody");
+    tbody.innerHTML = "";
+
+    CACHE_USUARIOS.forEach((u, index) => {
+        const tr = document.createElement("tr");
+        
+        let tags = [];
+        if(u.entradas) tags.push("Entradas");
+        if(u.salidas) tags.push("Salidas");
+        if(u.ubicaciones) tags.push("Ubic.");
+        if(u.productos) tags.push("Prod.");
+        if(u.envios) tags.push("Envíos");
+        if(u.bajas) tags.push("Bajas");
+        
+        let badgesHtml = tags.map(t => `<span style="background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:4px; font-size:0.7rem; margin-right:4px;">${t}</span>`).join("");
+        if(tags.length === 0) badgesHtml = `<span style="color:#94a3b8; font-style:italic; font-size:0.8rem;">Sin accesos operativos</span>`;
+
+        let adminBadge = u.esAdmin ? `<span style="background:#fef2f2; color:#dc2626; padding:4px 8px; border-radius:6px; font-weight:bold; font-size:0.75rem;">⭐ Admin</span>` : `<span style="color:#94a3b8;">No</span>`;
+
+        tr.innerHTML = `
+            <td style="font-weight:bold; color:#1e293b;">${u.correo}</td>
+            <td style="text-align:center;">${adminBadge}</td>
+            <td><div style="display:flex; flex-wrap:wrap; gap:4px;">${badgesHtml}</div></td>
+            <td style="text-align:right;">
+                <button onclick="abrirModalUsuario(${index})" class="btn-action btn-move" title="Editar" style="background:#f1f5f9; color:#334155;">✏️</button>
+                <button onclick="eliminarUsuarioAdmin('${u.correo}')" class="btn-action btn-transf" title="Eliminar" style="background:#fef2f2; color:#dc2626;">🗑️</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function abrirModalUsuario(index = -1) {
+    const u = index >= 0 ? CACHE_USUARIOS[index] : null;
+    
+    document.getElementById("adm_correo").value = u ? u.correo : "";
+    document.getElementById("adm_correo").disabled = (u != null); // No se puede cambiar el correo una vez creado
+    document.getElementById("adm_pin").value = u ? u.pin : "";
+    
+    document.getElementById("adm_esAdmin").checked = u ? u.esAdmin : false;
+    document.getElementById("pin_hint").style.display = (u && u.esAdmin) ? 'block' : 'none';
+
+    document.getElementById("chk_entradas").checked = u ? u.entradas : false;
+    document.getElementById("chk_salidas").checked = u ? u.salidas : false;
+    document.getElementById("chk_ubicaciones").checked = u ? u.ubicaciones : false;
+    document.getElementById("chk_productos").checked = u ? u.productos : false;
+    document.getElementById("chk_envios").checked = u ? u.envios : false;
+    document.getElementById("chk_bajas").checked = u ? u.bajas : false;
+
+    abrirModalGenerico('modalUsuario');
+}
+
+function guardarUsuarioAdmin() {
+    const correo = document.getElementById("adm_correo").value.trim().toLowerCase();
+    const pin = document.getElementById("adm_pin").value.trim();
+    const esAdmin = document.getElementById("adm_esAdmin").checked;
+
+    if (!correo) return Swal.fire("Atención", "El correo es obligatorio.", "warning");
+    if (esAdmin && !pin) return Swal.fire("Atención", "Los administradores deben tener un PIN secreto.", "warning");
+
+    const usuario = {
+        correo: correo,
+        pin: pin,
+        esAdmin: esAdmin,
+        entradas: document.getElementById("chk_entradas").checked,
+        salidas: document.getElementById("chk_salidas").checked,
+        ubicaciones: document.getElementById("chk_ubicaciones").checked,
+        productos: document.getElementById("chk_productos").checked,
+        envios: document.getElementById("chk_envios").checked,
+        bajas: document.getElementById("chk_bajas").checked
+    };
+
+    cerrarModalGenerico('modalUsuario');
+    Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    google.script.run
+        .withSuccessHandler(res => {
+            if (res.success) {
+                cargarDashboardAdmin();
+                Swal.fire("¡Listo!", "Usuario guardado correctamente.", "success");
+            } else {
+                Swal.fire("Error", res.error, "error");
+            }
+        })
+        .withFailureHandler(e => Swal.fire("Error", e.message, "error"))
+        .guardarUsuario(usuario);
+}
+
+function eliminarUsuarioAdmin(correo) {
+    Swal.fire({
+        title: '¿Revocar acceso?',
+        text: `El usuario ${correo} ya no podrá entrar al sistema.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, eliminar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            // Pasamos el correo de la persona que está intentando borrar (para que no te borres a ti mismo)
+            const miCorreo = localStorage.getItem("inventario_email");
+            
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res.success) {
+                        cargarDashboardAdmin();
+                        Swal.fire("Eliminado", "Acceso revocado.", "success");
+                    } else {
+                        Swal.fire("Denegado", res.error, "error");
+                    }
+                })
+                .withFailureHandler(e => Swal.fire("Error", e.message, "error"))
+                .eliminarUsuario(correo, miCorreo);
+        }
+    });
 }

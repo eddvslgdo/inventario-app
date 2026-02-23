@@ -1,13 +1,150 @@
 function initApp() {
-  cambiarVista('vista-operacion');
+  // Verificamos si ya había un correo y PIN guardados en este navegador
+  const emailGuardado = localStorage.getItem("inventario_email");
+  const pinGuardado = localStorage.getItem("inventario_pin");
   
-  // 1. Averiguamos el entorno actual antes de cargar los catálogos
-  google.script.run.withSuccessHandler(mode => {
-     updateEnvButton(mode);
-     recargarSelectores(); 
-  }).getCurrentEnvironment();
+  if (emailGuardado) {
+    // Si sí hay, entramos directo
+    ejecutarAutenticacion(emailGuardado, pinGuardado, true);
+  } else {
+    mostrarPantallaLogin();
+  }
 }
 
+function mostrarPantallaLogin() {
+    document.getElementById("vista-login").style.display = "flex";
+    document.getElementById("app-principal").style.display = "none";
+    reiniciarLogin();
+    if (typeof ocultarCargando === "function") ocultarCargando();
+}
+
+function reiniciarLogin() {
+    document.getElementById("input-correo").style.display = "block";
+    document.getElementById("input-pin-admin").style.display = "none";
+    document.getElementById("input-pin-admin").value = "";
+    document.getElementById("btn-login").innerText = "Continuar";
+    document.getElementById("btn-login-back").style.display = "none";
+    document.getElementById("login-subtitle").innerText = "Ingresa tu correo asignado";
+}
+
+function procesarLogin() {
+  const email = document.getElementById("input-correo").value.trim();
+  const pinField = document.getElementById("input-pin-admin");
+  const pin = pinField.value.trim();
+  
+  if (!email) return Swal.fire("Atención", "Ingresa un correo", "warning");
+  
+  // Si el campo de la contraseña ya está visible y está vacío...
+  if (pinField.style.display === "block" && !pin) {
+     return Swal.fire("Atención", "Por favor ingresa tu PIN de Administrador", "warning");
+  }
+  
+  const btn = document.getElementById("btn-login");
+  btn.innerText = "Verificando...";
+  btn.disabled = true;
+  
+  ejecutarAutenticacion(email, pin, false);
+}
+
+function ejecutarAutenticacion(email, pin, esAutomatico) {
+  if (!esAutomatico && typeof mostrarCargando === "function") mostrarCargando("Verificando credenciales...");
+  
+  google.script.run
+    .withSuccessHandler(res => {
+       if (typeof ocultarCargando === "function") ocultarCargando();
+       const btn = document.getElementById("btn-login");
+       if (btn) { btn.innerText = "Continuar"; btn.disabled = false; }
+
+       // LA MAGIA DE LA CONTRASEÑA DE ADMIN
+       if (res.requiresPin) {
+          document.getElementById("input-correo").style.display = "none";
+          document.getElementById("input-pin-admin").style.display = "block";
+          document.getElementById("input-pin-admin").focus();
+          document.getElementById("btn-login-back").style.display = "block";
+          document.getElementById("btn-login").innerText = "Ingresar";
+          document.getElementById("login-subtitle").innerText = "🔒 Ingresa tu PIN de Administrador";
+          return; // Detenemos aquí, hasta que el usuario meta el PIN
+       }
+
+       if (res.success) {
+          // GUARDAR EN MEMORIA (Para que mañana no le pida login)
+          localStorage.setItem("inventario_email", email);
+          if (pin) localStorage.setItem("inventario_pin", pin);
+          
+          document.getElementById("vista-login").style.display = "none";
+          document.getElementById("app-principal").style.display = "block";
+          
+          if (!esAutomatico) mostrarToast(`Hola, ${res.nombre} 👋`, "success");
+          configurarInterfazPorPermisos(res);
+       } else {
+          // BORRAR MEMORIA SI FALLA
+          localStorage.removeItem("inventario_email");
+          localStorage.removeItem("inventario_pin");
+          mostrarPantallaLogin();
+          if (!esAutomatico) Swal.fire("Acceso Denegado", res.error, "error");
+       }
+    })
+    .withFailureHandler(err => {
+       if (typeof ocultarCargando === "function") ocultarCargando();
+       localStorage.removeItem("inventario_email");
+       localStorage.removeItem("inventario_pin");
+       const btn = document.getElementById("btn-login");
+       if (btn) { btn.innerText = "Continuar"; btn.disabled = false; }
+       Swal.fire("Error de Conexión", "No se pudo verificar el acceso.", "error");
+    })
+    .procesarLoginEmail(email, pin);
+}
+
+function configurarInterfazPorPermisos(info) {
+  // 1. Mostrar Botones Exclusivos SOLO si es Admin
+  const btnEnv = document.getElementById('btn-env-switch');
+  const btnAdmin = document.getElementById('nav-admin'); // <--- Buscamos el botón
+  
+  if (info.esAdmin) {
+      if (btnEnv) btnEnv.style.display = 'block';
+      if (btnAdmin) btnAdmin.style.display = 'inline-block'; // <--- Lo encendemos
+  } else {
+      if (btnEnv) btnEnv.style.display = 'none';
+      if (btnAdmin) btnAdmin.style.display = 'none';
+  }
+  
+  // 2. Encender botones de Menú Operativos
+  if (info.permisos.entradas) document.getElementById('nav-entradas').style.display = 'inline-block';
+  if (info.permisos.salidas) document.getElementById('nav-salidas').style.display = 'inline-block';
+  if (info.permisos.ubicaciones) document.getElementById('nav-ubicaciones').style.display = 'inline-block';
+  if (info.permisos.productos) document.getElementById('nav-productos').style.display = 'inline-block';
+  if (info.permisos.envios) document.getElementById('nav-pedidos').style.display = 'inline-block';
+  if (info.permisos.bajas) document.getElementById('nav-bajas').style.display = 'inline-block';
+  
+  // 3. Forzar redirección a la primera vista que tenga habilitada
+  if (info.permisos.entradas) cambiarVista('vista-operacion');
+  else if (info.permisos.envios) cambiarVista('vista-pedidos');
+  else if (info.permisos.salidas) cambiarVista('vista-salidas');
+  else cambiarVista('vista-productos'); 
+
+  // 4. Arrancar datos
+  updateEnvButton(info.entorno);
+  recargarSelectores();
+}
+
+// CERRAR SESIÓN (Regresa al Login inmediatamente)
+// CERRAR SESIÓN (Regresa al Login inmediatamente sin recargar la página)
+function cerrarSesion() {
+  // 1. Borramos la memoria del dispositivo
+  localStorage.removeItem("inventario_email");
+  localStorage.removeItem("inventario_pin");
+  
+  // 2. Ocultamos la app y mostramos el Login dinámicamente
+  document.getElementById("app-principal").style.display = "none";
+  document.getElementById("vista-login").style.display = "flex";
+  
+  // 3. Limpiamos los campos visualmente
+  reiniciarLogin();
+  document.getElementById("input-correo").value = "";
+}
+// ==========================================
+// FIX: FUNCIONES DE ENTORNO REPARADAS
+// ==========================================
 function toggleEnvironment() {
    const btn = document.getElementById('btn-env-switch');
    const isProd = btn.innerText.includes('PRODUCCIÓN');
@@ -15,22 +152,19 @@ function toggleEnvironment() {
    
    Swal.fire({
       title: 'Cambiando entorno...',
-      text: 'Conectando con la base de datos...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
    });
    
    google.script.run.withSuccessHandler(mode => {
       updateEnvButton(mode);
-      
-      // Recargamos TODO para limpiar la caché de la vista anterior
       recargarSelectores();
       if(document.getElementById('vista-productos').style.display !== 'none') cargarDashboardProductos();
       if(document.getElementById('vista-ubicaciones').style.display !== 'none') cargarDashboardUbicaciones();
       if(document.getElementById('vista-pedidos').style.display !== 'none') cargarDashboardPedidos();
       if(document.getElementById('vista-bajas').style.display !== 'none') cargarCaducados();
       
-      Swal.fire('¡Cambiado!', `Ahora estás trabajando en la base de datos de:\n${mode === 'PROD' ? '🟢 PRODUCCIÓN' : '🧪 PRUEBAS'}`, 'success');
+      Swal.fire('¡Cambiado!', `Estás en la base de:\n${mode === 'PROD' ? '🟢 PRODUCCIÓN' : '🧪 PRUEBAS'}`, 'success');
    }).switchEnvironment(newMode);
 }
 

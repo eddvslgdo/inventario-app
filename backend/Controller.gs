@@ -1844,3 +1844,32 @@ function transferirMasivo(origenId, destinoId, itemsMover) {
     lock.releaseLock();
   }
 }
+
+// ==========================================
+// MANTENIMIENTO: LIMPIEZA DE INVENTARIO
+// ==========================================
+function rutinaLimpiezaSemanalCeros() {
+  // ATENCIÓN: Forzamos a que limpie la base de datos de PRODUCCIÓN
+  // para que el trigger automático no dependa del botón de la interfaz web.
+  const DB_PROD = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E"; 
+  const db = SpreadsheetApp.openById(DB_PROD);
+  const sheet = db.getSheetByName("INVENTARIO");
+  
+  if (!sheet) return;
+
+  const data = sheet.getDataRange().getValues();
+  let filasBorradas = 0;
+
+  // IMPORTANTE: Recorremos de ABAJO hacia ARRIBA
+  for (let i = data.length - 1; i >= 1; i--) {
+    let stock = Number(data[i][3]); // La columna D (índice 3) es el Volumen
+    
+    // Si el stock es 0 (o un decimal minúsculo por error de cálculo)
+    if (stock <= 0.001) {
+      sheet.deleteRow(i + 1);
+      filasBorradas++;
+    }
+  }
+  
+  console.log(`🧹 Rutina completada: Se eliminaron ${filasBorradas} registros en 0.`);
+}
