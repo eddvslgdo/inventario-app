@@ -372,21 +372,25 @@ function obtenerDatosProductos() {
                l.caducidad === cadStr &&
                l.alias === subName
       );
-      if (loteExistente) {
-        loteExistente.volumen += stock;
-      } else {
-        productosMap[baseName].lotes.push({
-          lote: String(dataInv[i][6]).trim(),
-          volumen: stock,
-          ubicacion: uName,
-          ubicacion_id: uId,           // NUEVO
-          presentacion: presName,
-          presentacion_id: prId,       // NUEVO
-          alias: subName, 
-          caducidad: cadStr,
-          volumen_nominal: mapPresVol[prId] || 0 // NUEVO
-        });
-      }
+if (loteExistente) {
+          loteExistente.volumen += stock;
+        } else {
+          productosMap[baseName].lotes.push({
+            lote: String(dataInv[i][6]).trim(),
+            volumen: stock,
+            ubicacion: uName,
+            ubicacion_id: uId,           
+            presentacion: presName,
+            presentacion_id: prId,       
+            alias: subName, 
+            caducidad: cadStr,
+            volumen_nominal: mapPresVol[prId] || 0,
+            
+            // --- NUEVO: IDENTIDAD REAL DE LA VARIANTE ---
+            raw_producto_id: pId,           
+            raw_producto_nombre: rawName    
+          });
+        }
     }
   }
 

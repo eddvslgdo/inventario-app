@@ -375,3 +375,29 @@ function actualizarNotificaciones() {
    let panelLista = document.getElementById("lista-notificaciones");
    if(panelLista) panelLista.innerHTML = listaHtml;
 }
+
+// --- BOTÓN DE PÁNICO REMOTO ---
+window.liberarSistemaRemoto = function() {
+   Swal.fire({
+      title: '¿Forzar Liberación?',
+      text: 'Esto cerrará la sesión de cualquier usuario que esté operando el sistema actualmente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      confirmButtonText: 'Sí, liberar ahora'
+   }).then((result) => {
+      if (result.isConfirmed) {
+         mostrarCargando("Liberando sistema...");
+         google.script.run
+           .withSuccessHandler(() => {
+              ocultarCargando();
+              Swal.fire('¡Liberado!', 'El sistema está libre y accesible nuevamente.', 'success');
+           })
+           .withFailureHandler((err) => {
+              ocultarCargando();
+              Swal.fire('Error', err.message, 'error');
+           })
+           .LIBERAR_SISTEMA();
+      }
+   });
+};

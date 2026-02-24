@@ -1679,7 +1679,7 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
           "
         >
-          <div
+<div
             style="
               background: #1e293b;
               padding: 20px;
@@ -1698,19 +1698,34 @@
                 >Controla quién puede entrar y qué puede ver.</small
               >
             </div>
-            <button
-              onclick="abrirModalUsuario()"
-              class="btn-field"
-              style="
-                background: #3b82f6;
-                color: white;
-                border: none;
-                width: auto;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-              "
-            >
-              + Nuevo Usuario
-            </button>
+            <div style="display:flex; gap:10px;">
+              <button
+                onclick="liberarSistemaRemoto()"
+                class="btn-field"
+                style="
+                  background: #ef4444;
+                  color: white;
+                  border: none;
+                  width: auto;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+                "
+              >
+                🚨 Liberar Sistema
+              </button>
+              <button
+                onclick="abrirModalUsuario()"
+                class="btn-field"
+                style="
+                  background: #3b82f6;
+                  color: white;
+                  border: none;
+                  width: auto;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+                "
+              >
+                + Nuevo Usuario
+              </button>
+            </div>
           </div>
 
           <div

@@ -135,8 +135,7 @@ function renderizarTablaProductos(productos) {
               }
 
               // NUEVO: Botón de Transformación directo en el listado
-              let btnTransf = `<button class="btn-action btn-transf" style="width:28px; height:28px; font-size:0.8rem; margin-left:12px; box-shadow:0 1px 2px rgba(0,0,0,0.1);" title="Transformar Lote" onclick="abrirTransformacion('${p.id}', '${p.nombre}', '${l.lote}', ${l.volumen}, '${l.ubicacion_id}', '${l.presentacion_id}', ${l.volumen_nominal}, '${p.unidad}')">🛠️</button>`;
-
+              let btnTransf = `<button class="btn-action btn-transf" style="width:28px; height:28px; font-size:0.8rem; margin-left:12px; box-shadow:0 1px 2px rgba(0,0,0,0.1);" title="Transformar Lote" onclick="abrirTransformacion('${l.raw_producto_id}', '${l.raw_producto_nombre}', '${l.lote}', ${l.volumen}, '${l.ubicacion_id}', '${l.presentacion_id}', ${l.volumen_nominal}, '${p.unidad}')">🛠️</button>`;
               filasDetalle += `
                   <tr style="${rowBg}">
                       <td class="td-ubic">${l.ubicacion}</td>
