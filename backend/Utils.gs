@@ -321,3 +321,55 @@ function LIBERAR_SISTEMA() {
    PropertiesService.getScriptProperties().deleteProperty('ACTIVE_SESSIONS');
    console.log("✅ Sistema liberado exitosamente. Todos los usuarios fueron desconectados.");
 }
+
+// --- NUEVO: HEARTBEAT (LATIDO) PARA MANTENER Y VERIFICAR LA SESIÓN ---
+function pingSesion(email) {
+  if (!email) return false;
+  
+  const scriptProps = PropertiesService.getScriptProperties();
+  let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
+  
+  // Si no hay memoria (alguien usó el botón de pánico), regresamos FALSE
+  if (!raw) return false; 
+  
+  let sessions = JSON.parse(raw);
+  let now = new Date().getTime();
+  let correoNormalizado = String(email).trim().toLowerCase();
+  
+  // Si el correo está en la lista de activos y no ha expirado
+  if (sessions[correoNormalizado] && (now - sessions[correoNormalizado] < 1800000)) {
+     // Renovamos su tiempo por otros 30 minutos para que no expire mientras trabaja
+     sessions[correoNormalizado] = now;
+     scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
+     return true;
+  }
+  
+  return false; // Ya no está activo o fue borrado
+}
+
+// --- BARRERA DE SEGURIDAD BACKEND ---
+function verificarAccesoServidor() {
+  const raw = PropertiesService.getScriptProperties().getProperty('ACTIVE_SESSIONS');
+  
+  // Si la memoria está vacía (alguien usó el botón de pánico)
+  if (!raw) {
+     throw new Error("🔒 SEGURIDAD: El sistema fue liberado o tu sesión fue cerrada remotamente. Recarga la página.");
+  }
+  
+  let sessions = JSON.parse(raw);
+  let now = new Date().getTime();
+  let hayAlguienActivo = false;
+  
+  // Verificamos si hay al menos una sesión viva que no haya expirado
+  for (let user in sessions) {
+     if (now - sessions[user] < 1800000) {
+        hayAlguienActivo = true;
+        break;
+     }
+  }
+  
+  // Si pasó el tiempo y caducó, bloqueamos la acción
+  if (!hayAlguienActivo) {
+     throw new Error("🔒 SEGURIDAD: Tu tiempo de sesión ha expirado por inactividad. Recarga la página e inicia sesión.");
+  }
+}

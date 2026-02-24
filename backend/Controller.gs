@@ -406,7 +406,8 @@ function registrarNuevoProducto(datos) {
   const lock = LockService.getScriptLock();
 
   try {
-    lock.waitLock(10000); // Bloqueo de concurrencia para evitar registros simultáneos
+    lock.waitLock(10000);
+    verificarAccesoServidor(); // Bloqueo de concurrencia para evitar registros simultáneos
     const sheet = obtenerHojaOCrear("PRODUCTOS", [
       "ID",
       "NOMBRE",
@@ -470,6 +471,7 @@ function registrarEntradaMasiva(lista) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(15000);
+    verificarAccesoServidor();
     const sInv = obtenerHojaOCrear("INVENTARIO", [
       "ID_PROD",
       "ID_PRES",
@@ -563,6 +565,7 @@ function transferirProducto(
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
+    verificarAccesoServidor();
     const sInv = obtenerHojaOCrear("INVENTARIO", []);
     const data = sInv.getDataRange().getValues();
 
@@ -620,6 +623,7 @@ function realizarTransformacion(datos) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
+    verificarAccesoServidor();
     const sInv = obtenerHojaOCrear("INVENTARIO", []);
     const data = sInv.getDataRange().getValues();
 
@@ -699,6 +703,7 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
+    verificarAccesoServidor();
     itemsCarrito.forEach((item) => {
       const p = String(item.producto_id);
       if (p.includes("Selecciona") || p === "undefined" || !p)
@@ -1213,6 +1218,7 @@ function procesarBajaOficial(itemsBaja) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(45000);
+    verificarAccesoServidor();
 
     // --- PASO 1: VERIFICAR ID DE DRIVE ---
     if (
@@ -1731,6 +1737,7 @@ function actualizarNombreUbicacion(id, nuevoNombre) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
+    verificarAccesoServidor();
     const sUbic = obtenerHojaSegura("UBICACIONES");
     const data = sUbic.getDataRange().getValues();
 
@@ -1753,6 +1760,7 @@ function borrarUbicacion(id) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
+    verificarAccesoServidor();
 
     // 1. VALIDACIÓN DE SEGURIDAD: Comprobar que no tenga inventario
     const sInv = obtenerHojaSegura("INVENTARIO");
@@ -1795,6 +1803,7 @@ function transferirMasivo(origenId, destinoId, itemsMover) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(15000);
+    verificarAccesoServidor();
     const sInv = obtenerHojaOCrear("INVENTARIO", []);
     const data = sInv.getDataRange().getValues();
     

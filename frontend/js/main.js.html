@@ -1,3 +1,40 @@
+let heartbeatInterval; // Variable global para controlar el latido
+
+function iniciarLatido() {
+   // Limpiamos cualquier latido viejo por seguridad
+   if (heartbeatInterval) clearInterval(heartbeatInterval);
+   
+   // Ejecutar cada 30 segundos (30000 milisegundos)
+   heartbeatInterval = setInterval(function() {
+      const email = localStorage.getItem("inventario_email");
+      if (!email) return;
+      
+      google.script.run
+        .withSuccessHandler(function(sigueActivo) {
+           if (!sigueActivo) {
+              // 🚨 SI EL SERVIDOR DICE QUE YA NO ESTAMOS ACTIVOS (Botón de pánico)
+              clearInterval(heartbeatInterval);
+              
+              // Forzamos la salida borrando memoria
+              localStorage.removeItem("inventario_email");
+              localStorage.removeItem("inventario_pin");
+              document.getElementById("app-principal").style.display = "none";
+              document.getElementById("vista-login").style.display = "flex";
+              reiniciarLogin();
+              
+              // Mostramos alerta de expulsión
+              Swal.fire({
+                 title: 'Sesión Finalizada',
+                 text: 'Tu sesión ha expirado o el sistema fue reiniciado remotamente por un administrador.',
+                 icon: 'warning',
+                 confirmButtonColor: '#f59e0b'
+              });
+           }
+        })
+        .pingSesion(email);
+   }, 10000);
+}
+
 function initApp() {
   cambiarVista('vista-operacion');
   
@@ -56,7 +93,8 @@ const btn = document.getElementById("btn-login");
 
 function ejecutarAutenticacion(email, pin, esAutomatico) {
   if (!esAutomatico && typeof mostrarCargando === "function") mostrarCargando("Verificando credenciales...");
-  
+  iniciarLatido();
+
   google.script.run
     .withSuccessHandler(res => {
        if (typeof ocultarCargando === "function") ocultarCargando();
@@ -209,6 +247,7 @@ else if (info.permisos.ubicaciones) cambiarVista('vista-ubicaciones');
 
 // CERRAR SESIÓN (Regresa al Login inmediatamente)
 function cerrarSesion() {
+   if (heartbeatInterval) clearInterval(heartbeatInterval);
   const email = localStorage.getItem("inventario_email");
   if(email) {
      google.script.run.registrarCierreSesion(email);
