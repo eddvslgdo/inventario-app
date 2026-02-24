@@ -77,7 +77,25 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
           return; 
        }
 
-       if (res.success) {
+if (res.success) {
+          // --- BLOQUEO DE CONCURRENCIA TIPO SAP (CORREGIDO) ---
+          if (res.bloqueado) {
+             Swal.fire({
+                title: '⛔ Sistema Ocupado',
+                html: `El sistema está siendo operado actualmente por:<br><br><b style="color:#d63031; font-size:1.1rem;">${res.otrosUsuariosActivos.join('<br>')}</b><br><br>Por seguridad de los datos, no puedes acceder hasta que el otro usuario cierre su sesión.`,
+                icon: 'error',
+                confirmButtonColor: '#d63031',
+                confirmButtonText: 'Entendido'
+             });
+             
+             // Borramos cualquier rastro de entrada y lo dejamos afuera
+             localStorage.removeItem("inventario_email");
+             localStorage.removeItem("inventario_pin");
+             reiniciarLogin();
+             return; // Rompemos la ejecución aquí. NO entra a la app.
+          }
+          
+          // --- SI NO HAY NADIE, LO DEJAMOS ENTRAR NORMAL ---
           localStorage.setItem("inventario_email", email);
           if (pin) localStorage.setItem("inventario_pin", pin);
           
@@ -85,10 +103,11 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
           document.getElementById("vista-login").style.display = "none";
           document.getElementById("app-principal").style.display = "block";
           
-          if (!esAutomatico) mostrarToast(`Hola, ${res.nombre} 👋`, "success");
           configurarInterfazPorPermisos(res);
+          
+          if (!esAutomatico) mostrarToast(`Hola, ${res.nombre} 👋`, "success");
        
-       // NUEVO FLUJO DE REGISTRO
+       // --- FLUJO DE REGISTRO PARA NUEVOS ---
        } else if (res.notFound) {
           Swal.fire({
              title: 'Usuario no registrado',
@@ -176,20 +195,34 @@ else if (info.permisos.ubicaciones) cambiarVista('vista-ubicaciones');
   // 4. Arrancar datos
   updateEnvButton(info.entorno);
   recargarSelectores();
+
+  // 5. Cargar notificaciones (Campana) en segundo plano silenciosamente
+  if (info.permisos.envios && typeof api !== 'undefined') {
+      api.obtenerHistorialPedidos(function(lista) {
+          window.LISTA_PEDIDOS_CACHE = lista || [];
+          if(typeof actualizarNotificaciones === 'function') actualizarNotificaciones();
+      }, function(err) {
+          console.warn("No se cargó la campana en 2do plano", err);
+      });
+  }
 }
 
 // CERRAR SESIÓN (Regresa al Login inmediatamente)
-// CERRAR SESIÓN (Regresa al Login inmediatamente sin recargar la página)
 function cerrarSesion() {
+  const email = localStorage.getItem("inventario_email");
+  if(email) {
+     google.script.run.registrarCierreSesion(email);
+  }
+
   // 1. Borramos la memoria del dispositivo
   localStorage.removeItem("inventario_email");
   localStorage.removeItem("inventario_pin");
   
-  // 2. Ocultamos la app y mostramos el Login dinámicamente
+  // 2. Ocultamos la app y mostramos el Login
   document.getElementById("app-principal").style.display = "none";
   document.getElementById("vista-login").style.display = "flex";
   
-  // 3. Limpiamos los campos visualmente
+  // 3. Limpiamos los campos
   reiniciarLogin();
   document.getElementById("input-correo").value = "";
 }

@@ -94,17 +94,50 @@ function procesarLoginEmail(email, pin) {
       let pinDb = String(data[i][1]).trim();
       
       if (esAdmin && (!pin || String(pin).trim() === "")) return { requiresPin: true };
-      if (esAdmin && String(pin).trim() !== pinDb) return { success: false, error: "PIN incorrecto. Acceso de administrador denegado." };
+  if (esAdmin && String(pin).trim() !== pinDb) return { success: false, error: "PIN incorrecto. Acceso de administrador denegado." };
       
-      // REGLA DE ORO: SIEMPRE que alguien inicia sesión, forzamos el entorno a PROD.
-      // Esto elimina el error de quedarse atorado en TEST tras cambiar de usuario.
       PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), "PROD");
+
+      // --- NUEVO: RASTREO DE SESIONES TIPO SAP ---
+PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), "PROD");
+
+      // --- RASTREO DE SESIONES TIPO SAP (CORREGIDO) ---
+      const scriptProps = PropertiesService.getScriptProperties();
+      let rawSessions = scriptProps.getProperty('ACTIVE_SESSIONS');
+      let sessions = rawSessions ? JSON.parse(rawSessions) : {};
+      let now = new Date().getTime();
+      let activeOthers = [];
+
+      // 1. Limpiar expirados (30 min) y buscar intrusos
+      for (let user in sessions) {
+         if (now - sessions[user] < 1800000) { 
+            if (user !== emailDb) activeOthers.push(user);
+         } else {
+            delete sessions[user]; // Borrar sesiones viejas
+         }
+      }
+
+      // 2. ¡CORRECCIÓN! Si hay alguien más, NO lo dejamos entrar NI lo registramos
+      if (activeOthers.length > 0) {
+         scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions)); // Guardar limpieza
+         return {
+            success: true, 
+            bloqueado: true, // Nueva bandera
+            otrosUsuariosActivos: activeOthers
+         };
+      }
+
+      // 3. Si está libre, lo registramos como el único activo
+      sessions[emailDb] = now;
+      scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
+      // ---------------------------------------------
 
       return {
         success: true,
+        bloqueado: false,
         nombre: emailDb.split("@")[0], 
         esAdmin: esAdmin,
-        entorno: "PROD", // Siempre inicia en PROD
+        entorno: "PROD",
         permisos: {
           entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === 'TRUE',
           salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === 'TRUE',
@@ -268,4 +301,23 @@ function registrarEnBitacora(usuario, accion, detalle) {
     console.error("Error en bitácora: " + e.message);
     return false;
   }
+}
+
+function registrarCierreSesion(email) {
+  if(!email) return;
+  try {
+    const scriptProps = PropertiesService.getScriptProperties();
+    let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
+    if(raw) {
+        let sessions = JSON.parse(raw);
+        delete sessions[email.toLowerCase()];
+        scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
+    }
+  } catch(e) {}
+}
+
+// --- BOTÓN DE PÁNICO: CORRER ESTA FUNCIÓN DESDE EL EDITOR PARA DESTRABAR EL SISTEMA ---
+function LIBERAR_SISTEMA() {
+   PropertiesService.getScriptProperties().deleteProperty('ACTIVE_SESSIONS');
+   console.log("✅ Sistema liberado exitosamente. Todos los usuarios fueron desconectados.");
 }
