@@ -76,65 +76,40 @@ function switchEnvironment(mode, userEmail) {
 // GESTIÓN DE SESIÓN POR CORREO Y PIN
 // ==========================================
 function procesarLoginEmail(email, pin) {
-  // Siempre validamos contra Producción
   const db = SpreadsheetApp.openById(DB_PROD_ID);
   const sPermisos = db.getSheetByName("PERMISOS");
-  
   if (!sPermisos) throw new Error("Falta la pestaña PERMISOS en la base de datos.");
-
+  
   const data = sPermisos.getDataRange().getValues();
   const emailInput = String(email).trim().toLowerCase();
   
   for (let i = 1; i < data.length; i++) {
     let emailDb = String(data[i][0]).trim().toLowerCase();
-    
-    // Si encuentra el correo en la base de datos
     if (emailDb === emailInput && emailDb !== "") {
       let esAdmin = data[i][8] === true || String(data[i][8]).toUpperCase() === 'TRUE';
       let pinDb = String(data[i][1]).trim();
       
       if (esAdmin && (!pin || String(pin).trim() === "")) return { requiresPin: true };
-  if (esAdmin && String(pin).trim() !== pinDb) return { success: false, error: "PIN incorrecto. Acceso de administrador denegado." };
+      if (esAdmin && String(pin).trim() !== pinDb) return { success: false, error: "PIN incorrecto." };
       
       PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), "PROD");
 
-      // --- NUEVO: RASTREO DE SESIONES TIPO SAP ---
-PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), "PROD");
-
-      // --- RASTREO DE SESIONES TIPO SAP (CORREGIDO) ---
+      // --- REGISTRO SILENCIOSO (NUNCA BLOQUEA) ---
       const scriptProps = PropertiesService.getScriptProperties();
       let rawSessions = scriptProps.getProperty('ACTIVE_SESSIONS');
       let sessions = rawSessions ? JSON.parse(rawSessions) : {};
       let now = new Date().getTime();
-      let activeOthers = [];
 
-      // 1. Limpiar expirados (30 min) y buscar intrusos
+      // Limpiar fantasmas
       for (let user in sessions) {
-         if (now - sessions[user] < 1800000) { 
-            if (user !== emailDb) activeOthers.push(user);
-         } else {
-            delete sessions[user]; // Borrar sesiones viejas
-         }
+         if (now - sessions[user].lastPing > 1800000) delete sessions[user];
       }
 
-      // 2. ¡CORRECCIÓN! Si hay alguien más, NO lo dejamos entrar NI lo registramos
-      if (activeOthers.length > 0) {
-         scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions)); // Guardar limpieza
-         return {
-            success: true, 
-            bloqueado: true, // Nueva bandera
-            otrosUsuariosActivos: activeOthers
-         };
-      }
-
-      // 3. Si está libre, lo registramos como el único activo
-      sessions[emailDb] = now;
+      sessions[emailDb] = { lastPing: now, rol: esAdmin ? "admin" : "user", env: "PROD" };
       scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
-      // ---------------------------------------------
 
       return {
         success: true,
-        bloqueado: false,
         nombre: emailDb.split("@")[0], 
         esAdmin: esAdmin,
         entorno: "PROD",
@@ -149,8 +124,82 @@ PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), "PROD");
       };
     }
   }
+  return { success: false, notFound: true, error: "Correo no registrado." };
+}
+
+function pingSesion(email, rol, entornoActual, vistaActual) {
+  if (!email) return { sigueActivo: false };
   
-return { success: false, notFound: true, error: "Este correo no está registrado en el sistema." };
+  const scriptProps = PropertiesService.getScriptProperties();
+  let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
+  if (!raw) return { sigueActivo: false }; 
+  
+  let sessions = JSON.parse(raw);
+  let now = new Date().getTime();
+  let correoNormalizado = String(email).trim().toLowerCase();
+  
+  // Rescatar la hora original de entrada para no perder su turno en la fila.
+  let tiempoEntrada = (sessions[correoNormalizado] && sessions[correoNormalizado].loginTime) 
+                      ? sessions[correoNormalizado].loginTime 
+                      : now;
+  
+  sessions[correoNormalizado] = { 
+     loginTime: tiempoEntrada, 
+     lastPing: now, 
+     rol: rol || "user", 
+     env: entornoActual || "PROD", 
+     vista: vistaActual || "desconocida" 
+  };
+  
+  let adminsEnProd = [];
+  let normalesEnProd = [];
+  let usuariosConectados = [];
+  
+  // Limpiamos inactivos (25 seg)
+  for (let user in sessions) {
+     if (now - sessions[user].lastPing < 25000) { 
+        usuariosConectados.push({ email: user, ...sessions[user] });
+        if (sessions[user].env === "PROD") {
+           if (sessions[user].rol === "admin") adminsEnProd.push(user);
+           else normalesEnProd.push({ e: user, t: sessions[user].loginTime });
+        }
+     } else {
+        delete sessions[user]; 
+     }
+  }
+  scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
+  
+  let tengoPermiso = false;
+  let lider = "";
+
+  if (entornoActual === "TEST") {
+      tengoPermiso = true;
+      lider = correoNormalizado;
+  } else {
+      if (rol === "admin") {
+          tengoPermiso = true; // Admins en PROD SIEMPRE mandan
+          lider = correoNormalizado; 
+      } else {
+          if (adminsEnProd.length > 0) {
+              tengoPermiso = false;
+              lider = adminsEnProd[0]; 
+          } else {
+              // Ordenamos por hora de llegada (el primero que entró gana)
+              normalesEnProd.sort((a,b) => a.t - b.t);
+              if (normalesEnProd.length > 0) {
+                  lider = normalesEnProd[0].e;
+                  tengoPermiso = (lider === correoNormalizado);
+              }
+          }
+      }
+  }
+  
+  return {
+     sigueActivo: true,
+     tengoPermiso: tengoPermiso,
+     escritorActual: lider.split('@')[0], 
+     listaUsuarios: usuariosConectados
+  };
 }
 
 // NUEVO: Función para registrar un usuario sin permisos operativos
@@ -323,28 +372,95 @@ function LIBERAR_SISTEMA() {
 }
 
 // --- NUEVO: HEARTBEAT (LATIDO) PARA MANTENER Y VERIFICAR LA SESIÓN ---
-function pingSesion(email) {
-  if (!email) return false;
-  
-  const scriptProps = PropertiesService.getScriptProperties();
-  let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
-  
-  // Si no hay memoria (alguien usó el botón de pánico), regresamos FALSE
-  if (!raw) return false; 
-  
-  let sessions = JSON.parse(raw);
-  let now = new Date().getTime();
-  let correoNormalizado = String(email).trim().toLowerCase();
-  
-  // Si el correo está en la lista de activos y no ha expirado
-  if (sessions[correoNormalizado] && (now - sessions[correoNormalizado] < 1800000)) {
-     // Renovamos su tiempo por otros 30 minutos para que no expire mientras trabaja
-     sessions[correoNormalizado] = now;
-     scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
-     return true;
+function pingSesion(email, rol, entornoActual, vistaActual) {
+  if (!email) return { sigueActivo: false };
+
+  // --- SEMÁFORO DE CONCURRENCIA ---
+  // Evita que dos navegadores se borren mutuamente si hacen ping en el mismo milisegundo
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(3000); 
+  } catch (e) {
+    return { sigueActivo: true, ignorarPing: true }; // Si hay tráfico, espera al siguiente latido
   }
-  
-  return false; // Ya no está activo o fue borrado
+
+  try {
+      const scriptProps = PropertiesService.getScriptProperties();
+      let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
+      if (!raw) return { sigueActivo: false }; 
+
+      let sessions = JSON.parse(raw);
+      let now = new Date().getTime();
+      let correoNormalizado = String(email).trim().toLowerCase();
+
+      // MANTENER ANTIGÜEDAD INTACTA
+      let tiempoEntrada = (sessions[correoNormalizado] && sessions[correoNormalizado].loginTime) 
+                          ? sessions[correoNormalizado].loginTime 
+                          : now;
+
+      sessions[correoNormalizado] = { 
+         loginTime: tiempoEntrada, 
+         lastPing: now, 
+         rol: rol || "user", 
+         env: entornoActual || "PROD", 
+         vista: vistaActual || "desconocida" 
+      };
+
+      let adminsEnProd = [];
+      let normalesEnProd = [];
+      let usuariosConectados = [];
+
+      // LIMPIAR INACTIVOS (Menos de 25 segundos para que suelte rápido el permiso al salir)
+      for (let user in sessions) {
+         if (now - sessions[user].lastPing < 25000) { 
+            usuariosConectados.push({ email: user, ...sessions[user] });
+            if (sessions[user].env === "PROD") {
+               if (sessions[user].rol === "admin") adminsEnProd.push(user);
+               else normalesEnProd.push({ e: user, t: sessions[user].loginTime });
+            }
+         } else {
+            delete sessions[user]; 
+         }
+      }
+      
+      scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
+
+      // LÓGICA DE HERENCIA DE PERMISOS
+      let tengoPermiso = false;
+      let lider = "";
+
+      if (entornoActual === "TEST") {
+          tengoPermiso = true;
+          lider = correoNormalizado;
+      } else {
+          if (rol === "admin") {
+              tengoPermiso = true; // Admin en PROD SIEMPRE manda
+              lider = correoNormalizado; 
+          } else {
+              if (adminsEnProd.length > 0) {
+                  tengoPermiso = false;
+                  lider = adminsEnProd[0]; 
+              } else {
+                  // ORDENAMOS POR HORA DE LLEGADA (El más antiguo toma el control)
+                  normalesEnProd.sort((a, b) => a.t - b.t);
+                  if (normalesEnProd.length > 0) {
+                      lider = normalesEnProd[0].e;
+                      tengoPermiso = (lider === correoNormalizado);
+                  }
+              }
+          }
+      }
+
+      return {
+         sigueActivo: true,
+         tengoPermiso: tengoPermiso,
+         escritorActual: lider.split('@')[0], 
+         listaUsuarios: usuariosConectados
+      };
+      
+  } finally {
+      lock.releaseLock();
+  }
 }
 
 // --- BARRERA DE SEGURIDAD BACKEND ---
@@ -362,7 +478,10 @@ function verificarAccesoServidor() {
   
   // Verificamos si hay al menos una sesión viva que no haya expirado
   for (let user in sessions) {
-     if (now - sessions[user] < 1800000) {
+     // CORRECCIÓN: Leemos exactamente la propiedad lastPing del nuevo modelo de datos
+     let ultimoPing = sessions[user].lastPing || 0; 
+     
+     if (now - ultimoPing < 1800000) { // 30 minutos (1800000 ms)
         hayAlguienActivo = true;
         break;
      }

@@ -1,59 +1,40 @@
-let heartbeatInterval; // Variable global para controlar el latido
+// =========================================================
+// VARIABLES GLOBALES DE SESIÓN
+// =========================================================
+window.heartbeatInterval = null;
+window.teniaPermisoEscritura = true; 
 
-function iniciarLatido() {
-   // Limpiamos cualquier latido viejo por seguridad
-   if (heartbeatInterval) clearInterval(heartbeatInterval);
-   
-   // Ejecutar cada 30 segundos (30000 milisegundos)
-   heartbeatInterval = setInterval(function() {
-      const email = localStorage.getItem("inventario_email");
-      if (!email) return;
-      
-      google.script.run
-        .withSuccessHandler(function(sigueActivo) {
-           if (!sigueActivo) {
-              // 🚨 SI EL SERVIDOR DICE QUE YA NO ESTAMOS ACTIVOS (Botón de pánico)
-              clearInterval(heartbeatInterval);
-              
-              // Forzamos la salida borrando memoria
-              localStorage.removeItem("inventario_email");
-              localStorage.removeItem("inventario_pin");
-              document.getElementById("app-principal").style.display = "none";
-              document.getElementById("vista-login").style.display = "flex";
-              reiniciarLogin();
-              
-              // Mostramos alerta de expulsión
-              Swal.fire({
-                 title: 'Sesión Finalizada',
-                 text: 'Tu sesión ha expirado o el sistema fue reiniciado remotamente por un administrador.',
-                 icon: 'warning',
-                 confirmButtonColor: '#f59e0b'
-              });
-           }
-        })
-        .pingSesion(email);
-   }, 10000);
-}
+// Estado interno para no depender de leer el DOM
+window.APP_STATE = {
+   env: "PROD" 
+};
 
+// =========================================================
+// INICIALIZACIÓN DE LA APLICACIÓN
+// =========================================================
 function initApp() {
   cambiarVista('vista-operacion');
   
-  // Obtenemos el usuario guardado en sesión
+  // Volvemos a localStorage para estabilidad
   const userEmail = localStorage.getItem("inventario_email");
 
-  // 1. Averiguamos el entorno actual antes de cargar los catálogos
   google.script.run.withSuccessHandler(mode => {
+     window.APP_STATE.env = mode;
      updateEnvButton(mode);
      recargarSelectores(); 
   }).getCurrentEnvironment();
 
-  google.script.run.withSuccessHandler((canToggle) => {
-    const btn = document.getElementById('btn-env-switch');
-    if (!btn) return;
-    btn.style.display = canToggle ? 'inline-flex' : 'none';
-  }).canToggleEnvironment(userEmail); // Añadimos userEmail aquí
+  if(userEmail) {
+      google.script.run.withSuccessHandler((canToggle) => {
+        const btn = document.getElementById('btn-env-switch');
+        if (btn) btn.style.display = canToggle ? 'inline-flex' : 'none';
+      }).canToggleEnvironment(userEmail); 
+  }
 }
 
+// =========================================================
+// FLUJO DE LOGIN
+// =========================================================
 function mostrarPantallaLogin() {
     document.getElementById("vista-login").style.display = "flex";
     document.getElementById("app-principal").style.display = "none";
@@ -67,7 +48,7 @@ function reiniciarLogin() {
     document.getElementById("input-pin-admin").value = "";
     document.getElementById("btn-login").innerText = "Continuar";
     document.getElementById("btn-login-back").style.display = "none";
-    document.getElementById("login-subtitle").innerText = "Ingresa tu correo asignado";
+    document.getElementById("login-subtitle").innerText = "Ingresa tu usuario asignado";
 }
 
 function procesarLogin() {
@@ -76,14 +57,9 @@ function procesarLogin() {
   const pin = pinField.value.trim();
   
   if (!email) return Swal.fire("Atención", "Ingresa un correo", "warning");
+  if (pinField.style.display === "block" && !pin) return Swal.fire("Atención", "Ingresa tu PIN", "warning");
   
-  // Si el campo de la contraseña ya está visible y está vacío...
-  if (pinField.style.display === "block" && !pin) {
-     return Swal.fire("Atención", "Por favor ingresa tu PIN de Administrador", "warning");
-  }
-  
-const btn = document.getElementById("btn-login");
-  // Aplicamos las clases de animación y quitamos los puntos (el CSS los pondrá solos)
+  const btn = document.getElementById("btn-login");
   btn.innerText = "Verificando"; 
   btn.classList.add("loading-dots", "btn-pulsing");
   btn.disabled = true;
@@ -93,17 +69,12 @@ const btn = document.getElementById("btn-login");
 
 function ejecutarAutenticacion(email, pin, esAutomatico) {
   if (!esAutomatico && typeof mostrarCargando === "function") mostrarCargando("Verificando credenciales...");
-  iniciarLatido();
-
+  
   google.script.run
     .withSuccessHandler(res => {
        if (typeof ocultarCargando === "function") ocultarCargando();
        const btn = document.getElementById("btn-login");
-       if (btn) { 
-           btn.innerText = "Continuar"; 
-           btn.classList.remove("loading-dots", "btn-pulsing"); 
-           btn.disabled = false; 
-       }
+       if (btn) { btn.innerText = "Continuar"; btn.classList.remove("loading-dots", "btn-pulsing"); btn.disabled = false; }
 
        if (res.requiresPin) {
           document.getElementById("input-correo").style.display = "none";
@@ -115,99 +86,150 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
           return; 
        }
 
-if (res.success) {
-          // --- BLOQUEO DE CONCURRENCIA TIPO SAP (CORREGIDO) ---
-          if (res.bloqueado) {
-             Swal.fire({
-                title: '⛔ Sistema Ocupado',
-                html: `El sistema está siendo operado actualmente por:<br><br><b style="color:#d63031; font-size:1.1rem;">${res.otrosUsuariosActivos.join('<br>')}</b><br><br>Por seguridad de los datos, no puedes acceder hasta que el otro usuario cierre su sesión.`,
-                icon: 'error',
-                confirmButtonColor: '#d63031',
-                confirmButtonText: 'Entendido'
-             });
-             
-             // Borramos cualquier rastro de entrada y lo dejamos afuera
-             localStorage.removeItem("inventario_email");
-             localStorage.removeItem("inventario_pin");
-             reiniciarLogin();
-             return; // Rompemos la ejecución aquí. NO entra a la app.
-          }
-          
-          // --- SI NO HAY NADIE, LO DEJAMOS ENTRAR NORMAL ---
+       if (res.success) {
+          // GUARDAMOS TODO EN LOCAL STORAGE
           localStorage.setItem("inventario_email", email);
-          if (pin) localStorage.setItem("inventario_pin", pin);
+          localStorage.setItem("inventario_rol", res.esAdmin ? "admin" : "user");
           
           document.getElementById('lbl-usuario-actual').innerText = res.nombre;
           document.getElementById("vista-login").style.display = "none";
           document.getElementById("app-principal").style.display = "block";
           
           configurarInterfazPorPermisos(res);
-          
           if (!esAutomatico) mostrarToast(`Hola, ${res.nombre} 👋`, "success");
-       
-       // --- FLUJO DE REGISTRO PARA NUEVOS ---
+          
+          iniciarLatido(); 
+
        } else if (res.notFound) {
           Swal.fire({
              title: 'Usuario no registrado',
-             text: `El correo "${email}" no tiene acceso. ¿Deseas solicitar registro en el sistema?`,
+             text: `El correo "${email}" no tiene acceso.`,
              icon: 'question',
              showCancelButton: true,
-             confirmButtonColor: '#007aff',
-             cancelButtonColor: '#64748b',
-             confirmButtonText: 'Sí, registrarme'
+             confirmButtonText: 'Sí, solicitar registro'
           }).then((result) => {
              if (result.isConfirmed) {
                 mostrarCargando("Creando usuario...");
                 google.script.run
-                  .withSuccessHandler(regRes => {
-                     ocultarCargando();
-                     if (regRes.success) {
-                        Swal.fire("¡Registro Exitoso!", "Tu usuario ha sido creado. Inicia sesión ahora para ver el estatus de tu cuenta.", "success");
-                     } else {
-                        Swal.fire("Error", regRes.error, "error");
-                     }
-                  })
-                  .withFailureHandler(err => {
-                     ocultarCargando();
-                     Swal.fire("Error", err.message, "error");
-                  })
+                  .withSuccessHandler(regRes => { ocultarCargando(); Swal.fire("¡Registro Exitoso!", "Cuenta en revisión.", "success"); })
                   .registrarUsuarioPendiente(email);
              }
           });
           localStorage.removeItem("inventario_email");
-          localStorage.removeItem("inventario_pin");
        } else {
           localStorage.removeItem("inventario_email");
-          localStorage.removeItem("inventario_pin");
           mostrarPantallaLogin();
           if (!esAutomatico) Swal.fire("Acceso Denegado", res.error, "error");
        }
     })
     .withFailureHandler(err => {
        if (typeof ocultarCargando === "function") ocultarCargando();
-       localStorage.removeItem("inventario_email");
-       localStorage.removeItem("inventario_pin");
-       const btn = document.getElementById("btn-login");
-       if (btn) { 
-           btn.innerText = "Continuar"; 
-           btn.classList.remove("loading-dots", "btn-pulsing"); 
-           btn.disabled = false; 
-       }
-       Swal.fire("Error de Conexión", "No se pudo verificar el acceso.", "error");
+       localStorage.clear();
+       mostrarPantallaLogin();
+       Swal.fire("Error de Conexión", "Fallo al verificar el acceso.", "error");
     })
     .procesarLoginEmail(email, pin);
 }
 
+// =========================================================
+// SISTEMA DE JERARQUÍA Y BLOQUEO (EL LATIDO)
+// =========================================================
+function iniciarLatido() {
+   if (window.heartbeatInterval) clearInterval(window.heartbeatInterval);
+   
+   window.heartbeatInterval = setInterval(function() {
+      const email = localStorage.getItem("inventario_email");
+      const rol = localStorage.getItem("inventario_rol") || "user"; 
+      const env = window.APP_STATE.env; 
+      const vistaActual = obtenerVistaActiva();
+      
+      if (!email) return;
+
+      google.script.run
+        .withSuccessHandler(function(estado) {
+           // Si el servidor estaba ocupado escribiendo datos de otro usuario, ignoramos este tick
+           if (estado && estado.ignorarPing) return;
+
+           if (!estado || !estado.sigueActivo) {
+              clearInterval(window.heartbeatInterval);
+              cerrarSesion();
+              return Swal.fire('Sesión Finalizada', 'Tu sesión expiró o fue cerrada remotamente.', 'warning');
+           }
+           
+           if (rol === "admin" && vistaActual === "vista-admin" && typeof renderizarTablaUsuariosEnLinea === 'function') {
+               renderizarTablaUsuariosEnLinea(estado.listaUsuarios);
+           }
+           
+           // TRANSICIONES DE ESTADO (Escritura vs Solo Lectura)
+           if (estado.tengoPermiso) {
+               if (!window.teniaPermisoEscritura) {
+                   window.teniaPermisoEscritura = true;
+                   desbloquearInterfaz();
+                   mostrarToast("✨ Permisos restaurados. Tienes el control.", "success");
+               }
+           } else {
+               if (window.teniaPermisoEscritura) {
+                   window.teniaPermisoEscritura = false;
+                   mostrarToast("👁️ Modo Solo Lectura activado.", "warning");
+               }
+               // Siempre actualizamos el banner por si el líder cambió (Ej: De Eduardo a Yair)
+               bloquearInterfaz(estado.escritorActual);
+           }
+        })
+        .pingSesion(email, rol, env, vistaActual);
+   }, 8000); 
+}
+
+function obtenerVistaActiva() {
+    let vistaActiva = "desconocida";
+    document.querySelectorAll('.vista').forEach(v => {
+        if (v.style.display !== 'none' && v.style.display !== '') vistaActiva = v.id;
+    });
+    return vistaActiva;
+}
+
+function bloquearInterfaz(escritor) {
+    document.querySelectorAll('.vista input, .vista select, .vista .btn-field, .vista .btn-action, .modal-content input, .modal-content select, .modal-content .btn-field').forEach(el => {
+        if (el.id !== 'buscadorProductos' && el.id !== 'buscadorPedidos' && !el.id.includes('filtroFecha')) { 
+            el.disabled = true;
+            el.style.opacity = '0.6';
+            el.style.cursor = 'not-allowed';
+        }
+    });
+
+    let banner = document.getElementById("banner-solo-lectura");
+    if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "banner-solo-lectura";
+        banner.style.cssText = "background:#fee2e2; color:#dc2626; text-align:center; padding:8px; font-weight:bold; font-size:0.85rem; border-bottom:2px solid #fca5a5; position:sticky; top:0; z-index:9000;";
+        const navBar = document.querySelector('.nav-bar');
+        if (navBar && navBar.parentNode) navBar.parentNode.insertBefore(banner, navBar.nextSibling);
+        else document.getElementById("app-principal").prepend(banner);
+    }
+    banner.innerHTML = `👁️ MODO SOLO LECTURA. <span style="font-weight:normal;">(<strong>${escritor}</strong> tiene el control temporal)</span>`;
+    banner.style.display = "block";
+}
+
+function desbloquearInterfaz() {
+    document.querySelectorAll('.vista input, .vista select, .vista .btn-field, .vista .btn-action, .modal-content input, .modal-content select, .modal-content .btn-field').forEach(el => {
+        el.disabled = false;
+        el.style.opacity = '1';
+        el.style.cursor = 'pointer';
+    });
+    let banner = document.getElementById("banner-solo-lectura");
+    if (banner) banner.style.display = "none";
+}
+
+// =========================================================
+// CONFIGURACIÓN DE LA INTERFAZ Y ENTORNOS
+// =========================================================
 function configurarInterfazPorPermisos(info) {
-  // 1. Mostrar Botones Exclusivos SOLO si es Admin
   const btnEnv = document.getElementById('btn-env-switch');
   const btnAdmin = document.getElementById('nav-admin');
   
   if (btnEnv) btnEnv.style.display = info.esAdmin ? 'block' : 'none';
   if (btnAdmin) btnAdmin.style.display = info.esAdmin ? 'inline-block' : 'none';
   
-  // 2. Encender o APAGAR botones de Menú Operativos (AQUÍ ESTABA EL ERROR)
-  // Ahora forzamos explícitamente a que se oculten si no tienen permiso
   document.getElementById('nav-entradas').style.display = info.permisos.entradas ? 'inline-block' : 'none';
   document.getElementById('nav-salidas').style.display = info.permisos.salidas ? 'inline-block' : 'none';
   document.getElementById('nav-ubicaciones').style.display = info.permisos.ubicaciones ? 'inline-block' : 'none';
@@ -215,118 +237,87 @@ function configurarInterfazPorPermisos(info) {
   document.getElementById('nav-pedidos').style.display = info.permisos.envios ? 'inline-block' : 'none';
   document.getElementById('nav-bajas').style.display = info.permisos.bajas ? 'inline-block' : 'none';
   
-  // 3. Forzar redirección a la primera vista que tenga habilitada
   if (info.permisos.entradas) cambiarVista('vista-operacion');
   else if (info.permisos.envios) cambiarVista('vista-pedidos');
   else if (info.permisos.salidas) cambiarVista('vista-salidas');
   else if (info.permisos.productos) cambiarVista('vista-productos');
-else if (info.permisos.ubicaciones) cambiarVista('vista-ubicaciones');
+  else if (info.permisos.ubicaciones) cambiarVista('vista-ubicaciones');
   else if (info.permisos.bajas) cambiarVista('vista-bajas');
   else {
-      // NUEVO: Candado extra - Si no tiene NINGÚN permiso, le mostramos la pantalla de "Cuenta en revisión"
       document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
       let vistaRevision = document.getElementById('vista-sin-permisos');
       if (vistaRevision) vistaRevision.style.display = 'flex';
-      
       Swal.fire("En espera de autorización", "Un Administrador debe otorgarte permisos para operar el sistema.", "info");
   }
-  // 4. Arrancar datos
+  
+  window.APP_STATE.env = info.entorno;
   updateEnvButton(info.entorno);
   recargarSelectores();
 
-  // 5. Cargar notificaciones (Campana) en segundo plano silenciosamente
   if (info.permisos.envios && typeof api !== 'undefined') {
       api.obtenerHistorialPedidos(function(lista) {
           window.LISTA_PEDIDOS_CACHE = lista || [];
           if(typeof actualizarNotificaciones === 'function') actualizarNotificaciones();
-      }, function(err) {
-          console.warn("No se cargó la campana en 2do plano", err);
-      });
+      }, function(err) { console.warn("Error background notificaciones", err); });
   }
 }
-
-// CERRAR SESIÓN (Regresa al Login inmediatamente)
-function cerrarSesion() {
-   if (heartbeatInterval) clearInterval(heartbeatInterval);
-  const email = localStorage.getItem("inventario_email");
-  if(email) {
-     google.script.run.registrarCierreSesion(email);
-  }
-
-  // 1. Borramos la memoria del dispositivo
-  localStorage.removeItem("inventario_email");
-  localStorage.removeItem("inventario_pin");
-  
-  // 2. Ocultamos la app y mostramos el Login
-  document.getElementById("app-principal").style.display = "none";
-  document.getElementById("vista-login").style.display = "flex";
-  
-  // 3. Limpiamos los campos
-  reiniciarLogin();
-  document.getElementById("input-correo").value = "";
-}
-// ==========================================
-// FIX: FUNCIONES DE ENTORNO REPARADAS
-// ==========================================
 
 function toggleEnvironment() {
    const btn = document.getElementById('btn-env-switch');
    const isProd = btn.innerText.includes('PRODUCCIÓN');
    const newMode = isProd ? 'TEST' : 'PROD';
-   
-   // NUEVO: Obtenemos el usuario de la memoria del navegador
    const userEmail = localStorage.getItem("inventario_email"); 
    
-   Swal.fire({
-      title: 'Cambiando entorno...',
-      text: 'Conectando con la base de datos...',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-   });
+   Swal.fire({ title: 'Cambiando entorno...', text: 'Conectando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
    
    google.script.run.withSuccessHandler(mode => {
+      window.APP_STATE.env = mode;
       updateEnvButton(mode);
       recargarSelectores();
       if(document.getElementById('vista-productos').style.display !== 'none') cargarDashboardProductos();
       if(document.getElementById('vista-ubicaciones').style.display !== 'none') cargarDashboardUbicaciones();
       if(document.getElementById('vista-pedidos').style.display !== 'none') cargarDashboardPedidos();
       if(document.getElementById('vista-bajas').style.display !== 'none') cargarCaducados();
-      
-      Swal.fire('¡Cambiado!', `Estás en la base de:\n${mode === 'PROD' ? '🟢 PRODUCCIÓN' : '🧪 PRUEBAS'}`, 'success');
+      Swal.fire('¡Cambiado!', `Estás en:\n${mode === 'PROD' ? '🟢 PRODUCCIÓN' : '🧪 PRUEBAS'}`, 'success');
    }).withFailureHandler((err) => {
-      Swal.fire('Sin permiso', err.message || 'No autorizado para cambiar entorno.', 'error');
-   }).switchEnvironment(newMode, userEmail); // NUEVO: Pasamos el userEmail al backend
+      Swal.fire('Sin permiso', err.message, 'error');
+   }).switchEnvironment(newMode, userEmail); 
 }
 
 function updateEnvButton(mode) {
    const btn = document.getElementById('btn-env-switch');
    if(!btn) return;
    if(mode === 'TEST') {
-      btn.style.background = '#f39c12'; 
-      btn.innerHTML = '🧪 MODO: PRUEBAS';
+      btn.style.background = '#f39c12'; btn.innerHTML = '🧪 MODO: PRUEBAS';
    } else {
-      btn.style.background = '#2ecc71'; 
-      btn.innerHTML = '🟢 MODO: PRODUCCIÓN';
+      btn.style.background = '#2ecc71'; btn.innerHTML = '🟢 MODO: PRODUCCIÓN';
    }
 }
 
-// ==========================================
-// MÓDULO DE NOTIFICACIONES Y PERFIL
-// ==========================================
+function cerrarSesion() {
+   if (window.heartbeatInterval) clearInterval(window.heartbeatInterval);
+   const email = localStorage.getItem("inventario_email");
+   if(email) google.script.run.registrarCierreSesion(email);
+   localStorage.clear();
+   document.getElementById("app-principal").style.display = "none";
+   document.getElementById("vista-login").style.display = "flex";
+   reiniciarLogin();
+   document.getElementById("input-correo").value = "";
+}
 
+// =========================================================
+// CAMPANA DE NOTIFICACIONES Y OTROS
+// =========================================================
 window.toggleMenuUsuario = function() {
    let panel = document.getElementById("panel-notificaciones");
    panel.style.display = panel.style.display === "none" ? "block" : "none";
 };
 
-// Cierra el menú si haces clic afuera
 document.addEventListener('click', function(event) {
     let panel = document.getElementById("panel-notificaciones");
     let boton = document.querySelector("button[onclick='toggleMenuUsuario()']");
     if (panel && panel.style.display === "block") {
-        if (!panel.contains(event.target) && !boton.contains(event.target)) {
-            panel.style.display = "none";
-        }
+        if (!panel.contains(event.target) && !boton.contains(event.target)) panel.style.display = "none";
     }
 });
 
@@ -336,7 +327,6 @@ function actualizarNotificaciones() {
    let pedidosPendientes = [];
    let pedidosSinGuia = [];
 
-   // Analizamos el caché de pedidos sin hacer llamadas extra al servidor
    LISTA_PEDIDOS_CACHE.forEach(p => {
       let st = p.estatus || "Pendiente";
       if (st === "Pendiente") pedidosPendientes.push(p);
@@ -361,7 +351,7 @@ function actualizarNotificaciones() {
        if (pedidosPendientes.length > 0) {
            listaHtml += `<div style="padding: 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'" onclick="cambiarVista('vista-pedidos'); filtrarEstado('Pendiente', null); toggleMenuUsuario();">
                             <div style="font-weight: bold; color: #d97706; font-size: 0.95rem;">⏳ ${pedidosPendientes.length} Pedido(s) Pendiente(s)</div>
-                            <div style="font-size: 0.8rem; color: #64748b; margin-top:3px;">Falta procesar su envío o entrega. Toca para verlos.</div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top:3px;">Falta procesar su envío o entrega.</div>
                          </div>`;
        }
        if (pedidosSinGuia.length > 0) {
@@ -371,12 +361,10 @@ function actualizarNotificaciones() {
                          </div>`;
        }
    }
-   
    let panelLista = document.getElementById("lista-notificaciones");
    if(panelLista) panelLista.innerHTML = listaHtml;
 }
 
-// --- BOTÓN DE PÁNICO REMOTO ---
 window.liberarSistemaRemoto = function() {
    Swal.fire({
       title: '¿Forzar Liberación?',
