@@ -730,15 +730,28 @@
         </div>
       </div>
 
-      <div id="vista-sin-permisos" class="vista" style="display: none; justify-content: center; align-items: center; height: 60vh;">
-        <div class="card" style="text-align: center; max-width: 400px; padding: 40px 20px;">
-           <div style="font-size: 4rem; margin-bottom: 15px;">⏳</div>
-           <h3 style="color: #1e293b; margin-top: 0;">Cuenta en Revisión</h3>
-           <p style="color: #64748b; font-size: 0.95rem;">
-             Tu usuario está registrado en el sistema, pero aún no tienes módulos operativos asignados.
-             <br><br>
-             Por favor, pide al administrador que autorice tus permisos.
-           </p>
+      <div
+        id="vista-sin-permisos"
+        class="vista"
+        style="
+          display: none;
+          justify-content: center;
+          align-items: center;
+          height: 60vh;
+        "
+      >
+        <div
+          class="card"
+          style="text-align: center; max-width: 400px; padding: 40px 20px"
+        >
+          <div style="font-size: 4rem; margin-bottom: 15px">⏳</div>
+          <h3 style="color: #1e293b; margin-top: 0">Cuenta en Revisión</h3>
+          <p style="color: #64748b; font-size: 0.95rem">
+            Tu usuario está registrado en el sistema, pero aún no tienes módulos
+            operativos asignados.
+            <br /><br />
+            Por favor, pide al administrador que autorice tus permisos.
+          </p>
         </div>
       </div>
 
@@ -836,7 +849,7 @@
             </div>
           </div>
 
-<div class="form-group">
+          <div class="form-group">
             <label>Cantidad (Piezas)</label>
             <div style="display: flex; gap: 10px">
               <input
@@ -846,8 +859,13 @@
                 step="1"
                 placeholder="Ej: 10"
                 class="input-modern"
-                onkeypress="return event.charCode >= 48 && event.charCode <= 57;"
-                oninput="this.value = this.value.replace(/[^0-9]/g, ''); calcularTotalEntrada();"
+                onkeypress="
+                  return event.charCode >= 48 && event.charCode <= 57;
+                "
+                oninput="
+                  this.value = this.value.replace(/[^0-9]/g, '');
+                  calcularTotalEntrada();
+                "
               />
               <div
                 id="infoTotal"
@@ -1141,26 +1159,45 @@
               border-radius: 12px;
               box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
               border: 1px solid #eef2f6;
+              flex-wrap: wrap;
+              gap: 15px;
             "
           >
             <h2 style="margin: 0; font-size: 1.4rem; color: #1e293b">
               📍 Mapa de Almacén
             </h2>
-            <button
-              onclick="abrirModalGenerico('modalUbicacion')"
-              class="btn-field"
-              style="
-                width: auto;
-                padding: 0 20px;
-                margin: 0;
-                background: #f59e0b;
-                color: white;
-                border: none;
-                box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);
-              "
-            >
-              + Nueva Ubicación
-            </button>
+            <div style="display: flex; gap: 10px">
+              <button
+                id="btn-asistente-org"
+                onclick="abrirAsistenteOrganizacion()"
+                class="btn-field"
+                style="
+                  display: none;
+                  width: auto;
+                  padding: 0 20px;
+                  background: #8b5cf6;
+                  color: white;
+                  border: none;
+                  box-shadow: 0 4px 6px rgba(139, 92, 246, 0.2);
+                "
+              >
+                ✨ Asistente de Organización
+              </button>
+              <button
+                onclick="abrirModalGenerico('modalUbicacion')"
+                class="btn-field"
+                style="
+                  width: auto;
+                  padding: 0 20px;
+                  background: #f59e0b;
+                  color: white;
+                  border: none;
+                  box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);
+                "
+              >
+                + Nueva Ubicación
+              </button>
+            </div>
           </div>
 
           <div
@@ -1504,7 +1541,7 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
           "
         >
-<div
+          <div
             style="
               background: #fff3cd;
               padding: 20px;
@@ -1526,9 +1563,11 @@
                 inventario.</small
               >
             </div>
-            
-            <div id="bajas-totales-badges" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
-            
+
+            <div
+              id="bajas-totales-badges"
+              style="display: flex; gap: 10px; flex-wrap: wrap"
+            ></div>
           </div>
           <div
             id="loading-bajas"
@@ -1668,47 +1707,185 @@
         </div>
       </div>
 
-<div id="vista-admin" class="vista" style="display: none; padding-top: 10px">
-        <div class="card" style="max-width: 900px; width: 100%; padding: 0; display: flex; flex-direction: column; max-height: 86vh; overflow: hidden; border-radius: 12px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
-          <div style="background: #1e293b; padding: 20px; border-bottom: 1px solid #0f172a; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+      <div
+        id="vista-admin"
+        class="vista"
+        style="display: none; padding-top: 10px"
+      >
+        <div
+          class="card"
+          style="
+            max-width: 900px;
+            width: 100%;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            max-height: 86vh;
+            overflow: hidden;
+            border-radius: 12px;
+            margin: 0 auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          "
+        >
+          <div
+            style="
+              background: #1e293b;
+              padding: 20px;
+              border-bottom: 1px solid #0f172a;
+              flex-shrink: 0;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
             <div>
-              <h2 style="margin: 0; color: white; font-size: 1.4rem">⚙️ Gestión de Accesos</h2>
-              <small style="color: #94a3b8">Controla quién puede entrar y qué puede ver.</small>
+              <h2 style="margin: 0; color: white; font-size: 1.4rem">
+                ⚙️ Gestión de Accesos
+              </h2>
+              <small style="color: #94a3b8"
+                >Controla quién puede entrar y qué puede ver.</small
+              >
             </div>
-            <button onclick="abrirModalUsuario()" class="btn-field" style="background: #3b82f6; color: white; border: none; width: auto; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
+            <button
+              onclick="abrirModalUsuario()"
+              class="btn-field"
+              style="
+                background: #3b82f6;
+                color: white;
+                border: none;
+                width: auto;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+              "
+            >
               + Nuevo Usuario
             </button>
           </div>
 
-          <div style="background: #f8fafc; padding: 15px 20px; border-bottom: 2px solid #e2e8f0; flex-shrink: 0;">
-<h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                 <style>
-                    @keyframes ping-dot {
-                        0% { transform: scale(1); opacity: 0.8; }
-                        75%, 100% { transform: scale(2.5); opacity: 0; }
-                    }
-                 </style>
-                 <span style="position: relative; display: flex; height: 12px; width: 12px;">
-                     <span style="animation: ping-dot 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; position: absolute; display: inline-flex; height: 100%; width: 100%; border-radius: 50%; background-color: #22c55e;"></span>
-                     <span style="position: relative; display: inline-flex; border-radius: 50%; height: 12px; width: 12px; background-color: #22c55e;"></span>
-                 </span>
-                 Monitor en Vivo
-             </h3>
-             <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
-                <thead style="background: #f1f5f9;">
-                   <tr style="text-align: left; color: #475569;">
-                      <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Usuario</th>
-                      <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1; text-align: center;">Entorno</th>
-                      <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Ubicación (Pantalla)</th>
-                      <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1; text-align: right;">Estado (Permiso)</th>
-                   </tr>
-                </thead>
-                <tbody id="tablaUsuariosEnLineaBody">
-                   <tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 10px; font-style: italic;">Esperando señal del servidor...</td></tr>
-                </tbody>
-             </table>
+          <div
+            style="
+              background: #f8fafc;
+              padding: 15px 20px;
+              border-bottom: 2px solid #e2e8f0;
+              flex-shrink: 0;
+            "
+          >
+            <h3
+              style="
+                margin: 0 0 10px 0;
+                color: #0f172a;
+                font-size: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+              "
+            >
+              <style>
+                @keyframes ping-dot {
+                  0% {
+                    transform: scale(1);
+                    opacity: 0.8;
+                  }
+                  75%,
+                  100% {
+                    transform: scale(2.5);
+                    opacity: 0;
+                  }
+                }
+              </style>
+              <span
+                style="
+                  position: relative;
+                  display: flex;
+                  height: 12px;
+                  width: 12px;
+                "
+              >
+                <span
+                  style="
+                    animation: ping-dot 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+                    position: absolute;
+                    display: inline-flex;
+                    height: 100%;
+                    width: 100%;
+                    border-radius: 50%;
+                    background-color: #22c55e;
+                  "
+                ></span>
+                <span
+                  style="
+                    position: relative;
+                    display: inline-flex;
+                    border-radius: 50%;
+                    height: 12px;
+                    width: 12px;
+                    background-color: #22c55e;
+                  "
+                ></span>
+              </span>
+              Monitor en Vivo
+            </h3>
+            <table
+              style="
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.85rem;
+                background: white;
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                overflow: hidden;
+              "
+            >
+              <thead style="background: #f1f5f9">
+                <tr style="text-align: left; color: #475569">
+                  <th
+                    style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1"
+                  >
+                    Usuario
+                  </th>
+                  <th
+                    style="
+                      padding: 8px 12px;
+                      border-bottom: 1px solid #cbd5e1;
+                      text-align: center;
+                    "
+                  >
+                    Entorno
+                  </th>
+                  <th
+                    style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1"
+                  >
+                    Ubicación (Pantalla)
+                  </th>
+                  <th
+                    style="
+                      padding: 8px 12px;
+                      border-bottom: 1px solid #cbd5e1;
+                      text-align: right;
+                    "
+                  >
+                    Estado (Permiso)
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="tablaUsuariosEnLineaBody">
+                <tr>
+                  <td
+                    colspan="4"
+                    style="
+                      text-align: center;
+                      color: #94a3b8;
+                      padding: 10px;
+                      font-style: italic;
+                    "
+                  >
+                    Esperando señal del servidor...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div id="loading-admin" style="text-align: center; margin: 20px; color: #666; display: none; flex-shrink: 0;">
+          <div
+            id="loading-admin"
             style="
               text-align: center;
               margin: 20px;
@@ -1717,6 +1894,8 @@
               flex-shrink: 0;
             "
           >
+            style=" text-align: center; margin: 20px; color: #666; display:
+            none; flex-shrink: 0; " >
             <div class="spinner"></div>
             <p>Cargando usuarios...</p>
           </div>
@@ -2810,6 +2989,117 @@
           <div id="contenido-modal-pedido"></div>
         </div>
       </div>
+      <div
+        id="modalOrganizacion"
+        class="modal-overlay"
+        style="display: none; z-index: 2005"
+      >
+        <div
+          class="modal-content"
+          style="
+            max-width: 850px;
+            padding: 0;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+          "
+        >
+          <div
+            style="
+              background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+              padding: 20px 25px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-shrink: 0;
+            "
+          >
+            <div>
+              <h3
+                style="
+                  margin: 0;
+                  color: white;
+                  font-size: 1.2rem;
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                "
+              >
+                ✨ Propuesta de Reorganización
+              </h3>
+              <span style="color: #ddd6fe; font-size: 0.85rem"
+                >Optimización basada en caducidad y capacidad volumétrica (Lotes
+                agrupados)</span
+              >
+            </div>
+            <button
+              onclick="cerrarModalGenerico('modalOrganizacion')"
+              style="
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.8rem;
+                cursor: pointer;
+              "
+            >
+              &times;
+            </button>
+          </div>
+
+          <div
+            id="cuerpo-propuesta"
+            style="
+              padding: 20px;
+              flex: 1 1 auto;
+              overflow-y: auto;
+              background: #f8fafc;
+            "
+          >
+            <div style="text-align: center; padding: 40px; color: #64748b">
+              <div class="modern-spinner"></div>
+              <p style="margin-top: 15px">
+                Analizando inventario y calculando capacidades...
+              </p>
+            </div>
+          </div>
+
+          <div
+            style="
+              background: white;
+              padding: 15px 25px;
+              border-top: 1px solid #e2e8f0;
+              display: flex;
+              justify-content: flex-end;
+              gap: 10px;
+              flex-shrink: 0;
+            "
+          >
+            <button
+              onclick="cerrarModalGenerico('modalOrganizacion')"
+              class="btn-action-modal btn-close"
+            >
+              Cancelar
+            </button>
+            <button
+              id="btn-aplicar-reorg"
+              onclick="ejecutarReorganizacion()"
+              class="btn-action-modal"
+              style="
+                background: #10b981;
+                color: white;
+                border: none;
+                box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+                font-weight: bold;
+                display: none;
+              "
+            >
+              ✅ Aplicar esta Distribución en Almacén
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div
         id="global-loader"
@@ -2889,38 +3179,48 @@
             .obtenerMaterialesCaducados();
         }
 
-function renderTablaBajas() {
+        function renderTablaBajas() {
           const tabla = document.getElementById("tablaBajas");
           const tbody = document.getElementById("tablaBajasBody");
           const chkAll = document.getElementById("chkAllBajas");
           const divTotales = document.getElementById("bajas-totales-badges"); // <-- Buscamos el nuevo contenedor
-          
+
           if (!tbody) return;
 
           tbody.innerHTML = "";
           if (chkAll) chkAll.checked = false;
 
           // --- NUEVO: MATEMÁTICA PARA SUMAR TOTALES ---
-          let totL = 0, totKg = 0, totPza = 0;
+          let totL = 0,
+            totKg = 0,
+            totPza = 0;
           if (CACHE_CADUCADOS) {
-             CACHE_CADUCADOS.forEach(item => {
-                 let prName = (item.presentacion || "").toLowerCase();
-                 let unidadDisp = prName.includes("kg") ? "Kg" : (prName.includes("pza") || prName.includes("unid") ? "Pza" : "L");
-                 
-                 if (unidadDisp === 'L') totL += Number(item.volumen);
-                 if (unidadDisp === 'Kg') totKg += Number(item.volumen);
-                 if (unidadDisp === 'Pza') totPza += Number(item.volumen);
-             });
+            CACHE_CADUCADOS.forEach((item) => {
+              let prName = (item.presentacion || "").toLowerCase();
+              let unidadDisp = prName.includes("kg")
+                ? "Kg"
+                : prName.includes("pza") || prName.includes("unid")
+                  ? "Pza"
+                  : "L";
+
+              if (unidadDisp === "L") totL += Number(item.volumen);
+              if (unidadDisp === "Kg") totKg += Number(item.volumen);
+              if (unidadDisp === "Pza") totPza += Number(item.volumen);
+            });
           }
-          
+
           if (divTotales) {
-             let badgesHtml = "";
-             if(totL > 0) badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">💧 ${totL.toFixed(2)} L</span>`;
-             if(totKg > 0) badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">⚖️ ${totKg.toFixed(2)} Kg</span>`;
-             if(totPza > 0) badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">📦 ${Math.round(totPza)} Pza</span>`;
-             
-             if (badgesHtml === "" && CACHE_CADUCADOS.length > 0) badgesHtml = `<span style="color:#856404; font-size:0.85rem;">0.00 L</span>`;
-             divTotales.innerHTML = badgesHtml;
+            let badgesHtml = "";
+            if (totL > 0)
+              badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">💧 ${totL.toFixed(2)} L</span>`;
+            if (totKg > 0)
+              badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">⚖️ ${totKg.toFixed(2)} Kg</span>`;
+            if (totPza > 0)
+              badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">📦 ${Math.round(totPza)} Pza</span>`;
+
+            if (badgesHtml === "" && CACHE_CADUCADOS.length > 0)
+              badgesHtml = `<span style="color:#856404; font-size:0.85rem;">0.00 L</span>`;
+            divTotales.innerHTML = badgesHtml;
           }
           // --------------------------------------------
 
@@ -2957,7 +3257,9 @@ function renderTablaBajas() {
                 ? "Pza"
                 : "L";
             let volDisp =
-              unidadDisp === "Pza" ? Math.round(item.volumen) : item.volumen.toFixed(2);
+              unidadDisp === "Pza"
+                ? Math.round(item.volumen)
+                : item.volumen.toFixed(2);
 
             tr.innerHTML = `
           <td style="text-align: center;"><input type="checkbox" class="chk-baja" data-index="${index}" ${chkAttr} style="transform: scale(1.2); cursor:pointer;"></td>

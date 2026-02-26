@@ -1993,3 +1993,211 @@ function cancelarPedido(idPedido, tipoCancelacion, idUbicacionDestino, motivo) {
     lock.releaseLock();
   }
 }
+
+// ==========================================
+// EJECUTOR DE REORGANIZACIÓN (BIN PACKING)
+// ==========================================
+function ejecutarReorganizacionBackend() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error("El sistema está ocupado. Intenta en unos segundos.");
+  
+  try {
+    verificarAccesoServidor();
+
+    // --- VERIFICACIÓN DE ROL (Seguridad estricta) ---
+    const emailUsuario = Session.getActiveUser().getEmail().toLowerCase();
+    const rawSessions = PropertiesService.getScriptProperties().getProperty('ACTIVE_SESSIONS');
+    if (rawSessions) {
+        let sessions = JSON.parse(rawSessions);
+        if (sessions[emailUsuario] && sessions[emailUsuario].rol !== "admin") {
+            throw new Error("🔒 SEGURIDAD: Acción bloqueada. Solo un Administrador puede reorganizar el almacén.");
+        }
+    }
+    // ------------------------------------------------
+
+    const sInv = obtenerHojaSegura("INVENTARIO");
+    // ... (el resto de tu código sigue igual hacia abajo)
+    const sUbic = obtenerHojaSegura("UBICACIONES");
+    const sPres = obtenerHojaSegura("PRESENTACIONES");
+
+    const dataInv = sInv.getDataRange().getValues();
+    const headersInv = dataInv[0];
+    const dataUbic = sUbic.getDataRange().getValues();
+    const dataPres = sPres.getDataRange().getValues();
+
+// 1. Mapear presentaciones para saber su capacidad (vNom)
+    let mapPres = {};
+    for (let i = 1; i < dataPres.length; i++) {
+        let id = String(dataPres[i][0]).trim();
+        let nombre = String(dataPres[i][1]).toLowerCase();
+        let esPieza = nombre.includes("pza") || nombre.includes("unid") || nombre.includes("pieza");
+        let vNom = parseFloat(dataPres[i][2]);
+        
+        if (isNaN(vNom) || vNom <= 0) {
+             let m = nombre.match(/[\d\.]+/);
+             if (m) {
+                 vNom = parseFloat(m[0]);
+                 if (nombre.includes("ml") || nombre.includes("gr")) vNom /= 1000;
+             }
+        }
+        if (!vNom || vNom <= 0) vNom = 1;
+        
+        let pts = 0;
+        let esCaja = false;
+        
+        // REGLA: Si es pieza abstracta, NUNCA va a las cajas. Se queda intacto en la BD.
+        if (!esPieza) {
+            if (Math.abs(vNom - 1.0) < 0.01) { esCaja = true; pts = 5; }
+            else if (Math.abs(vNom - 0.25) < 0.01) { esCaja = true; pts = 1; }
+        }
+        
+        mapPres[id] = { vNom: vNom, pts: pts, esCaja: esCaja };
+    }
+
+    // 2. Mapear Ubicaciones existentes
+    let mapUbicIds = {};
+    for (let i = 1; i < dataUbic.length; i++) {
+        mapUbicIds[String(dataUbic[i][1]).trim().toUpperCase()] = String(dataUbic[i][0]).trim();
+    }
+
+    let intactos = [];
+    let piezasVigentes = [];
+    let piezasCaducadas = [];
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+
+    // 3. Desarmar inventario en piezas físicas
+    for (let i = 1; i < dataInv.length; i++) {
+        let row = dataInv[i];
+        let presId = String(row[1]).trim();
+        let infoPres = mapPres[presId];
+        
+        // Si no es 1L o 0.25L, se queda intacto en su lugar original
+        if (!infoPres || !infoPres.esCaja) {
+            intactos.push(row);
+            continue;
+        }
+        
+        let vol = parseFloat(row[3]);
+        let pzasFisicas = Math.floor(vol / infoPres.vNom);
+        let restoDecimal = vol - (pzasFisicas * infoPres.vNom);
+        
+        // Si hay líquido suelto (ej. medias botellas), lo dejamos intacto
+        if (restoDecimal > 0.001) {
+            let rowResto = [...row];
+            rowResto[3] = restoDecimal;
+            intactos.push(rowResto);
+        }
+        
+        if (pzasFisicas > 0) {
+            let fCadStr = row[4];
+            let estaCaducado = false;
+            if (fCadStr && fCadStr !== "---" && fCadStr !== "SIN-FECHA") {
+                 let partes = String(fCadStr).split('/');
+                 if (partes.length === 3) {
+                     let d = new Date(partes[2], partes[1]-1, partes[0]);
+                     if (d < hoy) estaCaducado = true;
+                 }
+            }
+            
+            // Expandimos las botellas conservando su LOTE y FECHAS originales
+            for (let p = 0; p < pzasFisicas; p++) {
+                let pieza = {
+                    prodId: row[0],
+                    presId: row[1],
+                    vNom: infoPres.vNom,
+                    pts: infoPres.pts,
+                    caducidad: row[4],
+                    elaboracion: row[5],
+                    lote: row[6],
+                    fecha: row[7],
+                    prov: row[8]
+                };
+                if (estaCaducado) piezasCaducadas.push(pieza);
+                else piezasVigentes.push(pieza);
+            }
+        }
+    }
+
+    // 4. Lógica de Bin Packing (Misma regla: 1L primero)
+    function empaquetarBD(piezas, prefijoNombre) {
+        piezas.sort((a,b) => {
+            if (b.pts !== a.pts) return b.pts - a.pts;
+            return String(a.prodId).localeCompare(String(b.prodId));
+        });
+        
+        let cajas = [];
+        let cajaActual = { nombre: `${prefijoNombre} 1`, puntosUsados: 0, contenido: [] };
+        let contador = 1;
+        
+        for (let p of piezas) {
+            if (cajaActual.puntosUsados + p.pts > 60) {
+                cajas.push(cajaActual);
+                contador++;
+                cajaActual = { nombre: `${prefijoNombre} ${contador}`, puntosUsados: 0, contenido: [] };
+            }
+            cajaActual.contenido.push(p);
+            cajaActual.puntosUsados += p.pts;
+        }
+        if (cajaActual.contenido.length > 0) cajas.push(cajaActual);
+        return cajas;
+    }
+
+    let todasLasCajas = empaquetarBD(piezasVigentes, "CAJA VIGENTES").concat(empaquetarBD(piezasCaducadas, "CAJA CADUCADOS"));
+
+    // 5. Crear las ubicaciones en la Hoja si no existen
+    let nuevasUbicacionesAInsertar = [];
+    todasLasCajas.forEach(c => {
+        let nombreUpp = c.nombre.toUpperCase();
+        if (!mapUbicIds[nombreUpp]) {
+            let newId = "UBIC-" + new Date().getTime() + "-" + Math.floor(Math.random()*1000);
+            mapUbicIds[nombreUpp] = newId;
+            nuevasUbicacionesAInsertar.push([newId, c.nombre]);
+        }
+        c.idUbicacion = mapUbicIds[nombreUpp];
+    });
+
+    if (nuevasUbicacionesAInsertar.length > 0) {
+        sUbic.getRange(sUbic.getLastRow() + 1, 1, nuevasUbicacionesAInsertar.length, 2).setValues(nuevasUbicacionesAInsertar);
+    }
+
+    // 6. Volver a armar las filas sumando botellas del mismo lote en la misma caja
+    let filasEmpacadas = [];
+    todasLasCajas.forEach(c => {
+        let mapAgrupacion = {};
+        c.contenido.forEach(p => {
+            let key = p.prodId + "|" + p.presId + "|" + p.lote + "|" + p.caducidad;
+            if (!mapAgrupacion[key]) mapAgrupacion[key] = { ...p, pzas: 1 };
+            else mapAgrupacion[key].pzas++;
+        });
+        
+        for (let key in mapAgrupacion) {
+            let p = mapAgrupacion[key];
+            let volumenTotal = p.pzas * p.vNom;
+            filasEmpacadas.push([
+                p.prodId,
+                p.presId,
+                c.idUbicacion, 
+                volumenTotal,
+                p.caducidad,
+                p.elaboracion,
+                p.lote,
+                p.fecha,
+                p.prov + " (Auto-Reorg)"
+            ]);
+        }
+    });
+
+    // 7. Sobreescribir Inventario de manera limpia
+    let nuevoDataInv = [headersInv].concat(intactos).concat(filasEmpacadas);
+    sInv.clearContents();
+    sInv.getRange(1, 1, nuevoDataInv.length, nuevoDataInv[0].length).setValues(nuevoDataInv);
+
+    return { success: true, totalCajas: todasLasCajas.length };
+    
+  } catch (e) {
+      throw new Error(e.message);
+  } finally {
+      lock.releaseLock();
+  }
+}

@@ -161,6 +161,7 @@ if (rol === "admin" && vistaActual === "vista-admin" && typeof renderizarTablaUs
                renderizarTablaUsuariosEnLinea(estado.listaUsuarios, estado.escritorActual);
            }
            
+           
            // TRANSICIONES DE ESTADO (Escritura vs Solo Lectura)
            if (estado.tengoPermiso) {
                if (!window.teniaPermisoEscritura) {
