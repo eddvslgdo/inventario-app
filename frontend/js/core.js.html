@@ -20,6 +20,7 @@ window.cambiarVista = function (vistaId) {
 
 if (vistaId === 'vista-operacion') {
       if (typeof recargarSelectores === 'function') recargarSelectores(); // <--- Auto actualiza al entrar
+      if (typeof cargarHistorialEntradas === 'function') cargarHistorialEntradas();
       if (typeof COLA_ENTRADAS !== 'undefined') {
           COLA_ENTRADAS = [];
           if (typeof renderizarColaEntrada === 'function') renderizarColaEntrada();
@@ -409,6 +410,7 @@ function renderTablaUsuarios() {
         if(u.productos) tags.push("Prod.");
         if(u.envios) tags.push("Envíos");
         if(u.bajas) tags.push("Bajas");
+        if(u.historialEntradas) tags.push("Hist. Entradas");
         
         let badgesHtml = tags.map(t => `<span style="background:#e0e7ff; color:#3730a3; padding:2px 6px; border-radius:4px; font-size:0.7rem; margin-right:4px;">${t}</span>`).join("");
         if(tags.length === 0) badgesHtml = `<span style="color:#94a3b8; font-style:italic; font-size:0.8rem;">Sin accesos operativos</span>`;
@@ -444,6 +446,7 @@ function abrirModalUsuario(index = -1) {
     document.getElementById("chk_productos").checked = u ? u.productos : false;
     document.getElementById("chk_envios").checked = u ? u.envios : false;
     document.getElementById("chk_bajas").checked = u ? u.bajas : false;
+    document.getElementById("chk_historialEntradas").checked = u ? u.historialEntradas : false;
 
     abrirModalGenerico('modalUsuario');
 }
@@ -465,7 +468,8 @@ function guardarUsuarioAdmin() {
         ubicaciones: document.getElementById("chk_ubicaciones").checked,
         productos: document.getElementById("chk_productos").checked,
         envios: document.getElementById("chk_envios").checked,
-        bajas: document.getElementById("chk_bajas").checked
+        bajas: document.getElementById("chk_bajas").checked,
+        historialEntradas: document.getElementById("chk_historialEntradas").checked
     };
 
     cerrarModalGenerico('modalUsuario');

@@ -42,6 +42,7 @@ function guardarEntradaDirecta() {
       Swal.fire("¡Éxito!", "Entrada registrada correctamente.", "success");
       limpiarFormularioEntrada();
       if(typeof recargarSelectores === 'function') recargarSelectores();
+      if(typeof cargarHistorialEntradas === 'function') cargarHistorialEntradas();
     })
     .withFailureHandler(function(err) {
       Swal.fire("Error", err.message, "error");
@@ -166,6 +167,7 @@ function ejecutarGuardadoMasivo() {
        Swal.fire("¡Éxito!", "Ingreso Masivo completado.", "success");
        if(typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
        if(typeof recargarSelectores === 'function') recargarSelectores();
+       if(typeof cargarHistorialEntradas === 'function') cargarHistorialEntradas();
     })
     .withFailureHandler(function(err) {
        Swal.fire("Error", err.message, "error");
@@ -173,3 +175,127 @@ function ejecutarGuardadoMasivo() {
     })
     .registrarEntradaMasiva(COLA_ENTRADAS);
 }
+
+// ==========================================
+// RENDERIZADO DEL HISTORIAL DE ENTRADAS
+// ==========================================
+window.cargarHistorialEntradas = function() {
+    const contenedor = document.getElementById("contenedor-tabla-entradas");
+    if (!contenedor) return;
+    
+    contenedor.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #64748b;">
+            <div class="modern-spinner"></div>
+            <p style="margin-top: 15px;">Obteniendo registros...</p>
+        </div>`;
+
+    google.script.run
+        .withSuccessHandler(data => {
+            if (!data || !data.rows || data.rows.length === 0) {
+                contenedor.innerHTML = `<div style="padding: 20px; text-align: center; color: #64748b; background: white; border-radius: 8px;">No hay registros de entradas recientes.</div>`;
+                return;
+            }
+            
+            // Tabla dinámica sin desbordes
+            let html = `<table class="modern-table" style="width: 100%; border-collapse: collapse; margin: 0;">`;
+            
+            html += `<thead style="position: sticky; top: 0; background: #f1f5f9; z-index: 5; box-shadow: 0 2px 4px rgba(0,0,0,0.02);"><tr>`;
+            data.headers.forEach(h => {
+                html += `<th style="padding: 12px 15px;">${h}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+            
+            data.rows.forEach(row => {
+                html += `<tr>`;
+                row.forEach((celda, index) => {
+                    let valor = String(celda).trim() === "" ? "<span style='color:#cbd5e1;'>---</span>" : celda;
+                    let tdStyle = "padding: 12px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle;";
+                    
+                    if (index === 0) tdStyle += " white-space: nowrap; font-size: 0.85rem; color: #64748b;"; 
+                    else if (index === 1) { valor = `<strong style="color: #1e293b; line-height: 1.3; display: block;">${valor}</strong>`; tdStyle += " min-width: 150px;"; } 
+                    else if (index === 2) tdStyle += " font-size: 0.85rem; color: #64748b;"; 
+                    else if (index === 3) {
+                         // Si dice "Ubic. Eliminada", la pintamos de gris para que se entienda
+                         if(valor === "Ubic. Eliminada") valor = `<span style="color:#94a3b8; font-style:italic; font-size:0.8rem;">🚫 Eliminada</span>`;
+                         tdStyle += " font-size: 0.85rem; color: #64748b;"; 
+                    }
+                    else if (index === 4) { valor = `<strong style="color: #007aff; font-size: 1.05rem;">${valor}</strong>`; tdStyle += " white-space: nowrap; text-align: right;"; } 
+                    else if (index === 5 && valor !== "---") { valor = `<span class="id-badge" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a;">${valor}</span>`; tdStyle += " white-space: nowrap;"; } 
+                    
+                    html += `<td style="${tdStyle}">${valor}</td>`;
+                });
+                html += `</tr>`;
+            });
+            
+            html += `</tbody></table>`;
+            contenedor.innerHTML = html;
+        })
+        .withFailureHandler(err => {
+            contenedor.innerHTML = `<div style="color: #dc2626; padding: 20px; background: #fee2e2; border-radius: 8px; text-align: center;">Error al cargar: ${err.message}</div>`;
+        })
+        .obtenerHistorialEntradas();
+};
+
+// ==========================================
+// FILTRO EN VIVO (Buscador a prueba de errores)
+// ==========================================
+// ==========================================
+// RENDERIZADO DEL HISTORIAL DE ENTRADAS
+// ==========================================
+window.cargarHistorialEntradas = function() {
+    const contenedor = document.getElementById("contenedor-tabla-entradas");
+    if (!contenedor) return;
+    
+    contenedor.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #64748b;">
+            <div class="modern-spinner"></div>
+            <p style="margin-top: 15px;">Obteniendo registros...</p>
+        </div>`;
+
+    google.script.run
+        .withSuccessHandler(data => {
+            if (!data || !data.rows || data.rows.length === 0) {
+                contenedor.innerHTML = `<div style="padding: 20px; text-align: center; color: #64748b; background: white; border-radius: 8px;">No hay registros de entradas recientes.</div>`;
+                return;
+            }
+            
+            // Tabla dinámica sin desbordes
+            let html = `<table class="modern-table" style="width: 100%; border-collapse: collapse; margin: 0;">`;
+            
+            html += `<thead style="position: sticky; top: 0; background: #f1f5f9; z-index: 5; box-shadow: 0 2px 4px rgba(0,0,0,0.02);"><tr>`;
+            data.headers.forEach(h => {
+                html += `<th style="padding: 12px 15px; white-space: nowrap;">${h}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+            
+            data.rows.forEach(row => {
+                html += `<tr>`;
+                row.forEach((celda, index) => {
+                    let valor = String(celda).trim() === "" ? "<span style='color:#cbd5e1;'>---</span>" : celda;
+                    let tdStyle = "padding: 12px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle;";
+                    
+                    if (index === 0) tdStyle += " white-space: nowrap; font-size: 0.85rem; color: #64748b;"; 
+                    else if (index === 1) { valor = `<strong style="color: #1e293b; line-height: 1.3; display: block;">${valor}</strong>`; tdStyle += " min-width: 160px;"; } 
+                    else if (index === 2) tdStyle += " font-size: 0.85rem; color: #64748b; white-space: nowrap;"; 
+                    else if (index === 3) {
+                         if(valor === "Ubic. Eliminada") valor = `<span style="color:#94a3b8; font-style:italic; font-size:0.8rem;">🚫 Eliminada</span>`;
+                         tdStyle += " font-size: 0.85rem; color: #64748b; min-width: 120px;"; 
+                    }
+                    else if (index === 4) { valor = `<strong style="color: #007aff; font-size: 1.05rem;">${valor}</strong>`; tdStyle += " white-space: nowrap; text-align: right;"; } 
+                    else if (index === 5 && valor !== "---") { valor = `<span class="id-badge" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a;">${valor}</span>`; tdStyle += " white-space: nowrap;"; } 
+                    // --- NUEVO: REGLA PARA EL PROVEEDOR ---
+                    else if (index === 6) tdStyle += " font-size: 0.85rem; color: #64748b; white-space: nowrap;"; 
+                    
+                    html += `<td style="${tdStyle}">${valor}</td>`;
+                });
+                html += `</tr>`;
+            });
+            
+            html += `</tbody></table>`;
+            contenedor.innerHTML = html;
+        })
+        .withFailureHandler(err => {
+            contenedor.innerHTML = `<div style="color: #dc2626; padding: 20px; background: #fee2e2; border-radius: 8px; text-align: center;">Error al cargar: ${err.message}</div>`;
+        })
+        .obtenerHistorialEntradas();
+};

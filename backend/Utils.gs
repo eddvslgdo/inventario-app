@@ -113,13 +113,14 @@ function procesarLoginEmail(email, pin) {
         nombre: emailDb.split("@")[0], 
         esAdmin: esAdmin,
         entorno: "PROD",
-        permisos: {
+permisos: {
           entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === 'TRUE',
           salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === 'TRUE',
           ubicaciones: data[i][4] === true || String(data[i][4]).toUpperCase() === 'TRUE',
           productos: data[i][5] === true || String(data[i][5]).toUpperCase() === 'TRUE',
           envios: data[i][6] === true || String(data[i][6]).toUpperCase() === 'TRUE',
-          bajas: data[i][7] === true || String(data[i][7]).toUpperCase() === 'TRUE'
+          bajas: data[i][7] === true || String(data[i][7]).toUpperCase() === 'TRUE',
+          historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === 'TRUE' // <--- COLUMNA 10 (J)
         }
       };
     }
@@ -227,7 +228,7 @@ function registrarUsuarioPendiente(email) {
     }
     
     // Agregamos a la hoja: [CORREO, PIN(vacío), Entradas, Salidas, Ubic, Prod, Envios, Bajas, EsAdmin] (Todo en false)
-    s.appendRow([emailBuscado, "", false, false, false, false, false, false, false]); 
+    s.appendRow([emailBuscado, "", false, false, false, false, false, false, false, false]); 
     
     return { success: true };
   } catch(e) {
@@ -254,6 +255,7 @@ function obtenerListaUsuarios() {
         correo: String(data[i][0]).trim(),
         pin: data[i][1],
         entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === 'TRUE',
+        historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === 'TRUE',
         salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === 'TRUE',
         ubicaciones: data[i][4] === true || String(data[i][4]).toUpperCase() === 'TRUE',
         productos: data[i][5] === true || String(data[i][5]).toUpperCase() === 'TRUE',
@@ -287,11 +289,11 @@ function guardarUsuario(u) {
     const rowData = [
       u.correo, u.pin || "", 
       u.entradas, u.salidas, u.ubicaciones, 
-      u.productos, u.envios, u.bajas, u.esAdmin
+      u.productos, u.envios, u.bajas, u.esAdmin, u.historialEntradas
     ];
     
     if (fila > 0) {
-      s.getRange(fila, 1, 1, 9).setValues([rowData]); 
+      s.getRange(fila, 1, 1, 10).setValues([rowData]); 
     } else {
       s.appendRow(rowData); 
     }

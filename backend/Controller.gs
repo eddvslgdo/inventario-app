@@ -2201,3 +2201,65 @@ function ejecutarReorganizacionBackend() {
       lock.releaseLock();
   }
 }
+
+// ==========================================
+// MÓDULO: HISTORIAL DE ENTRADAS (MEJORADO)
+// ==========================================
+function obtenerHistorialEntradas() {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    
+    const sheet = obtenerHojaSegura("REGISTROS_ENTRADA"); 
+    if (!sheet) return { headers: [], rows: [] };
+    
+    const data = sheet.getDataRange().getDisplayValues(); 
+    if (data.length <= 1) return { headers: data[0] || [], rows: [] };
+    
+    // --- MAGIA: Diccionarios blindados con toUpperCase() ---
+    const mapProd = {}, mapPres = {}, mapUbic = {};
+    try {
+        obtenerHojaSegura("PRODUCTOS").getDataRange().getValues().forEach(r => mapProd[String(r[0]).trim().toUpperCase()] = r[1]);
+        obtenerHojaSegura("PRESENTACIONES").getDataRange().getValues().forEach(r => mapPres[String(r[0]).trim().toUpperCase()] = r[1]);
+        obtenerHojaSegura("UBICACIONES").getDataRange().getValues().forEach(r => mapUbic[String(r[0]).trim().toUpperCase()] = r[1]);
+    } catch(e) {}
+
+    let headers = ["FECHA", "PRODUCTO", "PRESENTACIÓN", "DESTINO", "CANTIDAD", "LOTE", "PROVEEDOR"];
+    let rows = [];
+    
+    let limite = Math.max(1, data.length - 100);
+    for (let i = data.length - 1; i >= limite; i--) {
+      let r = data[i];
+      
+      let fecha = r[0];
+      let prod = mapProd[String(r[1]).trim().toUpperCase()] || r[1];
+      let pres = mapPres[String(r[2]).trim().toUpperCase()] || r[2];
+      
+      // Lógica inteligente para Ubicaciones Eliminadas
+      let idUbicRaw = String(r[3]).trim();
+      let ubic = mapUbic[idUbicRaw.toUpperCase()];
+      
+      if (!ubic) {
+          // Si no existe y parece un ID (es muy largo), le ponemos una etiqueta limpia
+          if (idUbicRaw.length > 20 && idUbicRaw.includes("-")) {
+              ubic = "Ubic. Eliminada";
+          } else {
+              ubic = idUbicRaw;
+          }
+      }
+
+      let cant = r[4]; 
+      let lote = r[5];
+      let prov = r[6] || "---";
+
+      rows.push([fecha, prod, pres, ubic, cant, lote, prov]);
+    }
+    
+    return { headers: headers, rows: rows };
+  } catch (e) {
+    throw new Error("Error al leer el historial: " + e.message);
+  } finally {
+    lock.releaseLock();
+  }
+}

@@ -13,22 +13,27 @@ window.APP_STATE = {
 // INICIALIZACIÓN DE LA APLICACIÓN
 // =========================================================
 function initApp() {
-  cambiarVista('vista-operacion');
-  
-  // Volvemos a localStorage para estabilidad
   const userEmail = localStorage.getItem("inventario_email");
 
-  google.script.run.withSuccessHandler(mode => {
-     window.APP_STATE.env = mode;
-     updateEnvButton(mode);
-     recargarSelectores(); 
-  }).getCurrentEnvironment();
-
-  if(userEmail) {
-      google.script.run.withSuccessHandler((canToggle) => {
-        const btn = document.getElementById('btn-env-switch');
-        if (btn) btn.style.display = canToggle ? 'inline-flex' : 'none';
-      }).canToggleEnvironment(userEmail); 
+  if (userEmail) {
+     // Mostramos la pantalla de login...
+     document.getElementById("vista-login").style.display = "flex";
+     document.getElementById("app-principal").style.display = "none";
+     document.getElementById("input-correo").value = userEmail;
+     
+     // ...pero encendemos la animación bonita del botón directamente
+     const btn = document.getElementById("btn-login");
+     if (btn) {
+         btn.innerText = "Restaurando";
+         btn.classList.add("loading-dots", "btn-pulsing");
+         btn.disabled = true;
+     }
+     
+     // Verificamos en silencio
+     ejecutarAutenticacion(userEmail, "", true); 
+  } else {
+     // Si NO hay sesión, mostramos el login normal
+     mostrarPantallaLogin();
   }
 }
 
@@ -68,11 +73,11 @@ function procesarLogin() {
 }
 
 function ejecutarAutenticacion(email, pin, esAutomatico) {
-  if (!esAutomatico && typeof mostrarCargando === "function") mostrarCargando("Verificando credenciales...");
+  // Eliminamos el mostrarCargando global de aquí. El botón ya está animado.
   
   google.script.run
     .withSuccessHandler(res => {
-       if (typeof ocultarCargando === "function") ocultarCargando();
+       // Eliminamos el ocultarCargando global. Apagamos el botón.
        const btn = document.getElementById("btn-login");
        if (btn) { btn.innerText = "Continuar"; btn.classList.remove("loading-dots", "btn-pulsing"); btn.disabled = false; }
 
@@ -123,7 +128,8 @@ function ejecutarAutenticacion(email, pin, esAutomatico) {
        }
     })
     .withFailureHandler(err => {
-       if (typeof ocultarCargando === "function") ocultarCargando();
+       const btn = document.getElementById("btn-login");
+       if (btn) { btn.innerText = "Continuar"; btn.classList.remove("loading-dots", "btn-pulsing"); btn.disabled = false; }
        localStorage.clear();
        mostrarPantallaLogin();
        Swal.fire("Error de Conexión", "Fallo al verificar el acceso.", "error");
@@ -267,14 +273,31 @@ function configurarInterfazPorPermisos(info) {
   if (btnEnv) btnEnv.style.display = info.esAdmin ? 'block' : 'none';
   if (btnAdmin) btnAdmin.style.display = info.esAdmin ? 'inline-block' : 'none';
   
-  document.getElementById('nav-entradas').style.display = info.permisos.entradas ? 'inline-block' : 'none';
-  document.getElementById('nav-salidas').style.display = info.permisos.salidas ? 'inline-block' : 'none';
+// --- MAGIA DE PERMISOS GRANULARES ---
+  const canViewEntradas = info.permisos.entradas || info.permisos.historialEntradas;
+  document.getElementById('nav-entradas').style.display = canViewEntradas ? 'inline-block' : 'none';
+  
+  const panelForm = document.getElementById("panel-formulario-entradas");
+  const panelHist = document.getElementById("panel-historial-entradas");
+  
+  if (panelForm && panelHist) {
+      if (info.permisos.entradas) {
+          // Acceso total
+          panelForm.style.display = "block";
+          panelHist.style.flex = "2 1 600px";
+      } else if (info.permisos.historialEntradas) {
+          // Solo lectura del historial
+          panelForm.style.display = "none";
+          panelHist.style.flex = "1 1 100%"; // La tabla toma toda la pantalla
+      }
+  }
+document.getElementById('nav-salidas').style.display = info.permisos.salidas ? 'inline-block' : 'none';
   document.getElementById('nav-ubicaciones').style.display = info.permisos.ubicaciones ? 'inline-block' : 'none';
   document.getElementById('nav-productos').style.display = info.permisos.productos ? 'inline-block' : 'none';
   document.getElementById('nav-pedidos').style.display = info.permisos.envios ? 'inline-block' : 'none';
   document.getElementById('nav-bajas').style.display = info.permisos.bajas ? 'inline-block' : 'none';
   
-  if (info.permisos.entradas) cambiarVista('vista-operacion');
+if (canViewEntradas) cambiarVista('vista-operacion');
   else if (info.permisos.envios) cambiarVista('vista-pedidos');
   else if (info.permisos.salidas) cambiarVista('vista-salidas');
   else if (info.permisos.productos) cambiarVista('vista-productos');
