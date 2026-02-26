@@ -1504,23 +1504,32 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
           "
         >
-          <div
+<div
             style="
               background: #fff3cd;
               padding: 20px;
               border-bottom: 1px solid #ffeeba;
               flex-shrink: 0;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 15px;
             "
           >
-            <h2 style="margin: 0; color: #856404; font-size: 1.4rem">
-              🗑️ Materiales Caducados
-            </h2>
-            <small style="color: #856404"
-              >Selecciona los lotes vencidos que deseas desincorporar del
-              inventario.</small
-            >
+            <div>
+              <h2 style="margin: 0; color: #856404; font-size: 1.4rem">
+                🗑️ Materiales Caducados
+              </h2>
+              <small style="color: #856404"
+                >Selecciona los lotes vencidos que deseas desincorporar del
+                inventario.</small
+              >
+            </div>
+            
+            <div id="bajas-totales-badges" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+            
           </div>
-
           <div
             id="loading-bajas"
             style="
@@ -1659,77 +1668,47 @@
         </div>
       </div>
 
-      <div
-        id="vista-admin"
-        class="vista"
-        style="display: none; padding-top: 10px"
-      >
-        <div
-          class="card"
-          style="
-            max-width: 900px;
-            width: 100%;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            max-height: 86vh;
-            overflow: hidden;
-            border-radius: 12px;
-            margin: 0 auto;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          "
-        >
-<div
-            style="
-              background: #1e293b;
-              padding: 20px;
-              border-bottom: 1px solid #0f172a;
-              flex-shrink: 0;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            "
-          >
+<div id="vista-admin" class="vista" style="display: none; padding-top: 10px">
+        <div class="card" style="max-width: 900px; width: 100%; padding: 0; display: flex; flex-direction: column; max-height: 86vh; overflow: hidden; border-radius: 12px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
+          <div style="background: #1e293b; padding: 20px; border-bottom: 1px solid #0f172a; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <h2 style="margin: 0; color: white; font-size: 1.4rem">
-                ⚙️ Gestión de Accesos
-              </h2>
-              <small style="color: #94a3b8"
-                >Controla quién puede entrar y qué puede ver.</small
-              >
+              <h2 style="margin: 0; color: white; font-size: 1.4rem">⚙️ Gestión de Accesos</h2>
+              <small style="color: #94a3b8">Controla quién puede entrar y qué puede ver.</small>
             </div>
-            <div style="display:flex; gap:10px;">
-              <button
-                onclick="liberarSistemaRemoto()"
-                class="btn-field"
-                style="
-                  background: #ef4444;
-                  color: white;
-                  border: none;
-                  width: auto;
-                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-                "
-              >
-                🚨 Liberar Sistema
-              </button>
-              <button
-                onclick="abrirModalUsuario()"
-                class="btn-field"
-                style="
-                  background: #3b82f6;
-                  color: white;
-                  border: none;
-                  width: auto;
-                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-                "
-              >
-                + Nuevo Usuario
-              </button>
-            </div>
+            <button onclick="abrirModalUsuario()" class="btn-field" style="background: #3b82f6; color: white; border: none; width: auto; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
+              + Nuevo Usuario
+            </button>
           </div>
 
-          <div
-            id="loading-admin"
+          <div style="background: #f8fafc; padding: 15px 20px; border-bottom: 2px solid #e2e8f0; flex-shrink: 0;">
+<h3 style="margin: 0 0 10px 0; color: #0f172a; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                 <style>
+                    @keyframes ping-dot {
+                        0% { transform: scale(1); opacity: 0.8; }
+                        75%, 100% { transform: scale(2.5); opacity: 0; }
+                    }
+                 </style>
+                 <span style="position: relative; display: flex; height: 12px; width: 12px;">
+                     <span style="animation: ping-dot 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; position: absolute; display: inline-flex; height: 100%; width: 100%; border-radius: 50%; background-color: #22c55e;"></span>
+                     <span style="position: relative; display: inline-flex; border-radius: 50%; height: 12px; width: 12px; background-color: #22c55e;"></span>
+                 </span>
+                 Monitor en Vivo
+             </h3>
+             <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
+                <thead style="background: #f1f5f9;">
+                   <tr style="text-align: left; color: #475569;">
+                      <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Usuario</th>
+                      <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1; text-align: center;">Entorno</th>
+                      <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Ubicación (Pantalla)</th>
+                      <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1; text-align: right;">Estado (Permiso)</th>
+                   </tr>
+                </thead>
+                <tbody id="tablaUsuariosEnLineaBody">
+                   <tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 10px; font-style: italic;">Esperando señal del servidor...</td></tr>
+                </tbody>
+             </table>
+          </div>
+          <div id="loading-admin" style="text-align: center; margin: 20px; color: #666; display: none; flex-shrink: 0;">
             style="
               text-align: center;
               margin: 20px;
@@ -2910,14 +2889,40 @@
             .obtenerMaterialesCaducados();
         }
 
-        function renderTablaBajas() {
+function renderTablaBajas() {
           const tabla = document.getElementById("tablaBajas");
           const tbody = document.getElementById("tablaBajasBody");
           const chkAll = document.getElementById("chkAllBajas");
+          const divTotales = document.getElementById("bajas-totales-badges"); // <-- Buscamos el nuevo contenedor
+          
           if (!tbody) return;
 
           tbody.innerHTML = "";
           if (chkAll) chkAll.checked = false;
+
+          // --- NUEVO: MATEMÁTICA PARA SUMAR TOTALES ---
+          let totL = 0, totKg = 0, totPza = 0;
+          if (CACHE_CADUCADOS) {
+             CACHE_CADUCADOS.forEach(item => {
+                 let prName = (item.presentacion || "").toLowerCase();
+                 let unidadDisp = prName.includes("kg") ? "Kg" : (prName.includes("pza") || prName.includes("unid") ? "Pza" : "L");
+                 
+                 if (unidadDisp === 'L') totL += Number(item.volumen);
+                 if (unidadDisp === 'Kg') totKg += Number(item.volumen);
+                 if (unidadDisp === 'Pza') totPza += Number(item.volumen);
+             });
+          }
+          
+          if (divTotales) {
+             let badgesHtml = "";
+             if(totL > 0) badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">💧 ${totL.toFixed(2)} L</span>`;
+             if(totKg > 0) badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">⚖️ ${totKg.toFixed(2)} Kg</span>`;
+             if(totPza > 0) badgesHtml += `<span style="background: white; border: 1px solid #ffeeba; color: #d97706; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">📦 ${Math.round(totPza)} Pza</span>`;
+             
+             if (badgesHtml === "" && CACHE_CADUCADOS.length > 0) badgesHtml = `<span style="color:#856404; font-size:0.85rem;">0.00 L</span>`;
+             divTotales.innerHTML = badgesHtml;
+          }
+          // --------------------------------------------
 
           if (CACHE_CADUCADOS.length === 0) {
             tabla.style.display = "table";
@@ -2929,7 +2934,6 @@
           tabla.style.display = "table";
 
           CACHE_CADUCADOS.forEach((item, index) => {
-            // CORRECCIÓN: Filtro estricto (Producto + Presentación + Lote + Ubicación)
             const yaAgregado = COLA_BAJAS.some(
               (i) =>
                 i.producto === item.producto &&
@@ -2953,7 +2957,7 @@
                 ? "Pza"
                 : "L";
             let volDisp =
-              unidadDisp === "Pza" ? Math.round(item.volumen) : item.volumen;
+              unidadDisp === "Pza" ? Math.round(item.volumen) : item.volumen.toFixed(2);
 
             tr.innerHTML = `
           <td style="text-align: center;"><input type="checkbox" class="chk-baja" data-index="${index}" ${chkAttr} style="transform: scale(1.2); cursor:pointer;"></td>

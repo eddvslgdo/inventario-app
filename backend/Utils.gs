@@ -129,77 +129,83 @@ function procesarLoginEmail(email, pin) {
 
 function pingSesion(email, rol, entornoActual, vistaActual) {
   if (!email) return { sigueActivo: false };
-  
-  const scriptProps = PropertiesService.getScriptProperties();
-  let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
-  if (!raw) return { sigueActivo: false }; 
-  
-  let sessions = JSON.parse(raw);
-  let now = new Date().getTime();
-  let correoNormalizado = String(email).trim().toLowerCase();
-  
-  // Rescatar la hora original de entrada para no perder su turno en la fila.
-  let tiempoEntrada = (sessions[correoNormalizado] && sessions[correoNormalizado].loginTime) 
-                      ? sessions[correoNormalizado].loginTime 
-                      : now;
-  
-  sessions[correoNormalizado] = { 
-     loginTime: tiempoEntrada, 
-     lastPing: now, 
-     rol: rol || "user", 
-     env: entornoActual || "PROD", 
-     vista: vistaActual || "desconocida" 
-  };
-  
-  let adminsEnProd = [];
-  let normalesEnProd = [];
-  let usuariosConectados = [];
-  
-  // Limpiamos inactivos (25 seg)
-  for (let user in sessions) {
-     if (now - sessions[user].lastPing < 25000) { 
-        usuariosConectados.push({ email: user, ...sessions[user] });
-        if (sessions[user].env === "PROD") {
-           if (sessions[user].rol === "admin") adminsEnProd.push(user);
-           else normalesEnProd.push({ e: user, t: sessions[user].loginTime });
-        }
-     } else {
-        delete sessions[user]; 
-     }
-  }
-  scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
-  
-  let tengoPermiso = false;
-  let lider = "";
 
-  if (entornoActual === "TEST") {
-      tengoPermiso = true;
-      lider = correoNormalizado;
-  } else {
-      if (rol === "admin") {
-          tengoPermiso = true; // Admins en PROD SIEMPRE mandan
-          lider = correoNormalizado; 
-      } else {
-          if (adminsEnProd.length > 0) {
-              tengoPermiso = false;
-              lider = adminsEnProd[0]; 
-          } else {
-              // Ordenamos por hora de llegada (el primero que entró gana)
-              normalesEnProd.sort((a,b) => a.t - b.t);
-              if (normalesEnProd.length > 0) {
-                  lider = normalesEnProd[0].e;
-                  tengoPermiso = (lider === correoNormalizado);
-              }
-          }
-      }
+  // --- SEMÁFORO DE CONCURRENCIA ---
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(3000); 
+  } catch (e) {
+    return { sigueActivo: true, ignorarPing: true }; 
   }
-  
-  return {
-     sigueActivo: true,
-     tengoPermiso: tengoPermiso,
-     escritorActual: lider.split('@')[0], 
-     listaUsuarios: usuariosConectados
-  };
+
+  try {
+      const scriptProps = PropertiesService.getScriptProperties();
+      let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
+      if (!raw) return { sigueActivo: false }; 
+
+      let sessions = JSON.parse(raw);
+      let now = new Date().getTime();
+      let correoNormalizado = String(email).trim().toLowerCase();
+
+      // MANTENER ANTIGÜEDAD INTACTA
+      let tiempoEntrada = (sessions[correoNormalizado] && sessions[correoNormalizado].loginTime) 
+                          ? sessions[correoNormalizado].loginTime 
+                          : now;
+
+      sessions[correoNormalizado] = { 
+         loginTime: tiempoEntrada, 
+         lastPing: now, 
+         rol: rol || "user", 
+         env: entornoActual || "PROD", 
+         vista: vistaActual || "desconocida" 
+      };
+
+      let adminsEnProd = [];
+      let normalesEnProd = [];
+      let usuariosConectados = [];
+
+      for (let user in sessions) {
+         if (now - sessions[user].lastPing < 25000) { 
+            usuariosConectados.push({ email: user, ...sessions[user] });
+            if (sessions[user].env === "PROD") {
+               if (sessions[user].rol === "admin") adminsEnProd.push(user);
+               else normalesEnProd.push({ e: user, t: sessions[user].loginTime });
+            }
+         } else {
+            delete sessions[user]; 
+         }
+      }
+      
+      scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
+
+      // 1. ¿QUIÉN ES EL LÍDER ABSOLUTO EN PRODUCCIÓN?
+      let liderProd = "";
+      if (adminsEnProd.length > 0) {
+          liderProd = adminsEnProd[0]; 
+      } else if (normalesEnProd.length > 0) {
+          normalesEnProd.sort((a, b) => a.t - b.t);
+          liderProd = normalesEnProd[0].e;
+      }
+
+      // 2. ¿TIENE PERMISO EL USUARIO QUE ESTÁ PREGUNTANDO?
+      let tengoPermiso = false;
+      if (entornoActual === "TEST") {
+          tengoPermiso = true; // En pruebas siempre puedes escribir localmente
+      } else {
+          tengoPermiso = (liderProd === correoNormalizado); // En PROD, solo si eres el líder
+      }
+
+      // Devolvemos SIEMPRE el liderProd para que la tabla del Admin sepa quién tiene el control real
+      return {
+         sigueActivo: true,
+         tengoPermiso: tengoPermiso,
+         escritorActual: liderProd ? liderProd.split('@')[0] : "", 
+         listaUsuarios: usuariosConectados
+      };
+      
+  } finally {
+      lock.releaseLock();
+  }
 }
 
 // NUEVO: Función para registrar un usuario sin permisos operativos

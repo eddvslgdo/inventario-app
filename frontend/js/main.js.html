@@ -156,8 +156,9 @@ function iniciarLatido() {
               return Swal.fire('Sesión Finalizada', 'Tu sesión expiró o fue cerrada remotamente.', 'warning');
            }
            
-           if (rol === "admin" && vistaActual === "vista-admin" && typeof renderizarTablaUsuariosEnLinea === 'function') {
-               renderizarTablaUsuariosEnLinea(estado.listaUsuarios);
+if (rol === "admin" && vistaActual === "vista-admin" && typeof renderizarTablaUsuariosEnLinea === 'function') {
+               // ¡AQUÍ FALTABA PASARLE EL ESCRITOR ACTUAL! 👇
+               renderizarTablaUsuariosEnLinea(estado.listaUsuarios, estado.escritorActual);
            }
            
            // TRANSICIONES DE ESTADO (Escritura vs Solo Lectura)
@@ -189,33 +190,68 @@ function obtenerVistaActiva() {
 }
 
 function bloquearInterfaz(escritor) {
-    document.querySelectorAll('.vista input, .vista select, .vista .btn-field, .vista .btn-action, .modal-content input, .modal-content select, .modal-content .btn-field').forEach(el => {
-        if (el.id !== 'buscadorProductos' && el.id !== 'buscadorPedidos' && !el.id.includes('filtroFecha')) { 
+    // 1. Seleccionamos inputs, selects y TODOS los botones de la interfaz
+    document.querySelectorAll('.vista input, .vista select, .vista button, .modal-content input, .modal-content select, .modal-content button').forEach(el => {
+        
+        const id = (el.id || '').toLowerCase();
+        const onclickStr = (el.getAttribute('onclick') || '').toLowerCase();
+        const textStr = (el.innerText || '').toLowerCase();
+
+        // REGLA A: Dejamos vivos los campos de búsqueda y filtros
+        const esBuscador = id.includes('buscador') || id.includes('filtro') || id.includes('search');
+        
+        // REGLA B: Dejamos vivos los botones inofensivos (Cerrar, Cancelar, Navegar, Ver detalles)
+        const esInofensivo = 
+            onclickStr.includes('cerrar') || 
+            onclickStr.includes('cancelar') || 
+            onclickStr.includes('verdetalle') || 
+            onclickStr.includes('toggle') || 
+            onclickStr.includes('filtrar') || 
+            textStr.includes('cerrar') || 
+            textStr.includes('cancelar') || 
+            textStr.includes('gestionar') || 
+            textStr.includes('ver ▼') ||
+            el.classList.contains('nav-btn') || 
+            el.classList.contains('filter-tab') ||
+            textStr === 'x' || textStr === '×'; // Botones de "tache" en modales
+
+        // Si NO es buscador y NO es inofensivo -> LO BLOQUEAMOS
+        if (!esBuscador && !esInofensivo) {
             el.disabled = true;
-            el.style.opacity = '0.6';
+            el.style.opacity = '0.5';
             el.style.cursor = 'not-allowed';
         }
     });
 
+    // 2. Dibujar el Banner de manera no invasiva
     let banner = document.getElementById("banner-solo-lectura");
     if (!banner) {
         banner = document.createElement("div");
         banner.id = "banner-solo-lectura";
-        banner.style.cssText = "background:#fee2e2; color:#dc2626; text-align:center; padding:8px; font-weight:bold; font-size:0.85rem; border-bottom:2px solid #fca5a5; position:sticky; top:0; z-index:9000;";
+        
+        // CORRECCIÓN: Bajamos el z-index a 900. 
+        // Así el menú queda protegido, pero si abres un Modal (z-index 1000+), el modal tapará el banner.
+        banner.style.cssText = "background:#fee2e2; color:#dc2626; text-align:center; padding:8px; font-weight:bold; font-size:0.85rem; border-bottom:2px solid #fca5a5; position:sticky; top:0; z-index:900;";
+        
         const navBar = document.querySelector('.nav-bar');
-        if (navBar && navBar.parentNode) navBar.parentNode.insertBefore(banner, navBar.nextSibling);
-        else document.getElementById("app-principal").prepend(banner);
+        if (navBar && navBar.parentNode) {
+            navBar.parentNode.insertBefore(banner, navBar.nextSibling);
+        } else {
+            document.getElementById("app-principal").prepend(banner);
+        }
     }
     banner.innerHTML = `👁️ MODO SOLO LECTURA. <span style="font-weight:normal;">(<strong>${escritor}</strong> tiene el control temporal)</span>`;
     banner.style.display = "block";
 }
 
 function desbloquearInterfaz() {
-    document.querySelectorAll('.vista input, .vista select, .vista .btn-field, .vista .btn-action, .modal-content input, .modal-content select, .modal-content .btn-field').forEach(el => {
+    // Reactivamos todo y regresamos el cursor a la normalidad
+    document.querySelectorAll('.vista input, .vista select, .vista button, .modal-content input, .modal-content select, .modal-content button').forEach(el => {
         el.disabled = false;
         el.style.opacity = '1';
-        el.style.cursor = 'pointer';
+        el.style.cursor = 'pointer'; 
     });
+    
     let banner = document.getElementById("banner-solo-lectura");
     if (banner) banner.style.display = "none";
 }
@@ -388,4 +424,72 @@ window.liberarSistemaRemoto = function() {
            .LIBERAR_SISTEMA();
       }
    });
+};
+
+// =========================================================
+// MONITOR EN VIVO DE USUARIOS CONECTADOS (PANEL ADMIN)
+// =========================================================
+window.renderizarTablaUsuariosEnLinea = function(listaUsuarios, escritorActual) {
+    const tbody = document.getElementById("tablaUsuariosEnLineaBody");
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    if (!listaUsuarios || listaUsuarios.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 10px;">No hay otros usuarios conectados.</td></tr>`;
+        return;
+    }
+
+    // Ordenar para que el administrador actual siempre salga arriba
+    listaUsuarios.sort((a, b) => {
+        if (a.rol === 'admin' && b.rol !== 'admin') return -1;
+        if (a.rol !== 'admin' && b.rol === 'admin') return 1;
+        return 0;
+    });
+
+    listaUsuarios.forEach(u => {
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid #e2e8f0";
+
+        let nombreCorto = String(u.email).split('@')[0];
+
+        // 1. Identificar si es el escritor
+        let esEscritor = (nombreCorto === escritorActual || u.email === escritorActual);
+        
+        let badgeEstado = "";
+        if (u.env === "TEST") {
+            badgeEstado = `<span style="background: #fef3c7; color: #b45309; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 0.70rem;">🧪 Pruebas (Aislado)</span>`;
+        } else if (esEscritor) {
+            badgeEstado = `<span style="background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.70rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">✍️ ESCRITOR</span>`;
+        } else {
+            badgeEstado = `<span style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.70rem;">👁️ LECTOR</span>`;
+        }
+
+        // 2. Etiqueta del entorno
+        let badgeEnv = u.env === 'PROD' 
+            ? `<span style="color: #10b981; font-weight: 800; font-size: 0.8rem;">PROD</span>` 
+            : `<span style="color: #f59e0b; font-weight: 800; font-size: 0.8rem;">TEST</span>`;
+
+        // 3. Formatear la vista en la que están navegando
+        let vistaLimpia = (u.vista || "Cargando...").replace("vista-", "");
+        let iconoVista = "🔍";
+        if (vistaLimpia === "operacion") { vistaLimpia = "Entradas"; iconoVista = "📦"; }
+        if (vistaLimpia === "salidas") iconoVista = "🚚";
+        if (vistaLimpia === "ubicaciones") iconoVista = "📍";
+        if (vistaLimpia === "productos") iconoVista = "📊";
+        if (vistaLimpia === "pedidos") { vistaLimpia = "Envíos"; iconoVista = "📦"; }
+        if (vistaLimpia === "admin") iconoVista = "⚙️";
+
+        // Ensamblar la fila
+        tr.innerHTML = `
+            <td style="padding: 8px 12px; font-weight: 600; color: #1e293b;">
+               ${nombreCorto} 
+               ${u.rol === 'admin' ? '<span title="Administrador" style="font-size:0.7rem; margin-left:4px;">⭐</span>' : ''}
+            </td>
+            <td style="padding: 8px 12px; text-align: center;">${badgeEnv}</td>
+            <td style="padding: 8px 12px; color: #475569; font-size: 0.8rem;">${iconoVista} ${vistaLimpia.toUpperCase()}</td>
+            <td style="padding: 8px 12px; text-align: right;">${badgeEstado}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 };
