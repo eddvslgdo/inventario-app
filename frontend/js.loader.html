@@ -361,7 +361,8 @@
     if (tbody) {
       tbody.innerHTML = "";
       if (!ubic.items || ubic.items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">Esta ubicación está vacía.</td></tr>';
+        tbody.innerHTML =
+          '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">Esta ubicación está vacía.</td></tr>';
       } else {
         const orden = { L: 1, Kg: 2, Pza: 3 };
         ubic.items.sort((a, b) => {
@@ -381,15 +382,28 @@
             let lbl = "📦 PIEZAS (INDIVISIBLES)";
             let colorSep = "#f3e5f5";
             let textCol = "#8e24aa";
-            let totalGrupo = ubic.totales && ubic.totales.Pza ? Math.round(ubic.totales.Pza) + " Pza" : "0 Pza";
+            let totalGrupo =
+              ubic.totales && ubic.totales.Pza
+                ? Math.round(ubic.totales.Pza) + " Pza"
+                : "0 Pza";
 
             if (unidadActual === "L") {
-              lbl = "💧 VOLUMEN (LÍQUIDOS)"; colorSep = "#e3f2fd"; textCol = "#0277bd";
-              totalGrupo = ubic.totales && ubic.totales.L ? ubic.totales.L.toFixed(2) + " L" : "0.00 L";
+              lbl = "💧 VOLUMEN (LÍQUIDOS)";
+              colorSep = "#e3f2fd";
+              textCol = "#0277bd";
+              totalGrupo =
+                ubic.totales && ubic.totales.L
+                  ? ubic.totales.L.toFixed(2) + " L"
+                  : "0.00 L";
             }
             if (unidadActual === "Kg") {
-              lbl = "⚖️ MASA (SÓLIDOS)"; colorSep = "#fff8e1"; textCol = "#f57f17";
-              totalGrupo = ubic.totales && ubic.totales.Kg ? ubic.totales.Kg.toFixed(2) + " Kg" : "0.00 Kg";
+              lbl = "⚖️ MASA (SÓLIDOS)";
+              colorSep = "#fff8e1";
+              textCol = "#f57f17";
+              totalGrupo =
+                ubic.totales && ubic.totales.Kg
+                  ? ubic.totales.Kg.toFixed(2) + " Kg"
+                  : "0.00 Kg";
             }
 
             var trSep = document.createElement("tr");
@@ -409,14 +423,36 @@
           tr.style.background = "#fff";
 
           var volUnit = item.volumen_nominal || 0;
-          let volDisplay = item.unidad === "Pza" ? Math.round(item.volumen) : Number(item.volumen).toFixed(2);
+          let volDisplay =
+            item.unidad === "Pza"
+              ? Math.round(item.volumen)
+              : Number(item.volumen).toFixed(2);
 
           // AGREGADA LA CASILLA (CHECKBOX) EN LA PRIMERA CELDA
-          var row = '<td style="padding:12px; text-align:center;"><input type="checkbox" class="chk-ubic-item" data-idx="' + k + '" style="transform: scale(1.2); cursor:pointer;"></td>';
-          row += '<td style="padding:12px;"><b>' + item.producto + '</b><br><small style="color:#666;">' + item.presentacion + "</small></td>";
-          row += '<td style="padding:12px; color:#d63031; font-family:monospace; font-size:0.9rem;">' + item.lote + "</td>";
-          row += '<td style="padding:12px; font-size:0.9rem;">' + (item.caducidad || "--") + "</td>";
-          row += '<td style="padding:12px; text-align:right;"><b>' + volDisplay + " " + item.unidad + "</b></td>";
+          var row =
+            '<td style="padding:12px; text-align:center;"><input type="checkbox" class="chk-ubic-item" data-idx="' +
+            k +
+            '" style="transform: scale(1.2); cursor:pointer;"></td>';
+          row +=
+            '<td style="padding:12px;"><b>' +
+            item.producto +
+            '</b><br><small style="color:#666;">' +
+            item.presentacion +
+            "</small></td>";
+          row +=
+            '<td style="padding:12px; color:#d63031; font-family:monospace; font-size:0.9rem;">' +
+            item.lote +
+            "</td>";
+          row +=
+            '<td style="padding:12px; font-size:0.9rem;">' +
+            (item.caducidad || "--") +
+            "</td>";
+          row +=
+            '<td style="padding:12px; text-align:right;"><b>' +
+            volDisplay +
+            " " +
+            item.unidad +
+            "</b></td>";
           row += '<td style="padding:12px; text-align:center;">';
           row += `<div style="display:flex; gap:5px; justify-content:center;">`;
           row += `<button class="btn-action btn-move" title="Transferir" onclick="abrirTransferencia('${item.raw_producto_id}', '${item.producto}', '${item.lote}', ${item.volumen}, '${ubic.id}', '${item.raw_presentacion_id}', ${volUnit}, '${item.unidad}')">🔄</button>`;
@@ -428,28 +464,29 @@
         }
       }
     }
-    if (typeof abrirModalGenerico === "function") abrirModalGenerico("modalDetalleUbicacion");
+    if (typeof abrirModalGenerico === "function")
+      abrirModalGenerico("modalDetalleUbicacion");
   }
 
   // --- LÓGICA DE COLAPSO (ACORDEÓN) PARA UBICACIONES ---
-window.toggleGrupoUbicacion = function(groupId, headerRow) {
+  window.toggleGrupoUbicacion = function (groupId, headerRow) {
     // Busca todas las filas que pertenezcan al grupo clíqueado (ej. grupo-ubic-L)
     var rows = document.querySelectorAll("." + groupId);
     var chevron = headerRow.querySelector(".ubic-chevron");
-    
+
     // Verificamos si actualmente están ocultas
     var isHidden = rows.length > 0 && rows[0].style.display === "none";
 
     // Mostramos u ocultamos
-    rows.forEach(function(r) {
-        r.style.display = isHidden ? "table-row" : "none";
+    rows.forEach(function (r) {
+      r.style.display = isHidden ? "table-row" : "none";
     });
 
     // Cambiamos el ícono de flecha (▶ o ▼)
     if (chevron) {
-        chevron.innerText = isHidden ? "▼" : "▶";
+      chevron.innerText = isHidden ? "▼" : "▶";
     }
-};
+  };
 
   // --- TRANSFERENCIA ---
   function abrirTransferencia(
@@ -579,7 +616,10 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
         cargarDashboardUbicaciones();
         cerrarModalGenerico("modalDetalleUbicacion");
         Swal.fire("Listo", "Transferencia exitosa", "success");
-        logActividad("TRANSFERENCIA", `Movió ${lts.toFixed(2)}L de ${TEMP_ACCION.prodNom} al destino: ${dest}`);
+        logActividad(
+          "TRANSFERENCIA",
+          `Movió ${lts.toFixed(2)}L de ${TEMP_ACCION.prodNom} al destino: ${dest}`,
+        );
       })
       .withFailureHandler(function (e) {
         Swal.fire("Error", e.message, "error");
@@ -912,9 +952,11 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
           cerrarModalGenerico("modalDetalleUbicacion");
         Swal.fire("Listo", "Transformación exitosa", "success");
         // --- NUEVA LÍNEA: Refrescar también la tabla de Productos ---
-        if (typeof cargarDashboardProductos === "function") cargarDashboardProductos(); 
-        
-        if (typeof cerrarModalGenerico === "function") cerrarModalGenerico("modalDetalleUbicacion");
+        if (typeof cargarDashboardProductos === "function")
+          cargarDashboardProductos();
+
+        if (typeof cerrarModalGenerico === "function")
+          cerrarModalGenerico("modalDetalleUbicacion");
         Swal.fire("Listo", "Transformación exitosa", "success");
       })
       .withFailureHandler(function (e) {
@@ -924,81 +966,99 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
   }
 
   // --- LÓGICA DE TRANSFERENCIA MASIVA ---
-  
+
   function toggleAllUbicItems(source) {
-     const checkboxes = document.querySelectorAll(".chk-ubic-item");
-     checkboxes.forEach((chk) => (chk.checked = source.checked));
+    const checkboxes = document.querySelectorAll(".chk-ubic-item");
+    checkboxes.forEach((chk) => (chk.checked = source.checked));
   }
 
   let ITEMS_MASIVOS = [];
 
   function prepararTransferenciaMasiva() {
-     const checkboxes = document.querySelectorAll(".chk-ubic-item:checked");
-     if (checkboxes.length === 0) {
-        return Swal.fire("Atención", "Selecciona al menos un lote marcando la casilla del lado izquierdo.", "warning");
-     }
+    const checkboxes = document.querySelectorAll(".chk-ubic-item:checked");
+    if (checkboxes.length === 0) {
+      return Swal.fire(
+        "Atención",
+        "Selecciona al menos un lote marcando la casilla del lado izquierdo.",
+        "warning",
+      );
+    }
 
-     // Buscamos la ubicación completa actual en el cache
-     let ubicInfo = CACHE_UBICACIONES.find(u => String(u.id) === String(UBICACION_ACTUAL_ID));
-     if(!ubicInfo) return;
+    // Buscamos la ubicación completa actual en el cache
+    let ubicInfo = CACHE_UBICACIONES.find(
+      (u) => String(u.id) === String(UBICACION_ACTUAL_ID),
+    );
+    if (!ubicInfo) return;
 
-     ITEMS_MASIVOS = [];
-     checkboxes.forEach((chk) => {
-        let idx = parseInt(chk.getAttribute("data-idx"));
-        let item = ubicInfo.items[idx];
-        ITEMS_MASIVOS.push({
-           productoId: item.raw_producto_id,
-           presentacionId: item.raw_presentacion_id,
-           lote: item.lote,
-           volumen: item.volumen
-        });
-     });
+    ITEMS_MASIVOS = [];
+    checkboxes.forEach((chk) => {
+      let idx = parseInt(chk.getAttribute("data-idx"));
+      let item = ubicInfo.items[idx];
+      ITEMS_MASIVOS.push({
+        productoId: item.raw_producto_id,
+        presentacionId: item.raw_presentacion_id,
+        lote: item.lote,
+        volumen: item.volumen,
+      });
+    });
 
-     document.getElementById("lblCantMasivaTransf").innerText = ITEMS_MASIVOS.length;
+    document.getElementById("lblCantMasivaTransf").innerText =
+      ITEMS_MASIVOS.length;
 
-     // Llenar el select de destinos excluyendo el estante actual
-     var selDest = document.getElementById("selDestinoMasivo");
-     if (selDest && window.CACHE_UBICACIONES) {
-        selDest.innerHTML = '<option value="">Selecciona destino...</option>';
-        window.CACHE_UBICACIONES.forEach((u) => {
-           if (String(u.id) !== String(UBICACION_ACTUAL_ID)) {
-              var opt = document.createElement("option");
-              opt.value = u.id;
-              opt.text = u.nombre;
-              selDest.appendChild(opt);
-           }
-        });
-     }
+    // Llenar el select de destinos excluyendo el estante actual
+    var selDest = document.getElementById("selDestinoMasivo");
+    if (selDest && window.CACHE_UBICACIONES) {
+      selDest.innerHTML = '<option value="">Selecciona destino...</option>';
+      window.CACHE_UBICACIONES.forEach((u) => {
+        if (String(u.id) !== String(UBICACION_ACTUAL_ID)) {
+          var opt = document.createElement("option");
+          opt.value = u.id;
+          opt.text = u.nombre;
+          selDest.appendChild(opt);
+        }
+      });
+    }
 
-     abrirModalGenerico("modalTransferenciaMasiva");
+    abrirModalGenerico("modalTransferenciaMasiva");
   }
 
   function confirmarTransferenciaMasiva() {
-     var dest = document.getElementById("selDestinoMasivo").value;
-     if (!dest) return Swal.fire("Atención", "Por favor selecciona el estante de destino.", "warning");
+    var dest = document.getElementById("selDestinoMasivo").value;
+    if (!dest)
+      return Swal.fire(
+        "Atención",
+        "Por favor selecciona el estante de destino.",
+        "warning",
+      );
 
-     cerrarModalGenerico("modalTransferenciaMasiva");
-     
-     Swal.fire({
-        title: "Moviendo " + ITEMS_MASIVOS.length + " lotes...",
-        allowOutsideClick: false,
-        didOpen: function () { Swal.showLoading(); }
-     });
+    cerrarModalGenerico("modalTransferenciaMasiva");
 
-     google.script.run
-       .withSuccessHandler(function (res) {
-          if(res.success) {
-             cargarDashboardUbicaciones();
-             cerrarModalGenerico("modalDetalleUbicacion");
-             Swal.fire("¡Listo!", "Movimiento masivo completado con éxito.", "success");
-          } else {
-             Swal.fire("Error", res.error, "error");
-          }
-       })
-       .withFailureHandler(function (e) {
-          Swal.fire("Error", e.message, "error");
-       })
-       .transferirMasivo(UBICACION_ACTUAL_ID, dest, ITEMS_MASIVOS);
+    Swal.fire({
+      title: "Moviendo " + ITEMS_MASIVOS.length + " lotes...",
+      allowOutsideClick: false,
+      didOpen: function () {
+        Swal.showLoading();
+      },
+    });
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (res.success) {
+          cargarDashboardUbicaciones();
+          cerrarModalGenerico("modalDetalleUbicacion");
+          Swal.fire(
+            "¡Listo!",
+            "Movimiento masivo completado con éxito.",
+            "success",
+          );
+        } else {
+          Swal.fire("Error", res.error, "error");
+        }
+      })
+      .withFailureHandler(function (e) {
+        Swal.fire("Error", e.message, "error");
+      })
+      .transferirMasivo(UBICACION_ACTUAL_ID, dest, ITEMS_MASIVOS);
   }
 </script>
 
@@ -1230,7 +1290,8 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
       tbody.appendChild(tr);
     });
 
-    if (typeof actualizarNotificaciones === 'function') actualizarNotificaciones();
+    if (typeof actualizarNotificaciones === "function")
+      actualizarNotificaciones();
   }
 
   // 3. FILTROS
@@ -1363,8 +1424,6 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
       .obtenerDetallePedidoCompleto(id);
   }
 
-  // En frontend/js/pedidos.js.html
-
   function renderModalDetalle(data) {
     var modalPadre = document.querySelector(
       "#modalDetallePedido .modal-content",
@@ -1372,9 +1431,15 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
     if (!modalPadre) return;
 
     var cab = data.cabecera;
-    var esFinalizado = cab.estatus === "Entregado";
+
+    // --- NUEVAS VALIDACIONES DE ESTADO ---
+    var esCancelado = cab.estatus === "Cancelado";
+    var esFinalizado = cab.estatus === "Entregado" || esCancelado; // Si está cancelado, también bloqueamos edición
     var disabledAttr = esFinalizado ? "disabled" : "";
+
+    // Bloqueo de Fecha Estimada (si ya tiene valor, no se cambia)
     var fechaEstVal = cab.fechaEst ? cab.fechaEst.split("T")[0] : "";
+    var lockEst = cab.fechaEst ? "disabled" : ""; // Candado específico
     var fechaRealVal = cab.fechaReal ? cab.fechaReal.split("T")[0] : "";
 
     // 1. LÓGICA DE LA GUÍA
@@ -1382,7 +1447,7 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
     if (cab.guia && cab.guia !== "---" && cab.guia !== "") {
       htmlGuia = `<span style="background:#eff6ff; color:#2563eb; padding:4px 10px; border-radius:6px; font-weight:bold; font-family:monospace; font-size:1rem;">${cab.guia}</span>`;
     } else {
-      htmlGuia = `<input type="text" id="inputNuevaGuia" placeholder="Ingresar Guía..." style="border:1px solid #d63031; padding:5px; border-radius:4px; width:100%; font-family:monospace; color:#d63031;">`;
+      htmlGuia = `<input type="text" id="inputNuevaGuia" ${disabledAttr} placeholder="Ingresar Guía..." style="border:1px solid #d63031; padding:5px; border-radius:4px; width:100%; font-family:monospace; color:#d63031;">`;
     }
 
     // 2. LÓGICA DE ITEMS
@@ -1394,21 +1459,19 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
           let pzasNum = Number(i.piezas) || 0;
           let prName = String(i.presentacion || "").toLowerCase();
 
-          // Deducir la unidad real basándonos en el nombre de la presentación
           let uni = "L";
           if (
             prName.includes("kg") ||
             prName.includes("kilo") ||
             prName.includes("gramo")
-          ) {
+          )
             uni = "Kg";
-          } else if (
+          else if (
             prName.includes("unid") ||
             prName.includes("pza") ||
             prName.includes("pieza")
-          ) {
+          )
             uni = "Pza";
-          }
 
           let volMostrar = uni === "Pza" ? Math.round(volNum) : volNum;
           let displayVolumen = `${volMostrar} ${uni}`;
@@ -1440,12 +1503,13 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
       cab.email && cab.email !== "---"
         ? cab.email
         : "<span style='color:#94a3b8; font-style:italic;'>No registrado</span>";
+
+    // Colores de Estatus
     var colorSt = "#f59e0b";
     var textoStatus = cab.estatus;
-    if (cab.estatus.indexOf("Entregado") !== -1) {
-      colorSt = "#10b981";
-    }
-    if (
+    if (cab.estatus.indexOf("Entregado") !== -1) colorSt = "#10b981";
+    else if (cab.estatus.indexOf("Cancelado") !== -1) colorSt = "#dc2626";
+    else if (
       cab.estatus.indexOf("Camino") !== -1 ||
       cab.estatus.indexOf("Enviado") !== -1
     ) {
@@ -1492,23 +1556,30 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
           ${itemsHtml} 
        </div>
 
+       <div class="info-card" style="margin-bottom:20px; background:#fff8f1; border-color:#fef08a;">
+          <div class="card-label" style="color:#d97706; border-bottom-color:#fde68a;">💬 HISTORIAL Y COMENTARIOS</div>
+          <textarea id="txtComentarios" ${disabledAttr} style="width:100%; min-height:80px; padding:12px; border:1px solid #fcd34d; border-radius:8px; resize:vertical; font-family:inherit; background:white; color:#334155; font-size:0.9rem;" placeholder="Agrega notas, motivos de retraso o historial del pedido...">${cab.comentarios || ""}</textarea>
+       </div>
+
        <div class="info-card" style="margin-bottom:20px; background:#fff; border-color:#e2e8f0;">
           <div class="card-label">📂 DOCUMENTOS DEL PEDIDO</div>
-          
           <div id="contenedor-archivos-pedido" style="min-height: 40px; margin-bottom: 15px;">
              <div style="color:#94a3b8; font-size:0.85rem; text-align:center;">Cargando documentos...</div>
           </div>
-          
-          <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px 10px; text-align: center; background: #f8fafc; position: relative; margin-bottom: 12px; transition: all 0.2s;">
+          ${
+            !esFinalizado
+              ? `
+          <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px 10px; text-align: center; background: #f8fafc; position: relative; margin-bottom: 12px;">
              <input type="file" id="inputArchivoPedido" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" onchange="document.getElementById('lbl-nombre-archivo').innerText = this.files[0] ? '✅ ' + this.files[0].name : 'Ningún archivo seleccionado';" />
              <div style="font-size: 1.8rem; margin-bottom: 5px; color: #94a3b8;">📄</div>
              <div style="font-size: 0.95rem; color: #334155; font-weight: 600;">Toca aquí para elegir un documento</div>
-             <div id="lbl-nombre-archivo" style="font-size: 0.8rem; color: #2563eb; margin-top: 8px; font-weight: bold; word-break: break-all;">Ningún archivo seleccionado</div>
+             <div id="lbl-nombre-archivo" style="font-size: 0.8rem; color: #2563eb; margin-top: 8px; font-weight: bold;">Ningún archivo seleccionado</div>
           </div>
-          
           <button onclick="procesarSubidaArchivo('${cab.id}', this)" style="width:100%; background:#2563eb; color:white; border:none; padding:12px; border-radius:8px; font-weight:600; cursor:pointer; font-size:1rem; box-shadow: 0 4px 6px rgba(37,99,235,0.2);">
              ⬆️ Subir Documento
-          </button>
+          </button>`
+              : ""
+          }
        </div>
 
        <div class="info-card" style="background:${esFinalizado ? "#f0fdf4" : "#fff"}; border-color:${esFinalizado ? "#bbf7d0" : "#e2e8f0"}; margin-bottom:0;">
@@ -1516,7 +1587,7 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
           <div class="clean-grid" style="margin-bottom:0; gap:15px;">
              <div class="clean-col">
                 <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:5px;">Fecha Estimada</label>
-                <input type="date" id="fechaEst" value="${fechaEstVal}" ${disabledAttr} style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;">
+                <input type="date" id="fechaEst" value="${fechaEstVal}" ${disabledAttr} ${lockEst} style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; background:${lockEst ? "#f1f5f9" : "white"};">
              </div>
              <div class="clean-col">
                 <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:5px;">Fecha Entrega (Real)</label>
@@ -1526,14 +1597,192 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
        </div>
     </div>
 
-    <div class="clean-footer">
-       <button onclick="cerrarModalGenerico('modalDetallePedido')" class="btn-action-modal btn-close">Cerrar</button>
-       ${!esFinalizado ? `<button onclick="guardarCambiosPedido()" class="btn-action-modal btn-save">Guardar Cambios</button>` : ""}
+<div class="clean-footer" style="display: flex; gap: 12px; flex-wrap: wrap; padding: 20px;">
+       <button onclick="cerrarModalGenerico('modalDetallePedido')" class="btn-action-modal btn-close" style="flex: 1; min-width: 100px; display:flex; align-items:center; justify-content:center;">
+           Cerrar
+       </button>
+       
+       ${
+         !esFinalizado
+           ? `
+       <button onclick="iniciarCancelacionPedido('${cab.id}')" class="btn-action-modal" style="flex: 1; min-width: 140px; background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;">
+           🚨 Cancelar
+       </button>
+       <button onclick="guardarCambiosPedido()" class="btn-action-modal btn-save" style="flex: 2; min-width: 200px; display:flex; align-items:center; justify-content:center;">
+           Guardar Cambios
+       </button>
+       `
+           : ""
+       }
     </div>
   `;
 
     // Cargar los archivos justo después de renderizar el modal
     cargarArchivosPedidoUI(cab.id);
+  }
+
+  // --- ACTUALIZAR GUARDADO PARA INCLUIR COMENTARIOS ---
+  function guardarCambiosPedido() {
+    var fe = document.getElementById("fechaEst").value;
+    var fr = document.getElementById("fechaReal").value;
+    var comentarios = document.getElementById("txtComentarios")
+      ? document.getElementById("txtComentarios").value
+      : "";
+
+    var inputGuia = document.getElementById("inputNuevaGuia");
+    var nuevaGuia = "";
+    if (inputGuia) nuevaGuia = inputGuia.value.trim();
+
+    var nuevoSt = "Pendiente";
+    if (fe) nuevoSt = "En Camino";
+    if (fr) nuevoSt = "Entregado";
+
+    var btn = document.querySelector(".btn-save");
+    if (btn) {
+      btn.innerText = "Guardando...";
+      btn.disabled = true;
+    }
+
+    google.script.run
+      .withSuccessHandler(function () {
+        if (typeof mostrarToast === "function")
+          mostrarToast("Pedido actualizado ✅", "success");
+        if (typeof cerrarModalGenerico === "function")
+          cerrarModalGenerico("modalDetallePedido");
+        cargarDashboardPedidos();
+      })
+      .withFailureHandler(function (err) {
+        if (typeof mostrarToast === "function")
+          mostrarToast("Error: " + err.message, "error");
+        if (btn) {
+          btn.innerText = "Guardar Cambios";
+          btn.disabled = false;
+        }
+      })
+      .actualizarPedido(
+        ID_PEDIDO_SELECCIONADO,
+        fe,
+        fr,
+        nuevoSt,
+        nuevaGuia,
+        comentarios,
+      );
+  }
+
+// --- ASISTENTE DE CANCELACIÓN Y DEVOLUCIÓN (DISEÑO PREMIUM) ---
+window.iniciarCancelacionPedido = function(idPedido) {
+    // PASO 1: SELECCIÓN DE DESTINO
+    Swal.fire({
+        title: 'Cancelar Pedido',
+        html: `
+            <p style="color:#64748b; font-size:0.95rem; margin-top:0; margin-bottom:15px;">¿Qué pasará con la mercancía de este envío?</p>
+            <select id="swal-tipo-cancelacion" style="width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; color: #334155; outline: none; background-color: #f8fafc; cursor: pointer; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); font-family: inherit;">
+                <option value="" disabled selected>Selecciona una opción...</option>
+                <option value="retorno">📦 Regresó a Almacén (Reingresar Stock)</option>
+                <option value="merma">💥 Pérdida / Merma / Daño (No reingresar)</option>
+            </select>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#007aff', // Azul
+        cancelButtonColor: '#94a3b8',  // Gris
+        confirmButtonText: 'Siguiente ➡️',
+        cancelButtonText: 'Atrás',
+        preConfirm: () => {
+            const val = document.getElementById('swal-tipo-cancelacion').value;
+            if (!val) Swal.showValidationMessage('Por favor selecciona una opción.');
+            return val;
+        }
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            let tipoCancelacion = result.value;
+
+            // PASO 2: MOTIVO DE CANCELACIÓN
+            Swal.fire({
+                title: 'Motivo de Cancelación',
+                html: `
+                    <p style="color:#64748b; font-size:0.9rem; margin-top:0; margin-bottom:10px;">Este comentario quedará guardado en el historial permanentemente.</p>
+                    <textarea id="swal-motivo" placeholder="Ej: El cliente se arrepintió, paquete dañado en tránsito..." style="width: 100%; box-sizing: border-box; min-height: 120px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; color: #334155; outline: none; resize: vertical; background-color: #f8fafc; font-family: inherit; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);"></textarea>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Confirmar Cancelación 🚨',
+                confirmButtonColor: '#dc2626', // Rojo para la acción destructiva
+                cancelButtonColor: '#94a3b8',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const text = document.getElementById('swal-motivo').value.trim();
+                    if (!text) Swal.showValidationMessage('Debes ingresar un motivo para el historial.');
+                    return text;
+                }
+            }).then((motivoResult) => {
+                if (motivoResult.isConfirmed) {
+                    let motivo = motivoResult.value;
+
+                    // PASO 3 (SOLO SI ES RETORNO): ELEGIR UBICACIÓN
+                    if (tipoCancelacion === 'retorno') {
+                        let optionsHtml = '';
+                        if(window.CACHE_CATALOGOS && window.CACHE_CATALOGOS.ubicaciones){
+                            window.CACHE_CATALOGOS.ubicaciones.forEach(u => {
+                                optionsHtml += `<option value="${u.id}">${u.nombre}</option>`;
+                            });
+                        }
+                        Swal.fire({
+                            title: '¿A qué ubicación regresa?',
+                            html: `
+                                <p style="color:#64748b; font-size:0.9rem; margin-top:0; margin-bottom:15px;">Selecciona el estante o área física donde se colocará el material devuelto.</p>
+                                <select id="swal-ubic-retorno" style="width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; color: #334155; outline: none; background-color: #f8fafc; cursor: pointer; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); font-family: inherit;">
+                                    <option value="" disabled selected>Selecciona la ubicación...</option>
+                                    ${optionsHtml}
+                                </select>
+                            `,
+                            showCancelButton: true,
+                            confirmButtonText: 'Ejecutar Retorno',
+                            confirmButtonColor: '#dc2626',
+                            cancelButtonColor: '#94a3b8',
+                            cancelButtonText: 'Cancelar',
+                            preConfirm: () => {
+                                const val = document.getElementById('swal-ubic-retorno').value;
+                                if (!val) Swal.showValidationMessage('Debes elegir una ubicación destino.');
+                                return val;
+                            }
+                        }).then((ubicResult) => {
+                            if (ubicResult.isConfirmed && ubicResult.value) {
+                                ejecutarCancelacionBackend(idPedido, tipoCancelacion, ubicResult.value, motivo);
+                            }
+                        });
+                    } else {
+                        // Si es merma, se ejecuta directo sin pedir ubicación
+                        ejecutarCancelacionBackend(idPedido, tipoCancelacion, null, motivo);
+                    }
+                }
+            });
+        }
+    });
+}
+  function ejecutarCancelacionBackend(idPedido, tipo, ubicacion, motivo) {
+    mostrarCargando("Procesando Cancelación...");
+    google.script.run
+      .withSuccessHandler(() => {
+        ocultarCargando();
+        Swal.fire(
+          "¡Cancelado!",
+          "El pedido y el inventario han sido actualizados.",
+          "success",
+        );
+        cerrarModalGenerico("modalDetallePedido");
+        cargarDashboardPedidos();
+        // Actualizamos la tabla de productos para reflejar el stock que regresó
+        if (
+          tipo === "retorno" &&
+          typeof cargarDashboardProductos === "function"
+        )
+          cargarDashboardProductos();
+      })
+      .withFailureHandler((err) => {
+        ocultarCargando();
+        Swal.fire("Error", err.message, "error");
+      })
+      .cancelarPedido(idPedido, tipo, ubicacion, motivo);
   }
 
   // --- LÓGICA DE ARCHIVOS (NUEVO) ---
@@ -1619,44 +1868,5 @@ window.toggleGrupoUbicacion = function(groupId, headerRow) {
     };
 
     reader.readAsDataURL(file);
-  }
-
-  // --- GUARDAR CAMBIOS ---
-
-  function guardarCambiosPedido() {
-    var fe = document.getElementById("fechaEst").value;
-    var fr = document.getElementById("fechaReal").value;
-
-    var inputGuia = document.getElementById("inputNuevaGuia");
-    var nuevaGuia = "";
-    if (inputGuia) nuevaGuia = inputGuia.value.trim();
-
-    var nuevoSt = "Pendiente";
-    if (fe) nuevoSt = "En Camino";
-    if (fr) nuevoSt = "Entregado";
-
-    var btn = document.querySelector(".btn-save");
-    if (btn) {
-      btn.innerText = "Guardando...";
-      btn.disabled = true;
-    }
-
-    google.script.run
-      .withSuccessHandler(function () {
-        if (typeof mostrarToast === "function")
-          mostrarToast("Pedido actualizado ✅", "success");
-        if (typeof cerrarModalGenerico === "function")
-          cerrarModalGenerico("modalDetallePedido");
-        cargarDashboardPedidos();
-      })
-      .withFailureHandler(function (err) {
-        if (typeof mostrarToast === "function")
-          mostrarToast("Error: " + err.message, "error");
-        if (btn) {
-          btn.innerText = "Guardar Cambios";
-          btn.disabled = false;
-        }
-      })
-      .actualizarPedido(ID_PEDIDO_SELECCIONADO, fe, fr, nuevoSt, nuevaGuia);
   }
 </script>

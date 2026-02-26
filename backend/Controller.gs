@@ -965,25 +965,15 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
     const sheetInv = obtenerHojaSegura("INVENTARIO");
     if (!sheetInv || sheetInv.getLastRow() < 2)
       return JSON.stringify({ success: false, error: "Sin stock" });
-
     const data = sheetInv.getDataRange().getValues();
 
     // 1. Obtener Nombres
-    const mapUbic = {},
-      mapPres = {};
-    const sU = obtenerHojaSegura("UBICACIONES"),
-      sP = obtenerHojaSegura("PRESENTACIONES");
-    if (sU)
-      sU.getDataRange()
-        .getValues()
-        .slice(1)
-        .forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
-    if (sP)
-      sP.getDataRange()
-        .getValues()
-        .slice(1)
-        .forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
-
+    const mapUbic = {}, mapPres = {};
+    const sU = obtenerHojaSegura("UBICACIONES"), sP = obtenerHojaSegura("PRESENTACIONES");
+    
+    if (sU) sU.getDataRange().getValues().slice(1).forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
+    if (sP) sP.getDataRange().getValues().slice(1).forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
+    
     let lotes = [];
 
     // 2. Leer y Agrupar
@@ -994,8 +984,7 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
         const lote = String(data[i][6]).trim();
         const caducidadStr = _fmtFechaDisplay(data[i][4]);
         const stock = Number(data[i][3]);
-
-        // Buscamos si ya existe esta combinación
+        
         let existente = lotes.find(
           (l) =>
             l.presentacion_id === presId &&
@@ -1003,12 +992,11 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
             l.lote === lote &&
             _fmtFechaDisplay(l.caducidad) === caducidadStr,
         );
-
         if (existente) {
           existente.stock_real += stock;
         } else {
           lotes.push({
-            producto_id: prodIdBuscado,
+            producto_id: prodIdBuscado, // <--- GUARDAMOS EL ID DEL PRODUCTO
             presentacion_id: presId,
             ubicacion_id: uId,
             stock_real: stock,
@@ -1023,14 +1011,16 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
       }
     }
 
-    // 3. Descontar Carrito (Si aplica)
+    // 3. Descontar Carrito (LA MAGIA DE LA CORRECCIÓN)
     if (carrito && Array.isArray(carrito)) {
       carrito.forEach((item) => {
         const l = lotes.find(
           (x) =>
+            x.producto_id === String(item.producto_id).trim() && // <--- FIX: EXIGIMOS QUE SEA EL MISMO PRODUCTO
             x.lote === String(item.lote).trim() &&
             x.ubicacion_id === String(item.ubicacion_id).trim(),
         );
+      
         if (l) l.stock_real -= Number(item.volumen_L);
       });
     }
@@ -1038,14 +1028,13 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
     const validos = lotes.filter((l) => l.stock_real > 0.001);
     if (validos.length === 0)
       return JSON.stringify({ success: false, error: "Sin stock disponible" });
-
+      
     const getMs = (d) => (d instanceof Date ? d.getTime() : 0);
     validos.sort(
       (a, b) =>
         getMs(a.elaboracion || a.fecha_entrada) -
         getMs(b.elaboracion || b.fecha_entrada),
     );
-
     const mejor = validos[0];
 
     return JSON.stringify({
@@ -1523,6 +1512,7 @@ function obtenerDetallePedidoCompleto(idPedido) {
         estatus: r[10],
         fechaEst: _fmtF(r[11]),
         fechaReal: _fmtF(r[12]),
+        comentarios: r[14] || "" // <--- NUEVA LÍNEA
       };
       break;
     }
@@ -1563,17 +1553,22 @@ function obtenerDetallePedidoCompleto(idPedido) {
   return { cabecera: cab, items: items };
 }
 
-function actualizarPedido(id, fe, fr, st, guia) {
+function actualizarPedido(id, fe, fr, st, guia, comentarios) { // Añadido "comentarios"
   const s = obtenerHojaSegura("PEDIDOS");
   const d = s.getDataRange().getValues();
   for (let i = 1; i < d.length; i++) {
     if (String(d[i][0]).trim() === String(id).trim()) {
-      s.getRange(i + 1, 11).setValue(st); // Estatus -> Col K
-      s.getRange(i + 1, 12).setValue(fe); // Fecha Est -> Col L
-      s.getRange(i + 1, 13).setValue(fr); // Fecha Real -> Col M
+      s.getRange(i + 1, 11).setValue(st);
+      s.getRange(i + 1, 12).setValue(fe);
+      s.getRange(i + 1, 13).setValue(fr);
 
       if (guia && guia.trim() !== "") {
-        s.getRange(i + 1, 8).setValue(guia); // Guía -> Col H
+        s.getRange(i + 1, 8).setValue(guia);
+      }
+      
+      // NUEVO: Guardar comentarios
+      if (comentarios !== undefined) {
+         s.getRange(i + 1, 15).setValue(comentarios); // Columna O
       }
       return "OK";
     }
@@ -1896,4 +1891,105 @@ function rutinaLimpiezaSemanalCeros() {
   }
   
   console.log(`🧹 Rutina completada: Se eliminaron ${filasBorradas} registros en 0.`);
+}
+
+// ==========================================
+// CANCELACIÓN DE PEDIDOS Y LOGÍSTICA INVERSA
+// ==========================================
+function cancelarPedido(idPedido, tipoCancelacion, idUbicacionDestino, motivo) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+    verificarAccesoServidor();
+    
+    const sPed = obtenerHojaSegura("PEDIDOS");
+    const dPed = sPed.getDataRange().getValues();
+    let filaPedido = -1;
+    let comentariosActuales = "";
+
+    // 1. Buscar el Pedido y actualizar su estatus
+    for (let i = 1; i < dPed.length; i++) {
+      if (String(dPed[i][0]).trim() === String(idPedido).trim()) {
+        filaPedido = i + 1;
+        comentariosActuales = dPed[i][14] || ""; // Columna O
+        break;
+      }
+    }
+    
+    if (filaPedido === -1) throw new Error("Pedido no encontrado");
+
+    // Escribimos el historial automático
+    const emailUsuario = Session.getActiveUser().getEmail() || "Sistema";
+    const fechaTexto = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
+    let notaSistema = `\n\n❌ [${fechaTexto} - ${emailUsuario}]: Pedido CANCELADO. Motivo: ${motivo}. `;
+    notaSistema += tipoCancelacion === "retorno" ? `Mercancía enviada a devolución.` : `Mercancía marcada como Merma/Pérdida.`;
+    
+    sPed.getRange(filaPedido, 11).setValue("Cancelado");
+    sPed.getRange(filaPedido, 15).setValue(comentariosActuales + notaSistema);
+
+    // 2. Si es Retorno, devolvemos el stock al Inventario RECUPERANDO LAS FECHAS
+    if (tipoCancelacion === "retorno" && idUbicacionDestino) {
+        const sSal = obtenerHojaSegura("REGISTROS_SALIDA");
+        const sInv = obtenerHojaSegura("INVENTARIO");
+        const dSal = sSal.getDataRange().getValues();
+        const dInv = sInv.getDataRange().getValues();
+        
+        // --- MAGIA: MAPEAR LAS FECHAS ORIGINALES DEL INVENTARIO ---
+        let mapaFechas = {};
+        for(let i = 1; i < dInv.length; i++) {
+            let pId = String(dInv[i][0]).trim();
+            let lote = String(dInv[i][6]).trim().toUpperCase();
+            let key = pId + "|" + lote;
+            
+            // Guardamos la fecha de elaboración y caducidad asociadas a ese Lote
+            if (!mapaFechas[key]) {
+                mapaFechas[key] = {
+                    caducidad: dInv[i][4],
+                    elaboracion: dInv[i][5]
+                };
+            }
+        }
+        
+        let itemsARetornar = [];
+        // Buscamos todo lo que salió con este ID de Pedido
+        for (let i = 1; i < dSal.length; i++) {
+            if (String(dSal[i][11]).trim() === String(idPedido).trim()) {
+                itemsARetornar.push({
+                    producto_id: String(dSal[i][0]).trim(),
+                    presentacion_id: dSal[i][2],
+                    volumen_L: dSal[i][4],
+                    lote: String(dSal[i][7]).trim().toUpperCase()
+                });
+            }
+        }
+        
+        // Lo ingresamos como filas nuevas en el INVENTARIO inyectando las fechas rescatadas
+        itemsARetornar.forEach(item => {
+            if (Number(item.volumen_L) > 0) {
+                
+                // Buscamos si el lote existe en el mapa histórico para recuperar sus fechas
+                let keyBusqueda = item.producto_id + "|" + item.lote;
+                let fechasHistoricas = mapaFechas[keyBusqueda] || { caducidad: "SIN-FECHA", elaboracion: "SIN-FECHA" };
+
+                sInv.appendRow([
+                    item.producto_id,
+                    item.presentacion_id,
+                    idUbicacionDestino,
+                    Number(item.volumen_L),
+                    fechasHistoricas.caducidad,    // <--- ¡AQUÍ SE RESTAURA LA CADUCIDAD!
+                    fechasHistoricas.elaboracion,  // <--- ¡AQUÍ SE RESTAURA LA ELABORACIÓN!
+                    item.lote,
+                    new Date(),
+                    `DEVOLUCIÓN ${idPedido}`
+                ]);
+            }
+        });
+    }
+
+    return { success: true };
+  } catch (e) {
+    throw new Error("Fallo en la cancelación: " + e.message);
+  } finally {
+    lock.releaseLock();
+  }
 }
