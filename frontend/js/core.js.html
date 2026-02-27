@@ -47,6 +47,7 @@ if (vistaId === 'vista-operacion') {
   if (vistaId === 'vista-productos' && typeof cargarDashboardProductos === 'function') cargarDashboardProductos();
   if (vistaId === 'vista-pedidos' && typeof cargarDashboardPedidos === 'function') cargarDashboardPedidos();
   if (vistaId === 'vista-admin' && typeof cargarDashboardAdmin === 'function') cargarDashboardAdmin();
+  if (vistaId === 'vista-dashboard' && typeof cargarDashboardPrincipal === 'function') cargarDashboardPrincipal();
 };
 
 function recargarSelectores() {
@@ -134,31 +135,53 @@ function llenarSelects(data) {
 
 function llenarSelectClientes() {
   const sel = document.getElementById("log_cliente_select");
-  if (!sel) return;
-  
-  sel.innerHTML = '<option value="">-- Nuevo / Manual --</option>';
-  
+  const dlExt = document.getElementById("lista-clientes-ext"); // <--- NUEVO: El autocompletado externo
+
+  if (sel) sel.innerHTML = '<option value="">-- Nuevo / Manual --</option>';
+  if (dlExt) dlExt.innerHTML = '';
+
   if(typeof LISTA_CLIENTES !== 'undefined'){
+      // Set para evitar empresas duplicadas en el buscador
+      let empresasAgregadas = new Set();
+
       LISTA_CLIENTES.forEach((c) => {
-        const opt = document.createElement("option");
-        opt.value = c.id;
-        
-        let nombre = c.nombre || "Sin Nombre";
-        let empresa = (c.empresa && c.empresa.trim() !== "") ? `[${c.empresa}]` : "";
-        let dirCorta = c.direccion || "Sin dirección";
-        
-        if (dirCorta.length > 35) {
-            dirCorta = dirCorta.substring(0, 35) + "...";
+        // 1. Llenar el select del checkout normal
+        if (sel) {
+            const opt = document.createElement("option");
+            opt.value = c.id;
+            
+            let nombre = c.nombre || "Sin Nombre";
+            let empresa = (c.empresa && c.empresa.trim() !== "") ? `[${c.empresa}]` : "";
+            let dirCorta = c.direccion || "Sin dirección";
+            if (dirCorta.length > 35) dirCorta = dirCorta.substring(0, 35) + "...";
+            
+            opt.text = `${nombre} ${empresa} - ${dirCorta}`;
+            sel.appendChild(opt);
         }
-        
-        let textoFinal = nombre;
-        if (empresa !== "") textoFinal += ` ${empresa}`;
-        textoFinal += ` - ${dirCorta}`;
-        
-        opt.text = textoFinal;
-        
-        sel.appendChild(opt);
+
+        // 2. Llenar el Datalist del Gasto Logístico Externo
+        if (dlExt) {
+            let nomEmpresa = (c.empresa && c.empresa.trim() !== "") ? c.empresa.trim() : c.nombre.trim();
+            if (nomEmpresa && !empresasAgregadas.has(nomEmpresa)) {
+                empresasAgregadas.add(nomEmpresa);
+                const optDl = document.createElement("option");
+                optDl.value = nomEmpresa;
+                dlExt.appendChild(optDl);
+            }
+        }
       });
+
+      // Opcional: Agregar destinos internos predeterminados a la lista
+      if (dlExt) {
+          let destinosInternos = ["Planta Principal", "Oficinas Centrales"];
+          destinosInternos.forEach(d => {
+             if (!empresasAgregadas.has(d)) {
+                 const optDl = document.createElement("option");
+                 optDl.value = d;
+                 dlExt.appendChild(optDl);
+             }
+          });
+      }
   }
 }
 

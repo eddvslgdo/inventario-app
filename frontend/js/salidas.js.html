@@ -424,6 +424,63 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
   if (typeof calcularTotalSalida === 'function') calcularTotalSalida();
 }
 
+function confirmarEnvioExterno() {
+    let desc = document.getElementById("ext_desc").value.trim();
+    let emp = document.getElementById("ext_empresa").value.trim();
+    let paq = document.getElementById("ext_paq").value.trim();
+    let costo = document.getElementById("ext_costo").value;
+    
+    if(!desc || !emp || !paq || !costo) return Swal.fire("Campos Incompletos", "Llena los campos obligatorios (*).", "warning");
+
+    let datos = {
+        descripcion: desc,
+        nombreContacto: emp,
+        direccion: document.getElementById("ext_dir").value,
+        paqueteria: paq,
+        costo: costo,
+        guia: document.getElementById("ext_guia").value
+    };
+
+    Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+
+    google.script.run
+        .withSuccessHandler(res => {
+            cerrarModalGenerico('modalEnvioExterno');
+            Swal.fire("¡Guardado!", "Gasto registrado correctamente (No afectó inventario).", "success");
+            // Limpiar Modal
+            ["ext_desc","ext_empresa","ext_dir","ext_paq","ext_costo","ext_guia"].forEach(id => document.getElementById(id).value = "");
+            
+            if(typeof cargarDashboardPrincipal === 'function') cargarDashboardPrincipal();
+        })
+        .withFailureHandler(err => Swal.fire("Error", err.message, "error"))
+        .registrarEnvioExterno(datos);
+}
+
+// --- AUTOCOMPLETAR DIRECCIÓN EN ENVÍOS EXTERNOS ---
+window.autocompletarDirExterno = function() {
+    let elEmpresa = document.getElementById("ext_empresa");
+    let dirInput = document.getElementById("ext_dir");
+
+    if(!elEmpresa || !dirInput || typeof LISTA_CLIENTES === 'undefined') return;
+
+    let inputVal = elEmpresa.value.trim().toLowerCase();
+    if(inputVal === "") return;
+
+    // Buscamos si el texto coincide exactamente con una Empresa o con un Nombre
+    let cliente = LISTA_CLIENTES.find(c => 
+        (c.empresa && c.empresa.trim().toLowerCase() === inputVal) || 
+        (c.nombre && c.nombre.trim().toLowerCase() === inputVal)
+    );
+
+    if (cliente && cliente.direccion) {
+        // Solo autocompleta si el campo de dirección está vacío para no borrar si tú escribiste algo a mano
+        if (dirInput.value.trim() === "") { 
+            dirInput.value = cliente.direccion;
+            if(typeof mostrarToast === 'function') mostrarToast("Dirección autocompletada 📍", "info");
+        }
+    }
+};
+
 // INICIALIZAR AL CARGAR
 // Esto asegura que la pantalla se limpie si vienes de otra pestaña
 iniciarVistaSalidas();

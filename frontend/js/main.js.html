@@ -297,13 +297,13 @@ document.getElementById('nav-salidas').style.display = info.permisos.salidas ? '
   document.getElementById('nav-pedidos').style.display = info.permisos.envios ? 'inline-block' : 'none';
   document.getElementById('nav-bajas').style.display = info.permisos.bajas ? 'inline-block' : 'none';
   
-if (canViewEntradas) cambiarVista('vista-operacion');
-  else if (info.permisos.envios) cambiarVista('vista-pedidos');
-  else if (info.permisos.salidas) cambiarVista('vista-salidas');
-  else if (info.permisos.productos) cambiarVista('vista-productos');
-  else if (info.permisos.ubicaciones) cambiarVista('vista-ubicaciones');
-  else if (info.permisos.bajas) cambiarVista('vista-bajas');
-  else {
+// Mostrar el botón de Dashboard si tiene algún permiso
+  const hasAnyPerm = canViewEntradas || info.permisos.salidas || info.permisos.ubicaciones || info.permisos.productos || info.permisos.envios || info.permisos.bajas;
+  document.getElementById('nav-dashboard').style.display = hasAnyPerm ? 'inline-block' : 'none';
+
+  if (hasAnyPerm) {
+      cambiarVista('vista-dashboard'); // <- EL DASHBOARD AHORA ES LA PÁGINA PRINCIPAL
+  } else {
       document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
       let vistaRevision = document.getElementById('vista-sin-permisos');
       if (vistaRevision) vistaRevision.style.display = 'flex';
@@ -517,3 +517,228 @@ window.renderizarTablaUsuariosEnLinea = function(listaUsuarios, escritorActual) 
         tbody.appendChild(tr);
     });
 };
+
+// --- LÓGICA DEL DASHBOARD GERENCIAL REVISADO ---
+// Activar Plugin de Etiquetas de Datos en todas las gráficas
+Chart.register(ChartDataLabels);
+let c1=null, c2=null, c3=null, c4=null, cGeo1=null, cGeo2=null;
+
+window.cargarDashboardPrincipal = function() {
+    if(typeof api !== 'undefined') {
+        api.obtenerEstadisticasDashboard(function(res) {
+            if(res.success) {
+                const data = res.data;
+                const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+
+                document.getElementById('dash-gasto-mes').innerText = fmt.format(data.kpi.gastosMesActual);
+                document.getElementById('dash-gasto-hist').innerText = fmt.format(data.kpi.gastosHistorico);
+                document.getElementById('dash-env-mes').innerText = data.kpi.pedidosMesActual;
+                document.getElementById('dash-proceso').innerText = data.kpi.enviosEnProceso;
+                document.getElementById('dash-entregados').innerText = data.kpi.enviosCompletados;
+                document.getElementById('dash-cancelados').innerText = data.kpi.enviosCancelados;
+                
+                document.getElementById('dash-litros-activos').innerText = data.kpi.litrosActivos.toFixed(2) + " L";
+                document.getElementById('dash-litros-cad').innerText = data.kpi.litrosCaducados.toFixed(2) + " L";
+
+                Chart.defaults.set('plugins.datalabels', { display: false });
+
+                // 1. TENDENCIA DOBLE LÍNEA
+                if(c1) c1.destroy();
+                c1 = new Chart(document.getElementById('chartTendenciaLineas'), {
+                    type: 'line',
+                    data: {
+                        labels: data.tendenciaAnual.meses,
+                        datasets: [
+                            { label: 'Costo ($)', data: data.tendenciaAnual.gastos, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3, yAxisID: 'y' },
+                            { label: 'Envíos (#)', data: data.tendenciaAnual.pedidos, borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderDash: [5, 5], tension: 0.3, yAxisID: 'y1' }
+                        ]
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, 
+                        scales: { 
+                            x: { title: { display: true, text: 'Mes del Año', font: {weight: 'bold'} } },
+                            y: { title: { display: true, text: 'Costo (MXN)', font: {weight: 'bold'} }, type: 'linear', position: 'left' }, 
+                            y1: { title: { display: true, text: 'Muestras', font: {weight: 'bold'} }, type: 'linear', position: 'right', grid: { drawOnChartArea: false } } 
+                        } 
+                    }
+                });
+
+                // 2. TOP STOCK VIGENTE (BARRAS)
+                if(c2) c2.destroy();
+                c2 = new Chart(document.getElementById('chartTopStock'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.topStockArr.map(p => p.label.substring(0,12) + '...'),
+                        datasets: [{ label: 'Litros', data: data.topStockArr.map(p => p.value), backgroundColor: '#3b82f6', borderRadius: 4 }]
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, 
+                        plugins: { 
+                            legend: { display: false },
+                            datalabels: { display: true, color: '#fff', font: {weight: 'bold', size: 10}, formatter: Math.round } 
+                        },
+                        scales: { x: { display: true }, y: { display: true, title: { display: true, text: 'Volumen Total (L)', font: {weight: 'bold'} } } }
+                    }
+                });
+
+                // 3. MUESTRAS SOLICITADAS (CIRCULAR)
+                if(c3) c3.destroy();
+                c3 = new Chart(document.getElementById('chartTopMuestras'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.topProductosArr.map(p => p.label.substring(0,15)),
+                        datasets: [{ data: data.topProductosArr.map(p => p.value), backgroundColor: ['#8b5cf6', '#f59e0b', '#3b82f6', '#10b981', '#ec4899'], borderWidth: 2 }]
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, cutout: '50%',
+                        plugins: { 
+                            legend: { position: 'bottom' },
+                            datalabels: { display: true, color: '#fff', font: {weight: 'bold'} } 
+                        } 
+                    }
+                });
+
+                // 4. TOP EMPRESAS DESTINO (CIRCULAR)
+                if(c4) c4.destroy();
+                c4 = new Chart(document.getElementById('chartTopEmpresas'), {
+                    type: 'pie',
+                    data: {
+                        labels: data.topEmpresasArr.map(p => p.label.substring(0,15)),
+                        datasets: [{ data: data.topEmpresasArr.map(p => p.value), backgroundColor: ['#f59e0b', '#10b981', '#ec4899', '#3b82f6', '#64748b'] }]
+                    },
+                    options: { 
+                        responsive: true, maintainAspectRatio: false, 
+                        plugins: { 
+                            legend: { position: 'bottom' },
+                            datalabels: { display: true, color: '#fff', font: {weight: 'bold'} } 
+                        } 
+                    }
+                });
+
+                // 5. GEOGRAFÍA TIPO (Pie: Nacional vs Internacional)
+                let tiposEnvioLabels = Object.keys(data.geoTipo);
+                let tiposEnvioVals = Object.values(data.geoTipo);
+                if(cGeo1) cGeo1.destroy();
+                cGeo1 = new Chart(document.getElementById('chartGeoTipo'), {
+                    type: 'pie',
+                    data: { labels: tiposEnvioLabels, datasets: [{ data: tiposEnvioVals, backgroundColor: ['#10b981', '#f59e0b', '#8b5cf6'] }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, datalabels: {display: true, color: '#fff'} } }
+                });
+
+                // 6. GEOGRAFÍA ESTADOS (Barras Horizontales Top 5)
+                if(cGeo2) cGeo2.destroy();
+                cGeo2 = new Chart(document.getElementById('chartGeoEstados'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.geoEstadosArr.map(e => e.label.substring(0, 15)),
+                        datasets: [{ data: data.geoEstadosArr.map(e => e.value), backgroundColor: '#ec4899', borderRadius: 4 }]
+                    },
+                    options: { 
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false, 
+                        plugins: { legend: { display: false }, datalabels: {display: true, color: '#fff'} },
+                        scales: { x: { display: true, title: { display: true, text: 'Envíos por Estado', font: {weight: 'bold'} } } }
+                    }
+                });
+            }
+        });
+    }
+};
+
+// --- FIX PARA AUTOCOMPLETADO EXTERNO ---
+window.abrirModalEnvioExterno = function() {
+    // Si la lista de clientes está vacía, forzamos la descarga antes de abrir el modal
+    if (!window.LISTA_CLIENTES || window.LISTA_CLIENTES.length === 0) {
+        mostrarCargando("Cargando catálogo de clientes...");
+        api.obtenerListaClientes(function(c) {
+            ocultarCargando();
+            window.LISTA_CLIENTES = c;
+            if(typeof llenarSelectClientes === 'function') llenarSelectClientes();
+            abrirModalGenerico('modalEnvioExterno');
+        });
+    } else {
+        if(typeof llenarSelectClientes === 'function') llenarSelectClientes();
+        abrirModalGenerico('modalEnvioExterno');
+    }
+};
+
+function renderizarNuevasGraficas(data) {
+    // Configuración común para Ejes y Títulos (v3+)
+    const opcionesEjes = (tituloX, tituloY, isMoneda = false) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { 
+                title: { display: true, text: tituloX, font: { weight: 'bold' } },
+                grid: { display: false }
+            },
+            y: { 
+                title: { display: true, text: tituloY, font: { weight: 'bold' } },
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return isMoneda ? '$' + value.toLocaleString() : value;
+                    }
+                }
+            }
+        }
+    });
+
+    // 1. Gráfica de Barras Verticales: COSTOS TODO EL AÑO
+    const ctxCostos = document.getElementById('chartCostosAnual').getContext('2d');
+    if(chartCostosInst) chartCostosInst.destroy();
+    chartCostosInst = new Chart(ctxCostos, {
+        type: 'bar',
+        data: {
+            labels: data.tendenciaAnual.meses,
+            datasets: [{
+                data: data.tendenciaAnual.gastos,
+                backgroundColor: 'rgba(16, 185, 129, 0.8)', // Verde
+                borderRadius: 6,
+                borderWidth: 0
+            }]
+        },
+        options: opcionesEjes('Meses del Año', 'Gasto Invertido (MXN)', true)
+    });
+
+    // 2. Gráfica de Barras Verticales: PEDIDOS TODO EL AÑO
+    const ctxPedidos = document.getElementById('chartPedidosAnual').getContext('2d');
+    if(chartPedidosInst) chartPedidosInst.destroy();
+    chartPedidosInst = new Chart(ctxPedidos, {
+        type: 'bar',
+        data: {
+            labels: data.tendenciaAnual.meses,
+            datasets: [{
+                data: data.tendenciaAnual.pedidos,
+                backgroundColor: 'rgba(59, 130, 246, 0.8)', // Azul
+                borderRadius: 6,
+                borderWidth: 0
+            }]
+        },
+        options: opcionesEjes('Meses del Año', 'Cantidad de Pedidos', false)
+    });
+
+    // 3. Gráfica CIRCULAR: TOP PRODUCTOS
+    const ctxCircular = document.getElementById('chartCircularProductos').getContext('2d');
+    if(chartCirProdInst) chartCirProdInst.destroy();
+    chartCirProdInst = new Chart(ctxCircular, {
+        type: 'doughnut', // Doughnut se ve más moderno
+        data: {
+            labels: data.topProductosArr.map(p => p.label.substring(0,15)), // Recortar nombres
+            datasets: [{
+                data: data.topProductosArr.map(p => p.value),
+                backgroundColor: ['#8b5cf6', '#f59e0b', '#3b82f6', '#10b981', '#ec4899'],
+                borderWidth: 4,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%', // Hueco central
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+            }
+        }
+    });
+}

@@ -542,6 +542,8 @@
             margin: 0 15px;
           "
         >
+          <button id="nav-dashboard" class="nav-btn active" onclick="cambiarVista('vista-dashboard')" style="display: none;">🏠 Inicio</button>
+
           <button
             id="nav-entradas"
             class="nav-btn active"
@@ -763,6 +765,81 @@
       >
         ⚙️ Admin
       </button>
+
+<div id="vista-dashboard" class="vista" style="display: none; width: 100%; justify-content: center; padding-top: 10px;">
+  <div style="max-width: 1400px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; padding: 0 10px;">
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+      
+      <div style="background: white; border-radius: 12px; padding: 20px; border-left: 5px solid #10b981; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+        <div style="color: #64748b; font-size: 0.70rem; font-weight: 700;">COSTO LOGÍSTICO (MES ACTUAL)</div>
+        <div id="dash-gasto-mes" style="font-size: 1.8rem; font-weight: 800; color: #1e293b;">$0</div>
+      </div>
+      
+      <div style="background: white; border-radius: 12px; padding: 20px; border-left: 5px solid #047857; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+        <div style="color: #64748b; font-size: 0.70rem; font-weight: 700;">COSTO LOGÍSTICO (HISTÓRICO)</div>
+        <div id="dash-gasto-hist" style="font-size: 1.8rem; font-weight: 800; color: #1e293b;">$0</div>
+      </div>
+
+      <div style="background: white; border-radius: 12px; padding: 20px; border-left: 5px solid #3b82f6; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+        <div style="color: #64748b; font-size: 0.70rem; font-weight: 700;">MUESTRAS ENVIADAS (MES ACTUAL)</div>
+        <div id="dash-env-mes" style="font-size: 1.8rem; font-weight: 800; color: #1e293b;">0</div>
+      </div>
+
+      <div style="background: white; border-radius: 12px; padding: 15px 20px; border-left: 5px solid #f59e0b; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+        <div style="color: #64748b; font-size: 0.70rem; font-weight: 700; margin-bottom: 5px;">ESTATUS MES ACTUAL</div>
+        <div style="display: flex; flex-direction: column; gap: 2px; font-size: 0.95rem;">
+           <div style="display: flex; justify-content: space-between;"><span style="color:#d97706; font-weight:bold;">En Proceso:</span> <span id="dash-proceso" style="font-weight: bold;">0</span></div>
+           <div style="display: flex; justify-content: space-between;"><span style="color:#10b981; font-weight:bold;">Entregadas:</span> <span id="dash-entregados" style="font-weight: bold;">0</span></div>
+           <div style="display: flex; justify-content: space-between;"><span style="color:#ef4444; font-weight:bold;">Canceladas:</span> <span id="dash-cancelados" style="font-weight: bold;">0</span></div>
+        </div>
+      </div>
+
+      <div style="background: white; border-radius: 12px; padding: 15px 20px; border-left: 5px solid #8b5cf6; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+        <div style="color: #64748b; font-size: 0.70rem; font-weight: 700; margin-bottom: 5px;">VOLUMEN EN ALMACÉN (LÍQUIDOS)</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+           <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="color:#10b981; font-weight:bold;">Activo:</span> <span id="dash-litros-activos" style="font-weight: 800; font-size: 1.3rem;">0 L</span></div>
+           <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="color:#ef4444; font-weight:bold;">Caducado:</span> <span id="dash-litros-cad" style="font-weight: 800; font-size: 1.3rem; color: #ef4444;">0 L</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr)); gap: 20px;">
+      
+      <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+        <h4 style="margin: 0 0 15px; color: #334155; font-size: 0.95rem; text-transform: uppercase;">📈 Tendencia Anual</h4>
+        <div style="position: relative; height: 300px; width: 100%; flex: 1;"><canvas id="chartTendenciaLineas"></canvas></div>
+      </div>
+
+      <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+        <h4 style="margin: 0 0 15px; color: #334155; font-size: 0.95rem; text-transform: uppercase;">📦 Top Stock Vigente (1L y 250mL)</h4>
+        <div style="position: relative; height: 300px; width: 100%; flex: 1;"><canvas id="chartTopStock"></canvas></div>
+      </div>
+
+      <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+        <h4 style="margin: 0 0 15px; color: #334155; font-size: 0.95rem; text-transform: uppercase;">🎯 Muestras Más Solicitadas</h4>
+        <div style="position: relative; height: 300px; width: 100%; flex: 1;"><canvas id="chartTopMuestras"></canvas></div>
+      </div>
+
+      <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+        <h4 style="margin: 0 0 15px; color: #334155; font-size: 0.95rem; text-transform: uppercase;">🏢 Top 5 Empresas Destino</h4>
+        <div style="position: relative; height: 300px; width: 100%; flex: 1;"><canvas id="chartTopEmpresas"></canvas></div>
+      </div>
+
+      <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+        <h4 style="margin: 0 0 15px; color: #334155; font-size: 0.95rem; text-transform: uppercase;">🌍 Nacional vs Internacional</h4>
+        <div style="position: relative; height: 300px; width: 100%; flex: 1;"><canvas id="chartGeoTipo"></canvas></div>
+      </div>
+
+      <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+        <h4 style="margin: 0 0 15px; color: #334155; font-size: 0.95rem; text-transform: uppercase;">📍 Estados con Mayor Afluencia</h4>
+        <div style="position: relative; height: 300px; width: 100%; flex: 1;"><canvas id="chartGeoEstados"></canvas></div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
       <div
         id="vista-operacion"
@@ -1150,6 +1227,9 @@
             >
               ➕ Agregar a Pedido
             </button>
+
+            <button onclick="abrirModalEnvioExterno()" class="btn-field" style="flex: 1; background: #f8fafc; color: #475569; border: 2px dashed #cbd5e1;">✉️ Documentos / Envío Planta</button>
+
           </div>
 
           <div
@@ -3144,6 +3224,33 @@
         </div>
       </div>
 
+      <div id="modalEnvioExterno" class="modal-overlay" style="display: none; z-index: 2000;">
+  <div class="modal-content" style="max-width: 500px; padding: 0; border-radius: 16px; overflow: hidden;">
+    <div style="background: #3b82f6; padding: 20px; color: white;">
+       <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">✉️ Registrar Gasto Logístico</h3>
+       <span style="font-size: 0.85rem; opacity: 0.9;">Documentos o envíos de planta que no tocan tu inventario local.</span>
+    </div>
+    <div style="padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #f8fafc;">
+       <div><label>¿Qué estás enviando? *</label><input type="text" id="ext_desc" class="input-modern" placeholder="Ej. Facturas, Muestra Planta Toluca..."></div>
+        <div>
+         <label>Nombre Empresa / Destino *</label>
+         <input type="text" id="ext_empresa" list="lista-clientes-ext" class="input-modern" placeholder="Escribe o selecciona de tu lista..." oninput="autocompletarDirExterno()" autocomplete="off">
+         <datalist id="lista-clientes-ext"></datalist>
+       </div>
+       <div><label>Dirección</label><input type="text" id="ext_dir" class="input-modern"></div>
+       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div><label>Paquetería *</label><input type="text" id="ext_paq" class="input-modern" placeholder="DHL"></div>
+          <div><label>Costo ($) *</label><input type="number" id="ext_costo" class="input-modern" placeholder="0.00"></div>
+       </div>
+       <div><label>No. Guía (Opcional)</label><input type="text" id="ext_guia" class="input-modern" style="font-family: monospace;"></div>
+       <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button onclick="cerrarModalGenerico('modalEnvioExterno')" class="btn-field" style="flex: 1; background: #e2e8f0; border: none; color: #475569;">Cancelar</button>
+          <button onclick="confirmarEnvioExterno()" class="btn-field" style="flex: 1; background: #2563eb; color: white; border: none;">Guardar Gasto</button>
+       </div>
+    </div>
+  </div>
+</div>
+
       <div
         id="global-loader"
         style="
@@ -3175,6 +3282,9 @@
           Procesando...
         </p>
       </div>
+
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
       <div id="toast-container"></div>
       <?!= include('frontend/js.loader'); ?>

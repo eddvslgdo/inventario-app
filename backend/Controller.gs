@@ -2263,3 +2263,221 @@ function obtenerHistorialEntradas() {
     lock.releaseLock();
   }
 }
+
+// ==========================================
+// MÓDULO: DASHBOARD GERENCIAL (POWER BI STYLE)
+// ==========================================
+function obtenerEstadisticasDashboard() {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+
+    const sPed = obtenerHojaSegura("PEDIDOS");
+    const sDet = obtenerHojaSegura("DETALLE_PEDIDOS");
+    const sInv = obtenerHojaSegura("INVENTARIO");
+    const sPres = obtenerHojaSegura("PRESENTACIONES");
+    const sProd = obtenerHojaSegura("PRODUCTOS");
+    const sCli = obtenerHojaSegura("CLIENTES");
+
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+    const anioActual = hoy.getFullYear();
+    const mesActualStr = `${anioActual}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+
+    let stats = {
+      kpi: {
+        gastosMesActual: 0,
+        gastosHistorico: 0,
+        pedidosMesActual: 0,
+        enviosEnProceso: 0,
+        enviosCompletados: 0,
+        enviosCancelados: 0,
+        litrosActivos: 0,
+        litrosCaducados: 0
+      },
+      tendenciaAnual: {
+        meses: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
+        gastos: new Array(12).fill(0),
+        pedidos: new Array(12).fill(0)
+      },
+      topProductosEnviados: {},
+      topStock: {},
+      topEmpresas: {}, // REGRESA TOP EMPRESAS
+      geoTipo: {},   
+      geoEstados: {} 
+    };
+
+    // MAPEOS
+    let mapPres = {};
+    if (sPres && sPres.getLastRow() > 1) sPres.getDataRange().getValues().slice(1).forEach(r => mapPres[String(r[0]).trim()] = Number(r[2]) || 0);
+    
+    let mapProd = {};
+    if (sProd && sProd.getLastRow() > 1) {
+       sProd.getDataRange().getValues().slice(1).forEach(r => {
+           let uLow = String(r[3] || 'L').toLowerCase();
+           let uni = 'L';
+           if(uLow.includes('kg') || uLow.includes('kilo')) uni = 'Kg';
+           else if(uLow.includes('pza') || uLow.includes('unid') || uLow.includes('pieza')) uni = 'Pza';
+           mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: uni };
+       });
+    }
+    let mapEmpresas = {};
+    if (sCli && sCli.getLastRow() > 1) sCli.getDataRange().getValues().slice(1).forEach(r => mapEmpresas[String(r[0]).trim()] = String(r[2]).trim() || String(r[1]).trim());
+
+    const obtenerNombrePadre = (rawName) => {
+        let match = String(rawName).match(/(.*)\(([^)]+)\)$/);
+        return match ? match[2].trim() : String(rawName).trim();
+    };
+
+    // 1. INVENTARIO (Filtro estricto de Líquidos)
+    if (sInv && sInv.getLastRow() > 1) {
+      const dI = sInv.getDataRange().getValues();
+      for (let i = 1; i < dI.length; i++) {
+        let pId = String(dI[i][0]).trim();
+        let prId = String(dI[i][1]).trim();
+        let stock = Number(dI[i][3]) || 0;
+        let cadVal = dI[i][4];
+
+        if (stock > 0.001) {
+          let fCad = (cadVal instanceof Date) ? cadVal : new Date(cadVal);
+          let estaCaducado = (!isNaN(fCad.getTime()) && fCad < hoy);
+          let prodInfo = mapProd[pId] || { nombre: pId, unidad: 'L' };
+
+          // SOLO LÍQUIDOS (L) PARA KPIs
+          if (prodInfo.unidad === 'L') {
+              if (estaCaducado) stats.kpi.litrosCaducados += stock;
+              else stats.kpi.litrosActivos += stock;
+              
+              // TOP STOCK (Gráfica): Solo vigentes de 1L y 250mL ESTRICTAMENTE LÍQUIDOS
+              if (!estaCaducado) {
+                 let vNom = mapPres[prId] || 0;
+                 if (Math.abs(vNom - 1.0) < 0.01 || Math.abs(vNom - 0.25) < 0.01) {
+                    let parentName = obtenerNombrePadre(prodInfo.nombre);
+                    if (!stats.topStock[parentName]) stats.topStock[parentName] = 0;
+                    stats.topStock[parentName] += stock;
+                 }
+              }
+          }
+        }
+      }
+    }
+
+    // 2. PEDIDOS (Muestras, Gastos y Geografía)
+    const ESTADOS_MX = ["AGUASCALIENTES", "BAJA CALIFORNIA", "CAMPECHE", "CHIAPAS", "CHIHUAHUA", "COAHUILA", "COLIMA", "DISTRITO FEDERAL", "CIUDAD DE MEXICO", "CDMX", "DURANGO", "GUANAJUATO", "GUERRERO", "HIDALGO", "JALISCO", "ESTADO DE MEXICO", "MICHOACAN", "MORELOS", "NAYARIT", "NUEVO LEON", "OAXACA", "PUEBLA", "QUERETARO", "QUINTANA ROO", "SAN LUIS POTOSI", "SINALOA", "SONORA", "TABASCO", "TAMAULIPAS", "TLAXCALA", "VERACRUZ", "YUCATAN", "ZACATECAS"];
+    
+    let idPedAceptados = new Set();
+    if (sPed && sPed.getLastRow() > 1) {
+      const dP = sPed.getDataRange().getValues();
+      for (let i = 1; i < dP.length; i++) {
+        let idPed = String(dP[i][0]).trim();
+        if(!idPed) continue;
+
+        let isExterno = idPed.startsWith("EXT-");
+        let fVal = dP[i][1];
+        let f = (fVal instanceof Date) ? fVal : new Date(fVal);
+        if(isNaN(f.getTime())) continue;
+
+        let mesStr = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}`;
+        let costo = Number(String(dP[i][9] || "0").replace(/[^0-9.-]+/g, "")) || 0;
+        let estatus = String(dP[i][10] || "").toUpperCase();
+
+        // 💰 GASTOS SUMAN SIEMPRE (Histórico total y Mes actual)
+        stats.kpi.gastosHistorico += costo;
+        if(mesStr === mesActualStr) stats.kpi.gastosMesActual += costo;
+        if(f.getFullYear() === anioActual) stats.tendenciaAnual.gastos[f.getMonth()] += costo;
+
+        // 📦 PEDIDOS SOLO MUESTRAS
+        if (!isExterno) {
+            idPedAceptados.add(idPed); 
+
+            if(mesStr === mesActualStr) {
+                stats.kpi.pedidosMesActual++;
+                if (estatus.includes("ENTREGADO")) stats.kpi.enviosCompletados++;
+                else if (estatus.includes("CANCELADO")) stats.kpi.enviosCancelados++;
+                else stats.kpi.enviosEnProceso++;
+            }
+            if(f.getFullYear() === anioActual) stats.tendenciaAnual.pedidos[f.getMonth()]++;
+
+            // TOP EMPRESAS
+            let empresa = mapEmpresas[String(dP[i][2]).trim()] || "Ventas Generales";
+            if(!stats.topEmpresas[empresa]) stats.topEmpresas[empresa] = 0;
+            stats.topEmpresas[empresa]++;
+
+            // GEOGRAFÍA: Tipo y Estado
+            let tipoEnvio = String(dP[i][8] || "Nacional").trim();
+            if(!stats.geoTipo[tipoEnvio]) stats.geoTipo[tipoEnvio] = 0;
+            stats.geoTipo[tipoEnvio]++;
+
+            let direccion = String(dP[i][4] || "").toUpperCase();
+            direccion = direccion.replace(/Á/g, "A").replace(/É/g, "E").replace(/Í/g, "I").replace(/Ó/g, "O").replace(/Ú/g, "U");
+            
+            let estadoDetectado = "OTRO";
+            for(let edo of ESTADOS_MX) {
+                if(direccion.includes(edo)) {
+                    estadoDetectado = (edo === "DISTRITO FEDERAL" || edo === "CIUDAD DE MEXICO") ? "CDMX" : edo;
+                    break;
+                }
+            }
+            if(!stats.geoEstados[estadoDetectado]) stats.geoEstados[estadoDetectado] = 0;
+            stats.geoEstados[estadoDetectado]++;
+        }
+      }
+    }
+
+    // 3. DETALLE DE PEDIDOS (Top Muestras)
+    if (sDet && sDet.getLastRow() > 1) {
+      const dD = sDet.getDataRange().getDisplayValues();
+      for (let i = 1; i < dD.length; i++) {
+         let idPed = String(dD[i][0]).trim();
+         if (!idPedAceptados.has(idPed)) continue; 
+
+         let rawProdName = String(dD[i][1]).trim();
+         if(rawProdName) {
+            let parentName = obtenerNombrePadre(rawProdName);
+            if(!stats.topProductosEnviados[parentName]) stats.topProductosEnviados[parentName] = 0;
+            stats.topProductosEnviados[parentName] += 1;
+         }
+      }
+    }
+
+    // ORDENAMIENTO DE TOPS
+    let sortObj = (obj) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e => ({label: e[0], value: e[1]}));
+    stats.topProductosArr = sortObj(stats.topProductosEnviados);
+    stats.topStockArr = sortObj(stats.topStock);
+    stats.topEmpresasArr = sortObj(stats.topEmpresas);
+    stats.geoEstadosArr = Object.entries(stats.geoEstados).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e => ({label: e[0], value: e[1]}));
+
+    return { success: true, data: stats };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ==========================================
+// REGISTRO DE ENVÍOS EXTERNOS (DOCUMENTOS/PLANTA)
+// ==========================================
+function registrarEnvioExterno(datos) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+    verificarAccesoServidor();
+    
+    // Prefijo EXT- asegura que no ensucie las estadísticas de almacén
+    const idPedido = "EXT-" + Math.floor(Date.now() / 1000);
+    const fechaHoy = new Date();
+
+    const sPed = obtenerHojaOCrear("PEDIDOS", ["ID_PEDIDO", "FECHA", "ID_CLIENTE", "NOMBRE", "DIRECCION", "TELEFONO", "PAQUETERIA", "GUIA", "TIPO", "COSTO", "ESTATUS", "F_EST", "F_REAL", "LINK", "COMENTARIOS"]);
+    sPed.appendRow([
+      idPedido, fechaHoy, "GENERICO-EXT", datos.nombreContacto, datos.direccion, "", datos.paqueteria, datos.guia, "Externo", datos.costo, "Pendiente", "", "", "", "ENVÍO EXTERNO: " + datos.descripcion
+    ]);
+
+    return { success: true, idPedido: idPedido };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
