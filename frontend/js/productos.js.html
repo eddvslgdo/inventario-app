@@ -134,18 +134,24 @@ function renderizarTablaProductos(productos) {
                   }
               }
 
-              // NUEVO: Botón de Transformación directo en el listado
-              let btnTransf = `<button class="btn-action btn-transf" style="width:28px; height:28px; font-size:0.8rem; margin-left:12px; box-shadow:0 1px 2px rgba(0,0,0,0.1);" title="Transformar Lote" onclick="abrirTransformacion('${l.raw_producto_id}', '${l.raw_producto_nombre}', '${l.lote}', ${l.volumen}, '${l.ubicacion_id}', '${l.presentacion_id}', ${l.volumen_nominal}, '${p.unidad}')">🛠️</button>`;
+              // BOTONES DE ACCIÓN COMPACTOS
+              let btnTransf = `<button class="btn-action btn-transf" style="width:28px; height:28px; font-size:0.8rem; margin:0; box-shadow:0 1px 2px rgba(0,0,0,0.1);" title="Transformar Lote" onclick="abrirTransformacion('${l.raw_producto_id}', '${l.raw_producto_nombre}', '${l.lote}', ${l.volumen}, '${l.ubicacion_id}', '${l.presentacion_id}', ${l.volumen_nominal}, '${p.unidad}')">🛠️</button>`;
+              
+              let esAdmin = localStorage.getItem("inventario_rol") === "admin";
+              let btnAjuste = esAdmin ? `<button class="btn-action" style="background:#f1f5f9; color:#475569; width:28px; height:28px; font-size:0.8rem; margin:0; box-shadow:0 1px 2px rgba(0,0,0,0.1);" title="Ajuste Físico (Merma/Cuadre)" onclick="abrirModalAjuste('${l.raw_producto_id}', '${l.raw_producto_nombre}', '${l.presentacion_id}', '${l.ubicacion_id}', '${l.lote}', ${l.volumen}, '${p.unidad}')">✏️</button>` : ``;
+
               filasDetalle += `
                   <tr style="${rowBg}">
-                      <td class="td-ubic">${l.ubicacion}</td>
-                      <td><div class="td-pres">${l.presentacion}</div>${aliasTag}</td>
-                      <td><span class="lote-tag">${l.lote}</span></td>
-                      <td class="td-cad">${cadAlertaHtml}</td>
-                      <td class="td-cant">
-                         <div style="display:flex; justify-content:flex-end; align-items:center;">
-                            <span>${l.volumen} <span style="font-size:0.75rem; color:#888;">${p.unidad}</span></span>
-                            ${btnTransf}
+                      <td class="td-ubic" style="vertical-align: middle; padding: 12px 15px;">${l.ubicacion}</td>
+                      <td style="vertical-align: middle; padding: 12px 15px;"><div class="td-pres">${l.presentacion}</div>${aliasTag}</td>
+                      <td style="vertical-align: middle; padding: 12px 15px;"><span class="lote-tag">${l.lote}</span></td>
+                      <td class="td-cad" style="vertical-align: middle; padding: 12px 15px;">${cadAlertaHtml}</td>
+                      <td class="td-cant" style="vertical-align: middle; white-space: nowrap; text-align: right; padding: 12px 15px;">
+                         ${l.volumen} <span style="font-size:0.75rem; color:#888;">${p.unidad}</span>
+                      </td>
+                      <td style="vertical-align: middle; text-align: right; white-space: nowrap; padding: 12px 15px; width: 80px;">
+                         <div style="display:flex; justify-content:flex-end; gap:6px;">
+                            ${btnTransf}${btnAjuste}
                          </div>
                       </td>
                   </tr>
@@ -155,7 +161,7 @@ function renderizarTablaProductos(productos) {
           let displayTotalProd = (key === 'Pza') ? Math.round(p.totalVolumen) : p.totalVolumen.toFixed(2);
           
           let badgeCaducidad = productoExpiraPronto 
-            ? `<span style="background:#ffedd5; color:#c2410c; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold; margin-left:10px; border:1px solid #fed7aa;">⏳ Alerta Caducidad</span>` 
+            ? `<span style="background:#ffedd5; color:#c2410c; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold; margin-left:10px; border:1px solid #fed7aa; white-space:nowrap;">⏳ Alerta Caducidad</span>` 
             : "";
 
           const card = document.createElement("div");
@@ -165,23 +171,42 @@ function renderizarTablaProductos(productos) {
 
           card.innerHTML = `
               <div class="card-indicator" style="background:${colorIndicador};"></div>
-              <div class="card-header-compact" onclick="toggleDetalleProducto('${p.id}')">
-                  <div class="info-main">
-                      <h3 class="prod-title">${p.nombre} ${badgeCaducidad}</h3>
+              
+              <div class="card-header-compact" onclick="toggleDetalleProducto('${p.id}')" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap;">
+                  <div class="info-main" style="flex: 1; padding-right: 15px;">
+                      <h3 class="prod-title" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">${p.nombre} ${badgeCaducidad}</h3>
                       <span class="prod-meta">${p.lotes.length} lote(s) registrados</span>
                   </div>
-                  <div class="info-actions">
-                      <div class="prod-stock">${displayTotalProd} <span>${p.unidad}</span></div>
-                      <button class="btn-detalles-compact">Ver <span>▼</span></button>
+                  
+                  <div class="info-actions" style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                      <div class="prod-stock" style="white-space: nowrap;">${displayTotalProd} <span style="font-size:0.75rem; color:#64748b; font-weight:600;">${p.unidad}</span></div>
+                      
+                      <button class="btn-detalles-compact" onclick="event.stopPropagation(); abrirKardex('${p.id}', '${p.nombre}')" style="display:flex; align-items:center; gap:5px; white-space:nowrap;">
+                          📖 Kardex
+                      </button>
+                      
+                      <button class="btn-detalles-compact" style="display:flex; align-items:center; gap:5px; white-space:nowrap;">
+                          Ver <span>▼</span>
+                      </button>
                   </div>
               </div>
-              <div id="detalle-${p.id}" class="card-body-compact" style="display:none;">
-                  <table class="table-compact">
-                      <thead>
-                          <tr><th>Ubicación</th><th>Presentación</th><th>Lote</th><th>Caducidad</th><th style="text-align:right;">Stock</th></tr>
-                      </thead>
-                      <tbody>${filasDetalle}</tbody>
-                  </table>
+
+              <div id="detalle-${p.id}" class="card-body-compact" style="display:none; padding:0;">
+                  <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                      <table class="table-compact" style="width: 100%; min-width: 600px; margin: 0;">
+                          <thead style="background: #f1f5f9;">
+                              <tr>
+                                  <th style="padding: 10px 15px;">Ubicación</th>
+                                  <th style="padding: 10px 15px;">Presentación</th>
+                                  <th style="padding: 10px 15px;">Lote</th>
+                                  <th style="padding: 10px 15px;">Caducidad</th>
+                                  <th style="padding: 10px 15px; text-align:right;">Stock</th>
+                                  <th style="padding: 10px 15px; text-align:right;">Acciones</th>
+                              </tr>
+                          </thead>
+                          <tbody>${filasDetalle}</tbody>
+                      </table>
+                  </div>
               </div>
           `;
           contentGrupo.appendChild(card);
@@ -346,3 +371,138 @@ function guardarProducto() {
       if(typeof abrirModalGenerico === 'function') abrirModalGenerico('modalProducto'); 
   }).registrarNuevoProducto({ nombre: nombreLimpio, descripcion: desc, unidad: unidad });
 }
+
+// --- LÓGICA DE AJUSTES DE INVENTARIO ---
+let TEMP_AJUSTE = null;
+
+window.abrirModalAjuste = function(pId, pNombre, presId, ubicId, lote, stockActual, unidad) {
+    TEMP_AJUSTE = {
+        productoId: pId,
+        productoNombre: pNombre,
+        presentacionId: presId,
+        ubicacionId: ubicId,
+        lote: lote,
+        stockActual: stockActual,
+        unidad: unidad
+    };
+
+    Swal.fire({
+        title: '✏️ Ajuste Físico de Stock',
+        html: `
+            <div style="text-align: left; font-size: 0.9rem; color: #475569; margin-bottom: 15px;">
+                Producto: <b>${pNombre}</b><br>
+                Lote: <span style="font-family: monospace; color: #d63031;">${lote}</span><br>
+                Stock Actual: <b>${stockActual} ${unidad}</b>
+            </div>
+            <div style="text-align: left;">
+                <label style="font-weight: bold; font-size: 0.85rem;">¿Cuánto hay FÍSICAMENTE en el estante? (${unidad})</label>
+                <input type="number" id="swal-ajuste-nuevo" value="${stockActual}" step="0.01" class="input-modern" style="margin-top: 5px; margin-bottom: 15px;">
+                
+                <label style="font-weight: bold; font-size: 0.85rem;">Motivo del ajuste (Auditoría) *</label>
+                <textarea id="swal-ajuste-motivo" class="input-modern" placeholder="Ej. Frasco roto, error de conteo anterior, derrame..." style="min-height: 80px; resize: vertical; margin-top: 5px;"></textarea>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        confirmButtonText: 'Guardar Ajuste',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const nuevoVol = document.getElementById('swal-ajuste-nuevo').value;
+            const motivo = document.getElementById('swal-ajuste-motivo').value.trim();
+            
+            // TRUCO ANTI-GOOGLE APPS SCRIPT: 
+            // Usamos Math.sign() === -1 en lugar del símbolo "menor que" para evitar que el editor lo rompa.
+            if (!nuevoVol || Math.sign(nuevoVol) === -1) {
+                Swal.showValidationMessage('Ingresa una cantidad válida.');
+            } else if (!motivo) {
+                Swal.showValidationMessage('El motivo es obligatorio para la auditoría.');
+            } else {
+                return { nuevoVol: nuevoVol, motivo: motivo };
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            ejecutarAjusteStock(result.value.nuevoVol, result.value.motivo);
+        }
+    });
+};
+
+function ejecutarAjusteStock(nuevoVolumen, motivo) {
+    if (!TEMP_AJUSTE) return;
+
+    let datos = {
+        productoId: TEMP_AJUSTE.productoId,
+        productoNombre: TEMP_AJUSTE.productoNombre,
+        presentacionId: TEMP_AJUSTE.presentacionId,
+        ubicacionId: TEMP_AJUSTE.ubicacionId,
+        lote: TEMP_AJUSTE.lote,
+        nuevoVolumen: nuevoVolumen,
+        motivo: motivo
+    };
+
+    mostrarCargando("Sincronizando ajuste con el servidor...");
+
+    api.ajustarStockFisico(datos, function(res) {
+        ocultarCargando();
+        if (res.success) {
+            Swal.fire('¡Ajustado!', `El stock se corrigió correctamente. Diferencia: ${res.diferencia > 0 ? '+' : ''}${res.diferencia} ${TEMP_AJUSTE.unidad}`, 'success');
+            cargarDashboardProductos(); // Recargar la tabla
+        } else {
+            Swal.fire('Error', res.error, 'error');
+        }
+    }, function(err) {
+        ocultarCargando();
+        Swal.fire('Error', err.message, 'error');
+    });
+}
+
+// --- LÓGICA DE KARDEX (LIBRO MAYOR) ---
+window.abrirKardex = function(productoId, productoNombre) {
+    document.getElementById('kardex-producto-nombre').innerText = productoNombre;
+    document.getElementById('kardexBody').innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px; color: #64748b;"><div class="modern-spinner"></div><p style="margin-top:15px;">Rastreando historia...</p></td></tr>`;
+    
+    abrirModalGenerico('modalKardex');
+
+    // AQUÍ PASAMOS AMBOS DATOS: ID y Nombre
+    api.obtenerKardexProducto(productoId, productoNombre, function(res) {
+        let tbody = document.getElementById('kardexBody');
+        if (!res.success) {
+            tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding:20px;">Error: ${res.error}</td></tr>`;
+            return;
+        }
+
+        if (res.data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="color:#64748b; text-align:center; padding:30px; font-style:italic;">No se encontraron movimientos para este producto.</td></tr>`;
+            return;
+        }
+
+        let html = "";
+        res.data.forEach(mov => {
+            let colorTipo = "#64748b";
+            let badgeTipo = mov.tipo;
+            let signo = mov.cantidad > 0 ? "+" : ""; // El negativo ya viene en el número
+
+            // Colores por tipo de movimiento
+            if (mov.tipo.includes("ENTRADA") || mov.tipo.includes("(+)")) { 
+                colorTipo = "#10b981"; 
+                badgeTipo = "🟩 " + mov.tipo; 
+            } else if (mov.tipo === "SALIDA") { 
+                colorTipo = "#3b82f6"; 
+                badgeTipo = "🟦 " + mov.tipo; 
+            } else if (mov.tipo.includes("MERMA") || mov.tipo.includes("BAJA") || mov.tipo.includes("(-)")) { 
+                colorTipo = "#ef4444"; 
+                badgeTipo = "🟥 " + mov.tipo; 
+            }
+
+            html += `
+            <tr style="border-bottom: 1px solid #e2e8f0; background: white;">
+                <td style="font-size:0.85rem; color:#475569; white-space:nowrap; padding: 12px 15px;">${mov.fechaStr}</td>
+                <td style="font-weight:bold; color:${colorTipo}; font-size:0.85rem; padding: 12px 15px;">${badgeTipo}</td>
+                <td style="padding: 12px 15px;"><span style="font-family:monospace; color:#d97706; background:#fffbeb; padding:2px 6px; border-radius:4px; font-size:0.85rem; border:1px solid #fde68a;">${mov.lote}</span></td>
+                <td style="font-size:0.85rem; color:#334155; padding: 12px 15px;">${mov.detalle}</td>
+                <td style="text-align:right; font-weight:800; color:${colorTipo}; font-size:1.05rem; padding: 12px 15px;">${signo}${mov.cantidad}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    });
+};

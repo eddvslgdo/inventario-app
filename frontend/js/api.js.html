@@ -82,6 +82,19 @@ const api = {
       .withSuccessHandler(success)
       .withFailureHandler(failure || mostrarError)
       .registrarEnvioExterno(datos);
-  }
+  },
 
+  ajustarStockFisico(datos, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .ajustarStockFisico(datos);
+  },
+
+obtenerKardexProducto(productoId, productoNombre, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerKardexProducto(productoId, productoNombre);
+  }
 };

@@ -79,7 +79,6 @@ function procesarLoginEmail(email, pin) {
   const db = SpreadsheetApp.openById(DB_PROD_ID);
   const sPermisos = db.getSheetByName("PERMISOS");
   if (!sPermisos) throw new Error("Falta la pestaña PERMISOS en la base de datos.");
-  
   const data = sPermisos.getDataRange().getValues();
   const emailInput = String(email).trim().toLowerCase();
   
@@ -93,14 +92,12 @@ function procesarLoginEmail(email, pin) {
       if (esAdmin && String(pin).trim() !== pinDb) return { success: false, error: "PIN incorrecto." };
       
       PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), "PROD");
-
-      // --- REGISTRO SILENCIOSO (NUNCA BLOQUEA) ---
+      
       const scriptProps = PropertiesService.getScriptProperties();
       let rawSessions = scriptProps.getProperty('ACTIVE_SESSIONS');
       let sessions = rawSessions ? JSON.parse(rawSessions) : {};
       let now = new Date().getTime();
-
-      // Limpiar fantasmas
+      
       for (let user in sessions) {
          if (now - sessions[user].lastPing > 1800000) delete sessions[user];
       }
@@ -113,14 +110,15 @@ function procesarLoginEmail(email, pin) {
         nombre: emailDb.split("@")[0], 
         esAdmin: esAdmin,
         entorno: "PROD",
-permisos: {
+        permisos: {
           entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === 'TRUE',
           salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === 'TRUE',
           ubicaciones: data[i][4] === true || String(data[i][4]).toUpperCase() === 'TRUE',
           productos: data[i][5] === true || String(data[i][5]).toUpperCase() === 'TRUE',
           envios: data[i][6] === true || String(data[i][6]).toUpperCase() === 'TRUE',
           bajas: data[i][7] === true || String(data[i][7]).toUpperCase() === 'TRUE',
-          historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === 'TRUE' // <--- COLUMNA 10 (J)
+          historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === 'TRUE',
+          verCostos: data[i][10] === true || String(data[i][10]).toUpperCase() === 'TRUE' // <--- NUEVO PERMISO (COL K)
         }
       };
     }
@@ -248,20 +246,20 @@ function obtenerListaUsuarios() {
   
   const data = s.getDataRange().getValues();
   let usuarios = [];
-  
   for (let i = 1; i < data.length; i++) {
     if (data[i][0]) { 
       usuarios.push({
         correo: String(data[i][0]).trim(),
         pin: data[i][1],
         entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === 'TRUE',
-        historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === 'TRUE',
         salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === 'TRUE',
         ubicaciones: data[i][4] === true || String(data[i][4]).toUpperCase() === 'TRUE',
         productos: data[i][5] === true || String(data[i][5]).toUpperCase() === 'TRUE',
         envios: data[i][6] === true || String(data[i][6]).toUpperCase() === 'TRUE',
         bajas: data[i][7] === true || String(data[i][7]).toUpperCase() === 'TRUE',
-        esAdmin: data[i][8] === true || String(data[i][8]).toUpperCase() === 'TRUE'
+        esAdmin: data[i][8] === true || String(data[i][8]).toUpperCase() === 'TRUE',
+        historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === 'TRUE',
+        verCostos: data[i][10] === true || String(data[i][10]).toUpperCase() === 'TRUE' // <--- NUEVO PERMISO
       });
     }
   }
@@ -278,7 +276,6 @@ function guardarUsuario(u) {
     
     let fila = -1;
     const correoBusqueda = String(u.correo).trim().toLowerCase();
-    
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).trim().toLowerCase() === correoBusqueda) {
         fila = i + 1;
@@ -286,14 +283,15 @@ function guardarUsuario(u) {
       }
     }
     
+    // AHORA GUARDAMOS 11 COLUMNAS
     const rowData = [
       u.correo, u.pin || "", 
       u.entradas, u.salidas, u.ubicaciones, 
-      u.productos, u.envios, u.bajas, u.esAdmin, u.historialEntradas
+      u.productos, u.envios, u.bajas, u.esAdmin, u.historialEntradas, u.verCostos
     ];
     
     if (fila > 0) {
-      s.getRange(fila, 1, 1, 10).setValues([rowData]); 
+      s.getRange(fila, 1, 1, 11).setValues([rowData]);
     } else {
       s.appendRow(rowData); 
     }

@@ -782,7 +782,7 @@
       </div>
 
       <div style="background: white; border-radius: 12px; padding: 20px; border-left: 5px solid #3b82f6; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
-        <div style="color: #64748b; font-size: 0.70rem; font-weight: 700;">MUESTRAS ENVIADAS (MES ACTUAL)</div>
+        <div style="color: #64748b; font-size: 0.70rem; font-weight: 700;">ENVIOS REALIZADOS ESTE MES</div>
         <div id="dash-env-mes" style="font-size: 1.8rem; font-weight: 800; color: #1e293b;">0</div>
       </div>
 
@@ -2128,68 +2128,18 @@
             >
           </div>
 
-          <h4 style="margin: 15px 0 10px 0; color: #475569; font-size: 0.95rem">
+<h4 style="margin: 15px 0 10px 0; color: #475569; font-size: 0.95rem">
             Permisos de Operación:
           </h4>
-          <div
-            style="
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 10px;
-              background: #f1f5f9;
-              padding: 15px;
-              border-radius: 8px;
-            "
-          >
-            <label style="display: flex; gap: 8px; cursor: pointer"
-              ><input
-                type="checkbox"
-                id="chk_entradas"
-                style="transform: scale(1.2)"
-              />
-              📦 Entradas</label
-            >
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f1f5f9; padding: 15px; border-radius: 8px;">
+            <label style="display: flex; gap: 8px; cursor: pointer"><input type="checkbox" id="chk_entradas" style="transform: scale(1.2)" /> 📦 Entradas</label>
             <label style="display: flex; gap: 8px; cursor: pointer"><input type="checkbox" id="chk_historialEntradas" style="transform: scale(1.2)" /> 📋 Hist. Entradas</label>
-            <label style="display: flex; gap: 8px; cursor: pointer"
-              ><input
-                type="checkbox"
-                id="chk_salidas"
-                style="transform: scale(1.2)"
-              />
-              🚚 Salidas</label
-            >
-            <label style="display: flex; gap: 8px; cursor: pointer"
-              ><input
-                type="checkbox"
-                id="chk_ubicaciones"
-                style="transform: scale(1.2)"
-              />
-              📍 Ubicaciones</label
-            >
-            <label style="display: flex; gap: 8px; cursor: pointer"
-              ><input
-                type="checkbox"
-                id="chk_productos"
-                style="transform: scale(1.2)"
-              />
-              📊 Productos</label
-            >
-            <label style="display: flex; gap: 8px; cursor: pointer"
-              ><input
-                type="checkbox"
-                id="chk_envios"
-                style="transform: scale(1.2)"
-              />
-              📦 Envíos</label
-            >
-            <label style="display: flex; gap: 8px; cursor: pointer"
-              ><input
-                type="checkbox"
-                id="chk_bajas"
-                style="transform: scale(1.2)"
-              />
-              🗑️ Bajas</label
-            >
+            <label style="display: flex; gap: 8px; cursor: pointer"><input type="checkbox" id="chk_salidas" style="transform: scale(1.2)" /> 🚚 Salidas</label>
+            <label style="display: flex; gap: 8px; cursor: pointer"><input type="checkbox" id="chk_ubicaciones" style="transform: scale(1.2)" /> 📍 Ubicaciones</label>
+            <label style="display: flex; gap: 8px; cursor: pointer"><input type="checkbox" id="chk_productos" style="transform: scale(1.2)" /> 📊 Productos</label>
+            <label style="display: flex; gap: 8px; cursor: pointer"><input type="checkbox" id="chk_envios" style="transform: scale(1.2)" /> 📦 Envíos</label>
+            <label style="display: flex; gap: 8px; cursor: pointer"><input type="checkbox" id="chk_bajas" style="transform: scale(1.2)" /> 🗑️ Bajas</label>
+            <label style="display: flex; gap: 8px; cursor: pointer; color: #10b981; font-weight: bold;"><input type="checkbox" id="chk_costos" style="transform: scale(1.2)" /> 💰 Ver Costos</label>
           </div>
 
           <div style="display: flex; gap: 10px; margin-top: 25px">
@@ -3248,6 +3198,37 @@
           <button onclick="confirmarEnvioExterno()" class="btn-field" style="flex: 1; background: #2563eb; color: white; border: none;">Guardar Gasto</button>
        </div>
     </div>
+  </div>
+</div>
+
+<div id="modalKardex" class="modal-overlay" style="display: none; z-index: 2005;">
+  <div class="modal-content" style="max-width: 800px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh;">
+    
+    <div style="background: #1e293b; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+       <div>
+         <h3 style="margin: 0; color: white; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">📖 Libro Mayor (Kardex)</h3>
+         <span id="kardex-producto-nombre" style="color: #94a3b8; font-size: 0.9rem;">Cargando...</span>
+       </div>
+       <button onclick="cerrarModalGenerico('modalKardex')" style="background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; opacity: 0.8;">&times;</button>
+    </div>
+
+    <div style="flex: 1 1 auto; overflow-y: auto; background: #f8fafc; padding: 0;">
+       <table class="modern-table" style="width: 100%; margin: 0;">
+          <thead style="position: sticky; top: 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10;">
+             <tr>
+                <th>Fecha y Hora</th>
+                <th>Movimiento</th>
+                <th>Lote</th>
+                <th>Detalle / Referencia</th>
+                <th style="text-align: right;">Cantidad (L)</th>
+             </tr>
+          </thead>
+          <tbody id="kardexBody">
+             <tr><td colspan="5" style="text-align: center; padding: 40px; color: #64748b;">Consultando los registros históricos...</td></tr>
+          </tbody>
+       </table>
+    </div>
+
   </div>
 </div>
 

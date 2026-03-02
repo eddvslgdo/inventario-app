@@ -2481,3 +2481,334 @@ function registrarEnvioExterno(datos) {
     lock.releaseLock();
   }
 }
+
+// ==========================================
+// MÓDULO: AJUSTES FÍSICOS DE INVENTARIO
+// ==========================================
+function ajustarStockFisico(datos) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+
+    // 🔒 SEGURIDAD ESTRICTA BACKEND: Verificar que quien dispara esto sea realmente un Admin
+    const emailUsuario = Session.getActiveUser().getEmail().toLowerCase();
+    const rawSessions = PropertiesService.getScriptProperties().getProperty('ACTIVE_SESSIONS');
+    if (rawSessions) {
+        let sessions = JSON.parse(rawSessions);
+        if (sessions[emailUsuario] && sessions[emailUsuario].rol !== "admin") {
+            throw new Error("🔒 ALERTA DE SEGURIDAD: Acción denegada. Solo un Administrador tiene permisos para hacer ajustes directos de inventario.");
+        }
+    }
+
+    const sInv = obtenerHojaSegura("INVENTARIO");
+    const dataInv = sInv.getDataRange().getValues();
+    let filaEncontrada = -1;
+    let stockAnterior = 0;
+
+    // Buscar la fila exacta del lote
+    for (let i = 1; i < dataInv.length; i++) {
+      if (
+        String(dataInv[i][0]).trim() === String(datos.productoId).trim() &&
+        String(dataInv[i][1]).trim() === String(datos.presentacionId).trim() &&
+        String(dataInv[i][2]).trim() === String(datos.ubicacionId).trim() &&
+        String(dataInv[i][6]).trim().toUpperCase() === String(datos.lote).trim().toUpperCase()
+      ) {
+        filaEncontrada = i + 1;
+        stockAnterior = Number(dataInv[i][3]);
+        break;
+      }
+    }
+
+    if (filaEncontrada === -1) throw new Error("No se encontró el lote exacto en el inventario.");
+
+    let nuevoStock = Number(datos.nuevoVolumen);
+    if (nuevoStock < 0) nuevoStock = 0;
+
+    // 1. Actualizar el Inventario
+    sInv.getRange(filaEncontrada, 4).setValue(nuevoStock);
+
+    // 2. Registrar en la Bitácora de Auditoría
+    let diferencia = nuevoStock - stockAnterior;
+    let tipoMovimiento = diferencia >= 0 ? "AJUSTE POSITIVO (+)" : "MERMA / AJUSTE NEGATIVO (-)";
+    let detalle = `Producto: ${datos.productoNombre} | Lote: ${datos.lote} | Cambio: de ${stockAnterior} a ${nuevoStock} | Motivo: ${datos.motivo}`;
+    
+    registrarEnBitacora(emailUsuario, tipoMovimiento, detalle);
+
+    return { success: true, diferencia: diferencia };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ==========================================
+// MÓDULO: KARDEX Y TRAZABILIDAD (V3 - FAMILIAS Y VARIANTES)
+// ==========================================
+function obtenerKardexProducto(productoId, productoNombre) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    
+    let historial = [];
+    const nombreBuscado = String(productoNombre).trim().toUpperCase();
+
+    // Función auxiliar para extraer el "Nombre Padre" ignorando lo que está en paréntesis
+    const obtenerNombrePadre = (rawName) => {
+        let match = String(rawName).match(/(.*)\(([^)]+)\)$/);
+        return match ? match[2].trim().toUpperCase() : String(rawName).trim().toUpperCase();
+    };
+
+    // 0. MAPEAR TODOS LOS IDs DE ESTA FAMILIA DE PRODUCTOS
+    const sProd = obtenerHojaSegura("PRODUCTOS");
+    let idsValidos = new Set();
+    idsValidos.add(String(productoId).trim()); // Siempre incluir el ID principal
+    
+    if (sProd && sProd.getLastRow() > 1) {
+        const dP = sProd.getDataRange().getValues();
+        for (let i = 1; i < dP.length; i++) {
+            let pId = String(dP[i][0]).trim();
+            let pName = String(dP[i][1]).trim();
+            // Si el nombre base coincide, agregamos este ID a la bolsa de búsqueda
+            if (obtenerNombrePadre(pName) === nombreBuscado) {
+                idsValidos.add(pId);
+            }
+        }
+    }
+
+    // 1. LEER ENTRADAS (De cualquier ID válido de la familia)
+    const sEnt = obtenerHojaSegura("REGISTROS_ENTRADA");
+    if (sEnt && sEnt.getLastRow() > 1) {
+      const dataEnt = sEnt.getDataRange().getValues();
+      for (let i = 1; i < dataEnt.length; i++) {
+        let rowProdId = String(dataEnt[i][1]).trim();
+        if (idsValidos.has(rowProdId)) { 
+          historial.push({
+            fecha: dataEnt[i][0], 
+            tipo: "ENTRADA",
+            cantidad: Number(dataEnt[i][4]) || 0, 
+            lote: dataEnt[i][5] || "---",
+            detalle: `Proveedor/Origen: ${dataEnt[i][6] || '---'}`
+          });
+        }
+      }
+    }
+
+    // 2. LEER SALIDAS Y BAJAS
+    const sSal = obtenerHojaSegura("REGISTROS_SALIDA");
+    if (sSal && sSal.getLastRow() > 1) {
+      const dataSal = sSal.getDataRange().getValues();
+      for (let i = 1; i < dataSal.length; i++) {
+        let rowProdId = String(dataSal[i][0]).trim();
+        if (idsValidos.has(rowProdId)) { 
+          let tipo = String(dataSal[i][8]).toUpperCase().includes("DESINCORPORACIÓN") ? "BAJA / MERMA" : "SALIDA";
+          historial.push({
+            fecha: dataSal[i][10] || dataSal[i][0], 
+            tipo: tipo,
+            cantidad: -(Number(dataSal[i][4]) || 0),
+            lote: dataSal[i][7] || "---",
+            detalle: `Destino: ${dataSal[i][8] || '---'} (Doc: ${dataSal[i][11] || '---'})`
+          });
+        }
+      }
+    }
+
+    // 3. LEER BITÁCORA (Ajustes Físicos)
+    const sBit = obtenerHojaSegura("BITACORA_ACTIVIDAD");
+    if (sBit && sBit.getLastRow() > 1) {
+      const dataBit = sBit.getDataRange().getValues();
+      for (let i = 1; i < dataBit.length; i++) {
+        let accion = String(dataBit[i][2] || "").toUpperCase();
+        let detalleStr = String(dataBit[i][3] || "");
+
+        if (accion.includes("AJUSTE")) {
+          // Extraemos el nombre del producto directamente del texto del log
+          let prodMatch = detalleStr.match(/Producto:\s([^|]+)/);
+          let prodNameInBitacora = prodMatch ? prodMatch[1].trim() : "";
+          
+          // Si el "Nombre Padre" del log coincide con el producto que estamos buscando
+          if (obtenerNombrePadre(prodNameInBitacora) === nombreBuscado) {
+             let loteMatch = detalleStr.match(/Lote:\s([^|]+)/);
+             let lote = loteMatch ? loteMatch[1].trim() : "---";
+
+             let cambioMatch = detalleStr.match(/Cambio:\sde\s([\d.]+)\sa\s([\d.]+)/);
+             let cantidadDif = 0;
+             if (cambioMatch) cantidadDif = Number(cambioMatch[2]) - Number(cambioMatch[1]);
+
+             let motivoMatch = detalleStr.split('| Motivo:');
+             let motivoText = motivoMatch[1] ? motivoMatch[1].trim() : "Ajuste Manual";
+
+             historial.push({
+               fecha: dataBit[i][0], 
+               tipo: accion.includes("POSITIVO") ? "AJUSTE (+)" : "AJUSTE (-)",
+               cantidad: cantidadDif,
+               lote: lote,
+               detalle: `Autorizó: ${dataBit[i][1]} | Razón: ${motivoText}`
+             });
+          }
+        }
+      }
+    }
+
+    // 4. ORDENAR CRONOLÓGICAMENTE
+    historial.sort((a, b) => {
+      let dA = new Date(a.fecha).getTime();
+      let dB = new Date(b.fecha).getTime();
+      return dB - dA;
+    });
+
+    // 5. FORMATEAR FECHAS
+    let historialLimpio = historial.map(h => {
+        let f = new Date(h.fecha);
+        let fechaTexto = isNaN(f.getTime()) ? String(h.fecha) : Utilities.formatDate(f, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
+        return { fechaStr: fechaTexto, tipo: h.tipo, cantidad: h.cantidad, lote: h.lote, detalle: h.detalle };
+    });
+
+    return { success: true, data: historialLimpio };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ==========================================
+// MÓDULO: ALERTAS AUTOMÁTICAS (CRON)
+// ==========================================
+function revisarCaducidadesYEnviarAlerta() {
+  const sInv = obtenerHojaSegura("INVENTARIO");
+  const sProd = obtenerHojaSegura("PRODUCTOS");
+  const sPermisos = obtenerHojaSegura("PERMISOS");
+
+  if (!sInv || sInv.getLastRow() < 2) return;
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  const limite90Dias = new Date();
+  limite90Dias.setDate(hoy.getDate() + 90);
+
+  let mapProd = {};
+  if (sProd && sProd.getLastRow() > 1) {
+    sProd.getDataRange().getValues().slice(1).forEach(r => mapProd[String(r[0]).trim()] = r[1]);
+  }
+
+  // AHORA USAMOS OBJETOS PARA AGRUPAR LOTES IDÉNTICOS
+  let mapCaducados = {};
+  let mapProximos = {};
+
+  const dataInv = sInv.getDataRange().getValues();
+  
+  for (let i = 1; i < dataInv.length; i++) {
+    let pId = String(dataInv[i][0]).trim();
+    let stock = Number(dataInv[i][3]) || 0;
+    let cadVal = dataInv[i][4];
+    let lote = String(dataInv[i][6]).trim();
+
+    if (stock > 0.001 && cadVal && cadVal !== "---" && cadVal !== "SIN-FECHA") {
+      let fCad = null;
+      if (cadVal instanceof Date) {
+        fCad = cadVal;
+      } else if (typeof cadVal === "string") {
+        if (cadVal.includes("-")) {
+          let p = cadVal.split("T")[0].split("-");
+          if (p.length === 3) fCad = new Date(p[0], p[1] - 1, p[2]);
+        } else if (cadVal.includes("/")) {
+          let p = cadVal.split("/");
+          if (p.length === 3) fCad = new Date(p[2], p[1] - 1, p[0]);
+        }
+      }
+
+      if (fCad && !isNaN(fCad.getTime())) {
+        let nombreProd = mapProd[pId] || pId;
+        let fechaStr = Utilities.formatDate(fCad, Session.getScriptTimeZone(), "dd/MM/yyyy");
+        
+        // Creamos una "llave única" combinando Nombre + Lote + Fecha
+        let key = `${nombreProd}|${lote}|${fechaStr}`;
+
+        if (fCad < hoy) {
+          if (!mapCaducados[key]) mapCaducados[key] = { nombre: nombreProd, lote: lote, stock: 0, vence: fechaStr };
+          mapCaducados[key].stock += stock; // Sumamos el stock si ya existía
+        } else if (fCad <= limite90Dias) {
+          if (!mapProximos[key]) mapProximos[key] = { nombre: nombreProd, lote: lote, stock: 0, vence: fechaStr };
+          mapProximos[key].stock += stock; // Sumamos el stock si ya existía
+        }
+      }
+    }
+  }
+
+  // CONVERTIMOS LOS GRUPOS EN LÍNEAS DE HTML PARA EL CORREO
+  let caducados = Object.values(mapCaducados).map(item => 
+    `<li><b>${item.nombre}</b> (Lote: <span style="font-family:monospace;">${item.lote}</span>) - Stock Total: ${item.stock.toFixed(2)} - Vence: ${item.vence}</li>`
+  );
+
+  let proximos = Object.values(mapProximos).map(item => 
+    `<li><b>${item.nombre}</b> (Lote: <span style="font-family:monospace;">${item.lote}</span>) - Stock Total: ${item.stock.toFixed(2)} - Vence: ${item.vence}</li>`
+  );
+
+  // SI NO HAY ALERTAS, NO MANDAMOS CORREO
+  if (caducados.length === 0 && proximos.length === 0) return;
+
+  // OBTENER CORREOS
+  let correosDestino = [];
+  if (sPermisos && sPermisos.getLastRow() > 1) {
+    const dataPerm = sPermisos.getDataRange().getValues();
+    for(let i = 1; i < dataPerm.length; i++) {
+       let esAdmin = dataPerm[i][8] === true || String(dataPerm[i][8]).toUpperCase() === 'TRUE';
+       let correo = String(dataPerm[i][0]).trim();
+       if (esAdmin && correo.includes("@")) correosDestino.push(correo);
+    }
+  }
+  
+  if (correosDestino.length === 0) correosDestino.push(Session.getActiveUser().getEmail());
+
+  // ARMAR EL CORREO HTML
+  let htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+      <div style="background-color: #1e293b; padding: 20px; text-align: center; color: white;">
+        <h2 style="margin: 0;">🚨 Alerta de Inventario WMS</h2>
+        <p style="margin: 5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">Reporte automático del estado de caducidades</p>
+      </div>
+      <div style="padding: 20px; background-color: #f8fafc; color: #334155;">
+        <p>Hola Administrador,</p>
+        <p>El sistema ha detectado lotes que requieren tu atención inmediata para evitar mermas financieras.</p>
+  `;
+
+  if (caducados.length > 0) {
+    htmlBody += `
+        <h3 style="color: #dc2626; border-bottom: 2px solid #fca5a5; padding-bottom: 5px;">🛑 Productos Caducados (${caducados.length})</h3>
+        <ul style="padding-left: 20px; line-height: 1.6;">
+          ${caducados.join("")}
+        </ul>
+        <p style="font-size: 0.85rem; color: #64748b;"><em>* Sugerencia: Entra al sistema, ve a la pestaña "Bajas" y desincorpora estos lotes.</em></p>
+    `;
+  }
+
+  if (proximos.length > 0) {
+    htmlBody += `
+        <h3 style="color: #f59e0b; border-bottom: 2px solid #fcd34d; padding-bottom: 5px; margin-top: 25px;">⚠️ Próximos a Caducar (< 90 días) (${proximos.length})</h3>
+        <ul style="padding-left: 20px; line-height: 1.6;">
+          ${proximos.join("")}
+        </ul>
+        <p style="font-size: 0.85rem; color: #64748b;"><em>* Sugerencia: Prioriza la salida de estos lotes en tus próximos envíos FIFO.</em></p>
+    `;
+  }
+
+  htmlBody += `
+      </div>
+      <div style="background-color: #e2e8f0; padding: 15px; text-align: center; font-size: 0.8rem; color: #64748b;">
+        Este es un mensaje automático generado por tu Sistema de Gestión de Inventario.<br>
+        No es necesario responder a este correo.
+      </div>
+    </div>
+  `;
+
+  // ENVIAR EL CORREO
+  MailApp.sendEmail({
+    to: correosDestino.join(","),
+    subject: "🚨 Alerta WMS: Tienes productos caducados o por caducar",
+    htmlBody: htmlBody
+  });
+}
