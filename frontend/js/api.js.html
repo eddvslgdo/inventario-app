@@ -96,5 +96,35 @@ obtenerKardexProducto(productoId, productoNombre, success, failure) {
       .withSuccessHandler(success)
       .withFailureHandler(failure || mostrarError)
       .obtenerKardexProducto(productoId, productoNombre);
+  },
+
+  obtenerDirectorioClientes(success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerDirectorioClientes();
+  },
+
+guardarClienteCRM(datos, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .guardarClienteCRM(datos);
+  },
+
+  agregarDireccionCliente(idCliente, nuevaDireccion, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .agregarDireccionCliente(idCliente, nuevaDireccion);
+  },
+
+  actualizarDireccionesCliente(idCliente, direcciones, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .actualizarDireccionesCliente(idCliente, direcciones);
   }
+
 };
+

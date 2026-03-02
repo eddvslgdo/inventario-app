@@ -296,6 +296,7 @@ function configurarInterfazPorPermisos(info) {
   document.getElementById('nav-productos').style.display = info.permisos.productos ? 'inline-block' : 'none';
   document.getElementById('nav-pedidos').style.display = info.permisos.envios ? 'inline-block' : 'none';
   document.getElementById('nav-bajas').style.display = info.permisos.bajas ? 'inline-block' : 'none';
+  document.getElementById('nav-clientes').style.display = info.permisos.envios ? 'inline-block' : 'none';
   
   // Mostrar el botón de Dashboard si tiene algún permiso
   const hasAnyPerm = canViewEntradas || info.permisos.salidas || info.permisos.ubicaciones || info.permisos.productos || info.permisos.envios || info.permisos.bajas;
@@ -760,3 +761,318 @@ function renderizarNuevasGraficas(data) {
         }
     });
 }
+
+// ==========================================
+// MÓDULO CRM: DIRECTORIO DE CLIENTES
+// ==========================================
+let FILTRO_TIPO_CLIENTE = 'Todos'; // <--- ¡Esta es la línea que faltaba!
+
+window.cargarDashboardClientes = function() {
+    mostrarCargando("Sincronizando directorio...");
+    google.script.run
+        .withSuccessHandler(function(res) {
+            ocultarCargando();
+            window.CLIENTES_CACHE = res; 
+            renderizarGridClientes();
+        })
+        .withFailureHandler(function(e) {
+            ocultarCargando();
+            Swal.fire("Error", "No se pudo cargar el directorio.", "error");
+        })
+        .obtenerListaClientes();
+};
+
+window.renderizarGridClientes = function() {
+    const grid = document.getElementById("grid-clientes");
+    const inputSearch = document.getElementById("buscadorClientes");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    let texto = inputSearch ? inputSearch.value.toLowerCase() : "";
+    let datos = window.CLIENTES_CACHE || [];
+
+    let filtrados = datos.filter(c => {
+        let txtDoc = (c.nombre + " " + (c.empresa || "")).toLowerCase();
+        let pasaTexto = txtDoc.includes(texto);
+        
+        let pasaTipo = true;
+        let tipoNormalizado = (c.tipo || "Externo").toLowerCase();
+        if (FILTRO_TIPO_CLIENTE === 'Interno' && !tipoNormalizado.includes('interno')) pasaTipo = false;
+        if (FILTRO_TIPO_CLIENTE === 'Externo' && !tipoNormalizado.includes('externo')) pasaTipo = false;
+
+        return pasaTexto && pasaTipo;
+    });
+
+    if (filtrados.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #94a3b8; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">No se encontraron clientes con esos filtros.</div>`;
+        return;
+    }
+
+    filtrados.forEach(c => {
+        let esInterno = (c.tipo || "").toLowerCase().includes("interno");
+        let badgeColor = esInterno ? "#10b981" : "#3b82f6";
+        let badgeBg = esInterno ? "#d1fae5" : "#dbeafe";
+        let badgeIcon = esInterno ? "🏢" : "🌍";
+        let iniciales = (c.nombre || "SC").substring(0, 2).toUpperCase();
+
+        let numDirs = c.direcciones ? c.direcciones.length : 0;
+
+        let card = document.createElement("div");
+        card.style.cssText = "background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: transform 0.2s;";
+        card.onmouseover = () => card.style.transform = "translateY(-3px)";
+        card.onmouseout = () => card.style.transform = "translateY(0)";
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <div style="width: 45px; height: 45px; border-radius: 50%; background: ${badgeBg}; color: ${badgeColor}; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2rem;">${iniciales}</div>
+                <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 4px;">${badgeIcon} ${c.tipo || "Externo"}</span>
+            </div>
+            <h3 style="margin: 0 0 5px 0; color: #1e293b; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${c.nombre}">${c.nombre}</h3>
+            <div style="color: #64748b; font-size: 0.9rem; font-weight: 500; margin-bottom: 15px;">${c.empresa || "Sin Empresa"}</div>
+            
+            <div style="font-size: 0.85rem; color: #475569; display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px;">
+                <div>📞 ${c.telefono || "---"}</div>
+                <div>✉️ ${c.correo || "---"}</div>
+                <div>📍 ${numDirs} Sucursal(es) guardada(s)</div>
+            </div>
+
+            <button onclick="verDetalleCliente('${c.id}')" style="width: 100%; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                Ver Perfil y Kardex ➡️
+            </button>
+        `;
+        grid.appendChild(card);
+    });
+};
+
+window.filtrarGridClientes = function() { renderizarGridClientes(); };
+
+window.filtrarTipoCliente = function(tipo, btnEl) {
+    document.querySelectorAll('#vista-clientes .filter-tab').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+    FILTRO_TIPO_CLIENTE = tipo;
+    renderizarGridClientes();
+};
+
+window.abrirModalClienteNuevo = function() {
+    document.getElementById("crm_id").value = "";
+    document.getElementById("crm_nombre").value = "";
+    document.getElementById("crm_empresa").value = "";
+    document.getElementById("crm_tipo").value = "Externo";
+    document.getElementById("crm_telefono").value = "";
+    document.getElementById("crm_email").value = "";
+    
+    document.getElementById("crm_tabla_historial").innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #94a3b8;">Guarda el cliente primero para ver su historial.</td></tr>';
+    document.getElementById("crm_total_envios").innerText = "0 Envíos";
+    
+    document.getElementById("crm_lista_direcciones").innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 10px;">Guarda el cliente primero para agregar direcciones.</div>';
+
+    abrirModalGenerico('modalPerfilCliente');
+};
+
+window.verDetalleCliente = function(id) {
+    let cliente = window.CLIENTES_CACHE.find(c => String(c.id) === String(id));
+    if(!cliente) return;
+
+    document.getElementById("crm_id").value = cliente.id;
+    document.getElementById("crm_nombre").value = cliente.nombre;
+    document.getElementById("crm_empresa").value = cliente.empresa;
+    
+    let tipoLimpio = (cliente.tipo || "Externo").toLowerCase().includes("interno") ? "Interno" : "Externo";
+    document.getElementById("crm_tipo").value = tipoLimpio;
+    
+    document.getElementById("crm_telefono").value = cliente.telefono || "";
+    document.getElementById("crm_email").value = cliente.correo || "";
+
+    renderizarDireccionesCRM(cliente);
+
+    abrirModalGenerico('modalPerfilCliente');
+
+    let historialHtml = "";
+    let enviosDelCliente = [];
+
+    if (window.LISTA_PEDIDOS_CACHE) {
+        enviosDelCliente = window.LISTA_PEDIDOS_CACHE.filter(p => 
+            String(p.cliente).trim().toLowerCase() === String(cliente.nombre).trim().toLowerCase() ||
+            (cliente.empresa && String(p.empresa).trim().toLowerCase() === String(cliente.empresa).trim().toLowerCase())
+        );
+    }
+
+    document.getElementById("crm_total_envios").innerText = `${enviosDelCliente.length} Envíos`;
+
+    if (enviosDelCliente.length === 0) {
+        historialHtml = '<tr><td colspan="3" style="text-align: center; padding: 30px; color: #94a3b8; font-style: italic;">No hay envíos registrados para este cliente.</td></tr>';
+    } else {
+        enviosDelCliente.forEach(ped => {
+            let colorSt = "#f59e0b"; 
+            if(ped.estatus.includes("Entregado")) colorSt = "#10b981";
+            if(ped.estatus.includes("Cancelado")) colorSt = "#dc2626";
+            if(ped.estatus.includes("Enviado") || ped.estatus.includes("Proceso")) colorSt = "#3b82f6";
+
+            historialHtml += `
+            <tr style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'" onclick="verDetallePedido('${ped.id}')">
+                <td style="font-size: 0.8rem; color: #64748b; white-space: nowrap;">${String(ped.fecha).substring(0,10)}</td>
+                <td style="font-size: 0.85rem;">
+                    <div style="font-weight: bold; color: #1e293b;">${ped.id}</div>
+                    <div style="font-family: monospace; color: #059669;">${ped.guia || "Sin Guía"}</div>
+                </td>
+                <td style="text-align: right;">
+                    <span style="background: ${colorSt}15; color: ${colorSt}; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">${ped.estatus || "Pendiente"}</span>
+                </td>
+            </tr>`;
+        });
+    }
+    document.getElementById("crm_tabla_historial").innerHTML = historialHtml;
+};
+
+window.guardarDatosCRM = function() {
+    let datos = {
+        id: document.getElementById("crm_id").value,
+        nombre: document.getElementById("crm_nombre").value.trim(),
+        empresa: document.getElementById("crm_empresa").value.trim(),
+        tipo: document.getElementById("crm_tipo").value,
+        telefono: document.getElementById("crm_telefono").value.trim(),
+        email: document.getElementById("crm_email").value.trim()
+    };
+
+    if(!datos.nombre) return Swal.fire("Atención", "El nombre es obligatorio.", "warning");
+
+    let btn = event.target;
+    let oldTxt = btn.innerText;
+    btn.innerText = "Guardando...";
+    btn.disabled = true;
+
+    api.guardarClienteCRM(datos, function(res) {
+        btn.innerText = oldTxt;
+        btn.disabled = false;
+        if(res.success) {
+            mostrarToast("Perfil guardado ✅", "success");
+            if (!datos.id) {
+                cerrarModalGenerico('modalPerfilCliente');
+                cargarDashboardClientes(); 
+                if(typeof recargarSelectores === 'function') recargarSelectores();
+            } else {
+                let cli = window.CLIENTES_CACHE.find(c => c.id === datos.id);
+                if(cli) {
+                    cli.nombre = datos.nombre; cli.empresa = datos.empresa; 
+                    cli.tipo = datos.tipo; cli.telefono = datos.telefono; cli.correo = datos.email;
+                }
+                renderizarGridClientes();
+                if(typeof recargarSelectores === 'function') recargarSelectores();
+            }
+        } else {
+            Swal.fire("Error", res.error, "error");
+        }
+    });
+};
+
+// --- GESTIÓN DE DIRECCIONES EN EL CRM ---
+window.renderizarDireccionesCRM = function(cliente) {
+    let div = document.getElementById("crm_lista_direcciones");
+    if (!cliente.direcciones || cliente.direcciones.length === 0) {
+        div.innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 0.9rem; padding: 20px; border: 2px dashed #e2e8f0; border-radius: 8px; margin-top: 5px;">Libreta de direcciones vacía.<br><small style="margin-top: 5px; display: block;">Haz clic en "+ Agregar" para añadir una.</small></div>`;
+        return;
+    }
+    
+    let html = "";
+    cliente.direcciones.forEach((d, idx) => {
+        html += `
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
+            
+            <div style="font-size: 0.95rem; color: #1e293b; line-height: 1.5; word-break: break-word;">
+                <span style="color:#3b82f6; font-size: 1.1rem; vertical-align: middle; margin-right: 4px;">📍</span>${d}
+            </div>
+            
+            <div style="text-align: right; border-top: 1px dashed #cbd5e1; padding-top: 8px; margin-top: 4px;">
+                <button onclick="eliminarDireccionDesdeCRM('${cliente.id}', ${idx})" style="background: transparent; border: none; color: #ef4444; font-size: 0.85rem; font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'" title="Eliminar dirección">
+                    🗑️ Quitar Dirección
+                </button>
+            </div>
+            
+        </div>`;
+    });
+    
+    div.innerHTML = html;
+};
+
+window.agregarDireccionDesdeCRM = function() {
+    let idCliente = document.getElementById("crm_id").value;
+    if (!idCliente) return Swal.fire("Atención", "Guarda el cliente primero para poder agregar direcciones.", "warning");
+
+    Swal.fire({
+        title: '📍 Nueva Dirección',
+        input: 'textarea',
+        inputPlaceholder: 'Ej: Planta Querétaro - Calle 123, Bodega 4...',
+        showCancelButton: true,
+        confirmButtonColor: '#2ecc71',
+        confirmButtonText: 'Agregar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if(result.isConfirmed && result.value.trim() !== "") {
+            let nuevaDir = result.value.trim();
+            mostrarCargando("Guardando...");
+            
+            api.agregarDireccionCliente(idCliente, nuevaDir, function(res) {
+                ocultarCargando();
+                if(res.success) {
+                    let cli = window.CLIENTES_CACHE.find(c => c.id === idCliente);
+                    if(cli) {
+                        cli.direcciones = res.direcciones;
+                        renderizarDireccionesCRM(cli);
+                        renderizarGridClientes();
+                    }
+                    mostrarToast("Dirección guardada ✅", "success");
+                } else {
+                    Swal.fire("Error", res.error, "error");
+                }
+            });
+        }
+    });
+};
+
+window.eliminarDireccionDesdeCRM = function(idCliente, indexABorrar) {
+    let cli = window.CLIENTES_CACHE.find(c => c.id === idCliente);
+    if (!cli) return;
+
+    Swal.fire({
+        title: '¿Eliminar dirección?',
+        text: "Ya no aparecerá en el menú de autocompletado al crear un envío.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, eliminar'
+    }).then((result) => {
+        if(result.isConfirmed) {
+            let nuevasDirs = [...cli.direcciones];
+            nuevasDirs.splice(indexABorrar, 1); 
+
+            mostrarCargando("Actualizando...");
+            api.actualizarDireccionesCliente(idCliente, nuevasDirs, function(res) {
+                ocultarCargando();
+                if(res.success) {
+                    cli.direcciones = nuevasDirs;
+                    renderizarDireccionesCRM(cli);
+                    renderizarGridClientes();
+                    mostrarToast("Dirección eliminada 🗑️", "info");
+                } else {
+                    Swal.fire("Error", res.error, "error");
+                }
+            });
+        }
+    });
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

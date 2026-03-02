@@ -165,21 +165,48 @@ function reiniciarFormularioSalidas() {
 function alSeleccionarCliente() {
   var sel = document.getElementById("log_cliente_select");
   var idCliente = sel ? sel.value : "";
-  if(typeof LISTA_CLIENTES === 'undefined') return;
+  
+  var clientesData = window.CLIENTES_CACHE || (typeof LISTA_CLIENTES !== 'undefined' ? LISTA_CLIENTES : []);
+  var dlDir = document.getElementById("dl_direcciones_cliente");
+  var inputDir = document.getElementById("log_direccion");
+  var btnNuevaDir = document.getElementById("btn_nueva_dir");
 
+  // Si se elige "Nuevo / Manual"
   if(!idCliente || idCliente === "") {
      ["log_nombre", "log_empresa", "log_direccion", "log_telefono", "log_email"].forEach(function(id) {
          var el = document.getElementById(id); if(el) el.value = "";
      });
+     if(dlDir) dlDir.innerHTML = '';
+     if(btnNuevaDir) btnNuevaDir.style.display = "none";
      return;
   }
-  var cliente = LISTA_CLIENTES.find(function(c) { return String(c.id) === String(idCliente); });
+
+  // Si se elige un Cliente Guardado
+  var cliente = clientesData.find(function(c) { return String(c.id) === String(idCliente); });
   if (cliente) {
      if(document.getElementById("log_nombre")) document.getElementById("log_nombre").value = cliente.nombre || "";
      if(document.getElementById("log_empresa")) document.getElementById("log_empresa").value = cliente.empresa || "";
-     if(document.getElementById("log_direccion")) document.getElementById("log_direccion").value = cliente.direccion || "";
      if(document.getElementById("log_telefono")) document.getElementById("log_telefono").value = cliente.telefono || "";
      if(document.getElementById("log_email")) document.getElementById("log_email").value = cliente.email || "";
+
+     // Llenar sus direcciones en el Menú Híbrido
+     if(dlDir) {
+         dlDir.innerHTML = '';
+         if (cliente.direcciones && cliente.direcciones.length > 0) {
+             cliente.direcciones.forEach(d => {
+                 let opt = document.createElement("option");
+                 opt.value = d;
+                 dlDir.appendChild(opt);
+             });
+             // Autoseleccionamos la primera
+             if(inputDir) inputDir.value = cliente.direcciones[0];
+         } else {
+             // Fallback a la antigua
+             if(inputDir) inputDir.value = cliente.direccion || "";
+         }
+     }
+     
+     if(btnNuevaDir) btnNuevaDir.style.display = "block"; 
   }
 }
 
@@ -425,6 +452,7 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
 }
 
 function confirmarEnvioExterno() {
+    let sentido = document.getElementById("ext_sentido").value;
     let desc = document.getElementById("ext_desc").value.trim();
     let emp = document.getElementById("ext_empresa").value.trim();
     let paq = document.getElementById("ext_paq").value.trim();
@@ -433,6 +461,7 @@ function confirmarEnvioExterno() {
     if(!desc || !emp || !paq || !costo) return Swal.fire("Campos Incompletos", "Llena los campos obligatorios (*).", "warning");
 
     let datos = {
+        sentido: sentido,
         descripcion: desc,
         nombreContacto: emp,
         direccion: document.getElementById("ext_dir").value,
@@ -446,11 +475,13 @@ function confirmarEnvioExterno() {
     google.script.run
         .withSuccessHandler(res => {
             cerrarModalGenerico('modalEnvioExterno');
-            Swal.fire("¡Guardado!", "Gasto registrado correctamente (No afectó inventario).", "success");
-            // Limpiar Modal
+            Swal.fire("¡Guardado!", "Gasto registrado correctamente.", "success");
+            // Limpiar Modal (incluyendo el nuevo select)
             ["ext_desc","ext_empresa","ext_dir","ext_paq","ext_costo","ext_guia"].forEach(id => document.getElementById(id).value = "");
+            document.getElementById("ext_sentido").value = "Envio";
             
             if(typeof cargarDashboardPrincipal === 'function') cargarDashboardPrincipal();
+            if(typeof cargarDashboardPedidos === 'function') cargarDashboardPedidos();
         })
         .withFailureHandler(err => Swal.fire("Error", err.message, "error"))
         .registrarEnvioExterno(datos);
@@ -480,6 +511,45 @@ window.autocompletarDirExterno = function() {
         }
     }
 };
+
+
+window.agregarNuevaDireccionCheckout = function() {
+    var idCliente = document.getElementById("log_cliente_select").value;
+    if(!idCliente) return Swal.fire("Atención", "Selecciona un cliente primero.", "warning");
+
+    Swal.fire({
+        title: '📍 Agregar Sucursal / Dirección',
+        input: 'textarea',
+        inputPlaceholder: 'Ej: Planta Querétaro - Calle 123, Bodega 4...',
+        showCancelButton: true,
+        confirmButtonColor: '#2ecc71',
+        confirmButtonText: 'Guardar Dirección',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if(result.isConfirmed && result.value.trim() !== "") {
+            let nuevaDir = result.value.trim();
+            mostrarCargando("Guardando en la libreta del cliente...");
+            
+            api.agregarDireccionCliente(idCliente, nuevaDir, function(res) {
+                ocultarCargando();
+                if(res.success) {
+                    // 1. Actualizamos la memoria del navegador para no recargar la página
+                    let cli = window.CLIENTES_CACHE.find(c => c.id === idCliente);
+                    if(cli) cli.direcciones = res.direcciones;
+                    
+                    // 2. Refrescamos el Select visualmente
+                    alSeleccionarCliente();
+                    
+                    // 3. Dejamos seleccionada automáticamente la que acabamos de crear
+                    document.getElementById("log_direccion").value = nuevaDir;
+                    mostrarToast("Dirección guardada ✅", "success");
+                } else {
+                    Swal.fire("Error", "No se pudo guardar: " + res.error, "error");
+                }
+            });
+        }
+    });
+}
 
 // INICIALIZAR AL CARGAR
 // Esto asegura que la pantalla se limpie si vienes de otra pestaña

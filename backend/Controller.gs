@@ -146,29 +146,41 @@ const leer = (s, esPres) => {
     .filter((i) => i.id);
 };
 
+// 1. REEMPLAZA TU FUNCIÓN ACTUAL 'obtenerListaClientes' POR ESTA:
 function obtenerListaClientes() {
-  const s = obtenerHojaOCrear("CLIENTES", [
-    "ID",
-    "NOMBRE",
-    "EMPRESA",
-    "DIRECCION",
-    "TELEFONO",
-    "EMAIL",
-  ]);
+  const s = obtenerHojaSegura("CLIENTES");
   if (!s || s.getLastRow() < 2) return [];
-  return s
-    .getDataRange()
-    .getValues()
-    .slice(1)
-    .map((r) => ({
-      id: r[0],
-      nombre: r[1],
-      empresa: r[2],
-      direccion: r[3],
-      telefono: r[4],
-      email: r[5],
-    }))
-    .filter((i) => i.id);
+  
+  const data = s.getDataRange().getDisplayValues();
+  let clientes = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    
+    let dirs = [];
+    try {
+       // Extrae las direcciones guardadas en la Columna G (Índice 6)
+       dirs = JSON.parse(data[i][6] || "[]");
+    } catch(e) {
+       // Compatibilidad si tenías direcciones viejas
+       if (data[i][3] && !data[i][3].includes("terno")) dirs = [data[i][3]]; 
+    }
+
+    let tipoActual = String(data[i][3]).trim();
+    if (!tipoActual.includes("terno") && !tipoActual.includes("nterno")) tipoActual = "Externo"; 
+
+    clientes.push({
+      id: String(data[i][0]).trim(),
+      nombre: String(data[i][1]).trim(),
+      empresa: String(data[i][2]).trim(),
+      tipo: tipoActual,
+      telefono: String(data[i][4]).trim(),
+      correo: String(data[i][5]).trim(), // <--- Esto enciende los correos en la tarjeta
+      email: String(data[i][5]).trim(),
+      direcciones: Array.isArray(dirs) ? dirs : []
+    });
+  }
+  return clientes;
 }
 
 // ==========================================
@@ -1449,37 +1461,24 @@ function procesarBajaOficial(itemsBaja) {
  * Localiza esta función en backend/Controller.gs
  * Se corrigió para que incluya la unidad real de cada producto en el detalle.
  */
+/**
+ * Obtener detalle de pedido (Con búsqueda inteligente en CRM)
+ */
 function obtenerDetallePedidoCompleto(idPedido) {
   const sPed = obtenerHojaSegura("PEDIDOS"),
     sDet = obtenerHojaSegura("DETALLE_PEDIDOS"),
     sCli = obtenerHojaSegura("CLIENTES"),
-    sProd = obtenerHojaSegura("PRODUCTOS"); // Accedemos a productos para traer unidades
+    sProd = obtenerHojaSegura("PRODUCTOS");
 
   const id = String(idPedido).trim();
   const dP = sPed.getDataRange().getDisplayValues();
-  let cab = null,
-    items = [];
+  let cab = null, items = [];
 
   const mapUnidadPorNombre = {};
   if (sProd && sProd.getLastRow() > 1) {
-    sProd
-      .getDataRange()
-      .getDisplayValues()
-      .slice(1)
-      .forEach((r) => {
-        const nombre = String(r[1] || "")
-          .trim()
-          .toUpperCase();
+    sProd.getDataRange().getDisplayValues().slice(1).forEach((r) => {
+        const nombre = String(r[1] || "").trim().toUpperCase();
         if (nombre) mapUnidadPorNombre[nombre] = _normalizarUnidadLabel(r[3]);
-      });
-  }
-
-  // 1. Mapa de unidades (Producto -> Unidad)
-  const mapUnidades = {};
-  if (sProd) {
-    const dProd = sProd.getDataRange().getValues();
-    dProd.forEach((r) => {
-      mapUnidades[String(r[1]).trim()] = r[3] || "L";
     });
   }
 
@@ -1487,23 +1486,37 @@ function obtenerDetallePedidoCompleto(idPedido) {
   for (let i = 1; i < dP.length; i++) {
     if (String(dP[i][0]).trim() === id) {
       let r = dP[i];
-      let email = "---",
-        empresa = "";
+      let email = "---", empresa = "";
+      let telefono = String(r[5] || "").trim(); // Telefono guardado originalmente
+
+      // BÚSQUEDA INTELIGENTE EN EL CRM
       if (sCli) {
         const dC = sCli.getDataRange().getDisplayValues();
         for (let k = 1; k < dC.length; k++) {
-          if (String(dC[k][0]).trim() === String(r[2]).trim()) {
+          let idCli = String(dC[k][0]).trim();
+          let nombreCli = String(dC[k][1]).trim().toLowerCase();
+          let empresaCli = String(dC[k][2]).trim().toLowerCase();
+          let nombrePedido = String(r[3]).trim().toLowerCase();
+
+          // Magia: Busca coincidencia exacta por ID, o coincidencia por Nombre/Empresa (ideal para los externos)
+          if (idCli === String(r[2]).trim() || 
+             (nombrePedido !== "" && (nombreCli === nombrePedido || empresaCli === nombrePedido))) {
+            
             empresa = dC[k][2];
-            email = dC[k][5];
+            email = dC[k][5]; // Rescatamos el correo del CRM
+            
+            // Si el pedido no tenía teléfono, lo rescatamos del CRM también
+            if (!telefono || telefono === "---") telefono = dC[k][4]; 
             break;
           }
         }
       }
+      
       cab = {
         id: r[0],
         cliente: r[3],
         direccion: r[4],
-        telefono: r[5],
+        telefono: telefono,
         email: email,
         empresa: empresa,
         paqueteria: r[6],
@@ -1512,7 +1525,7 @@ function obtenerDetallePedidoCompleto(idPedido) {
         estatus: r[10],
         fechaEst: _fmtF(r[11]),
         fechaReal: _fmtF(r[12]),
-        comentarios: r[14] || "" // <--- NUEVA LÍNEA
+        comentarios: r[14] || ""
       };
       break;
     }
@@ -1526,18 +1539,9 @@ function obtenerDetallePedidoCompleto(idPedido) {
     for (let i = 1; i < dD.length; i++) {
       if (String(dD[i][0]).trim() === id) {
         let pName = dD[i][1];
-        if (pName.includes("Selecciona") || pName === "undefined")
-          pName = "⚠️ Error Datos";
-
+        if (pName.includes("Selecciona") || pName === "undefined") pName = "⚠️ Error Datos";
         const unidadFila = _normalizarUnidadLabel(dD[i][6]);
-        const unidad =
-          dD[i][6] && String(dD[i][6]).trim() !== ""
-            ? unidadFila
-            : mapUnidadPorNombre[
-                String(pName || "")
-                  .trim()
-                  .toUpperCase()
-              ] || "L";
+        const unidad = dD[i][6] && String(dD[i][6]).trim() !== "" ? unidadFila : mapUnidadPorNombre[String(pName || "").trim().toUpperCase()] || "L";
 
         items.push({
           producto: pName,
@@ -2284,28 +2288,18 @@ function obtenerEstadisticasDashboard() {
     hoy.setHours(0,0,0,0);
     const anioActual = hoy.getFullYear();
     const mesActualStr = `${anioActual}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
-
+    
     let stats = {
       kpi: {
-        gastosMesActual: 0,
-        gastosHistorico: 0,
-        pedidosMesActual: 0,
-        enviosEnProceso: 0,
-        enviosCompletados: 0,
-        enviosCancelados: 0,
-        litrosActivos: 0,
-        litrosCaducados: 0
+        gastosMesActual: 0, gastosHistorico: 0, pedidosMesActual: 0,
+        enviosEnProceso: 0, enviosCompletados: 0, enviosCancelados: 0,
+        litrosActivos: 0, litrosCaducados: 0
       },
       tendenciaAnual: {
         meses: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
-        gastos: new Array(12).fill(0),
-        pedidos: new Array(12).fill(0)
+        gastos: new Array(12).fill(0), pedidos: new Array(12).fill(0)
       },
-      topProductosEnviados: {},
-      topStock: {},
-      topEmpresas: {}, // REGRESA TOP EMPRESAS
-      geoTipo: {},   
-      geoEstados: {} 
+      topProductosEnviados: {}, topStock: {}, topEmpresas: {}, geoTipo: {}, geoEstados: {} 
     };
 
     // MAPEOS
@@ -2322,34 +2316,39 @@ function obtenerEstadisticasDashboard() {
            mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: uni };
        });
     }
+
+    // --- NUEVA LÓGICA PARA MAPEAR CLIENTES CON SU "TIPO" ---
     let mapEmpresas = {};
-    if (sCli && sCli.getLastRow() > 1) sCli.getDataRange().getValues().slice(1).forEach(r => mapEmpresas[String(r[0]).trim()] = String(r[2]).trim() || String(r[1]).trim());
+    if (sCli && sCli.getLastRow() > 1) {
+       sCli.getDataRange().getValues().slice(1).forEach(r => {
+           mapEmpresas[String(r[0]).trim()] = {
+               nombre: String(r[2]).trim() || String(r[1]).trim(),
+               tipo: String(r[3]).trim().toUpperCase() // Columna D (Interno/Externo)
+           };
+       });
+    }
 
     const obtenerNombrePadre = (rawName) => {
         let match = String(rawName).match(/(.*)\(([^)]+)\)$/);
         return match ? match[2].trim() : String(rawName).trim();
     };
 
-    // 1. INVENTARIO (Filtro estricto de Líquidos)
+    // 1. INVENTARIO
     if (sInv && sInv.getLastRow() > 1) {
       const dI = sInv.getDataRange().getValues();
       for (let i = 1; i < dI.length; i++) {
-        let pId = String(dI[i][0]).trim();
-        let prId = String(dI[i][1]).trim();
-        let stock = Number(dI[i][3]) || 0;
-        let cadVal = dI[i][4];
-
+        let pId = String(dI[i][0]).trim(); let prId = String(dI[i][1]).trim();
+        let stock = Number(dI[i][3]) || 0; let cadVal = dI[i][4];
+        
         if (stock > 0.001) {
           let fCad = (cadVal instanceof Date) ? cadVal : new Date(cadVal);
           let estaCaducado = (!isNaN(fCad.getTime()) && fCad < hoy);
           let prodInfo = mapProd[pId] || { nombre: pId, unidad: 'L' };
 
-          // SOLO LÍQUIDOS (L) PARA KPIs
           if (prodInfo.unidad === 'L') {
               if (estaCaducado) stats.kpi.litrosCaducados += stock;
               else stats.kpi.litrosActivos += stock;
               
-              // TOP STOCK (Gráfica): Solo vigentes de 1L y 250mL ESTRICTAMENTE LÍQUIDOS
               if (!estaCaducado) {
                  let vNom = mapPres[prId] || 0;
                  if (Math.abs(vNom - 1.0) < 0.01 || Math.abs(vNom - 0.25) < 0.01) {
@@ -2370,27 +2369,23 @@ function obtenerEstadisticasDashboard() {
     if (sPed && sPed.getLastRow() > 1) {
       const dP = sPed.getDataRange().getValues();
       for (let i = 1; i < dP.length; i++) {
-        let idPed = String(dP[i][0]).trim();
-        if(!idPed) continue;
-
+        let idPed = String(dP[i][0]).trim(); if(!idPed) continue;
         let isExterno = idPed.startsWith("EXT-");
-        let fVal = dP[i][1];
-        let f = (fVal instanceof Date) ? fVal : new Date(fVal);
+        let fVal = dP[i][1]; let f = (fVal instanceof Date) ? fVal : new Date(fVal);
         if(isNaN(f.getTime())) continue;
 
         let mesStr = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}`;
         let costo = Number(String(dP[i][9] || "0").replace(/[^0-9.-]+/g, "")) || 0;
         let estatus = String(dP[i][10] || "").toUpperCase();
 
-        // 💰 GASTOS SUMAN SIEMPRE (Histórico total y Mes actual)
+        // 💰 GASTOS SUMAN SIEMPRE
         stats.kpi.gastosHistorico += costo;
         if(mesStr === mesActualStr) stats.kpi.gastosMesActual += costo;
         if(f.getFullYear() === anioActual) stats.tendenciaAnual.gastos[f.getMonth()] += costo;
 
-        // 📦 PEDIDOS SOLO MUESTRAS
+        // 📦 PEDIDOS (Solo envíos de material reales)
         if (!isExterno) {
-            idPedAceptados.add(idPed); 
-
+            idPedAceptados.add(idPed);
             if(mesStr === mesActualStr) {
                 stats.kpi.pedidosMesActual++;
                 if (estatus.includes("ENTREGADO")) stats.kpi.enviosCompletados++;
@@ -2399,10 +2394,16 @@ function obtenerEstadisticasDashboard() {
             }
             if(f.getFullYear() === anioActual) stats.tendenciaAnual.pedidos[f.getMonth()]++;
 
-            // TOP EMPRESAS
-            let empresa = mapEmpresas[String(dP[i][2]).trim()] || "Ventas Generales";
-            if(!stats.topEmpresas[empresa]) stats.topEmpresas[empresa] = 0;
-            stats.topEmpresas[empresa]++;
+            // --- FILTRO: TOP EMPRESAS SOLO EXTERNAS ---
+            let dataCli = mapEmpresas[String(dP[i][2]).trim()];
+            let empresaNombre = dataCli ? dataCli.nombre : "Ventas Generales";
+            let tipoCli = dataCli ? dataCli.tipo : "EXTERNO"; // Si no hay datos, asumimos externo
+            
+            // Si NO contiene la palabra INTERNO, entonces sí la contamos en la gráfica
+            if (!tipoCli.includes("INTERNO")) {
+                if(!stats.topEmpresas[empresaNombre]) stats.topEmpresas[empresaNombre] = 0;
+                stats.topEmpresas[empresaNombre]++;
+            }
 
             // GEOGRAFÍA: Tipo y Estado
             let tipoEnvio = String(dP[i][8] || "Nacional").trim();
@@ -2411,7 +2412,6 @@ function obtenerEstadisticasDashboard() {
 
             let direccion = String(dP[i][4] || "").toUpperCase();
             direccion = direccion.replace(/Á/g, "A").replace(/É/g, "E").replace(/Í/g, "I").replace(/Ó/g, "O").replace(/Ú/g, "U");
-            
             let estadoDetectado = "OTRO";
             for(let edo of ESTADOS_MX) {
                 if(direccion.includes(edo)) {
@@ -2447,7 +2447,7 @@ function obtenerEstadisticasDashboard() {
     stats.topStockArr = sortObj(stats.topStock);
     stats.topEmpresasArr = sortObj(stats.topEmpresas);
     stats.geoEstadosArr = Object.entries(stats.geoEstados).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e => ({label: e[0], value: e[1]}));
-
+    
     return { success: true, data: stats };
   } catch (e) {
     return { success: false, error: e.message };
@@ -2465,15 +2465,25 @@ function registrarEnvioExterno(datos) {
     lock.waitLock(15000);
     verificarAccesoServidor();
     
-    // Prefijo EXT- asegura que no ensucie las estadísticas de almacén
     const idPedido = "EXT-" + Math.floor(Date.now() / 1000);
     const fechaHoy = new Date();
 
+    // Etiquetamos visualmente la descripción para el historial
+    let etiqueta = "📤 ENVÍO EXTERNO";
+    let tipoLogistica = "Externo";
+    
+    if(datos.sentido === "Recepcion") { 
+        etiqueta = "📥 RECEPCIÓN EXTERNA"; 
+        tipoLogistica = "Recepción"; 
+    } else if(datos.sentido === "Triangulacion") { 
+        etiqueta = "🔄 TRIANGULACIÓN"; 
+        tipoLogistica = "Triangulación"; 
+    }
+
     const sPed = obtenerHojaOCrear("PEDIDOS", ["ID_PEDIDO", "FECHA", "ID_CLIENTE", "NOMBRE", "DIRECCION", "TELEFONO", "PAQUETERIA", "GUIA", "TIPO", "COSTO", "ESTATUS", "F_EST", "F_REAL", "LINK", "COMENTARIOS"]);
     sPed.appendRow([
-      idPedido, fechaHoy, "GENERICO-EXT", datos.nombreContacto, datos.direccion, "", datos.paqueteria, datos.guia, "Externo", datos.costo, "Pendiente", "", "", "", "ENVÍO EXTERNO: " + datos.descripcion
+      idPedido, fechaHoy, "GENERICO-EXT", datos.nombreContacto, datos.direccion, "", datos.paqueteria, datos.guia, tipoLogistica, datos.costo, "Pendiente", "", "", "", etiqueta + ": " + datos.descripcion
     ]);
-
     return { success: true, idPedido: idPedido };
   } catch (e) {
     return { success: false, error: e.message };
@@ -2811,4 +2821,143 @@ function revisarCaducidadesYEnviarAlerta() {
     subject: "🚨 Alerta WMS: Tienes productos caducados o por caducar",
     htmlBody: htmlBody
   });
+}
+
+
+// ==========================================
+// MÓDULO: DIRECTORIO DE CLIENTES Y DIRECCIONES
+// ==========================================
+
+function obtenerDirectorioClientes() {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    const sCli = obtenerHojaSegura("CLIENTES");
+    if (!sCli || sCli.getLastRow() < 2) return { success: true, data: [] };
+
+    const data = sCli.getDataRange().getDisplayValues();
+    let clientes = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      if (!data[i][0]) continue; // Si no hay ID, saltar
+      
+      let dirs = [];
+      try {
+         // Intentamos leer el JSON de la columna G (índice 6)
+         dirs = JSON.parse(data[i][6] || "[]");
+      } catch(e) {
+         // Si era texto normal viejo, lo metemos como un elemento de lista
+         if (data[i][6]) dirs = [data[i][6]]; 
+      }
+
+      clientes.push({
+        id: String(data[i][0]).trim(),
+        nombre: String(data[i][1]).trim(),
+        empresa: String(data[i][2]).trim(),
+        tipo: String(data[i][3]).trim() || "Externo",
+        telefono: String(data[i][4]).trim(),
+        correo: String(data[i][5]).trim(),
+        direcciones: Array.isArray(dirs) ? dirs : []
+      });
+    }
+    
+    // Ordenar alfabéticamente por empresa
+    clientes.sort((a, b) => a.empresa.localeCompare(b.empresa));
+    
+    return { success: true, data: clientes };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+// 2. PEGA ESTAS 3 FUNCIONES NUEVAS AL FINAL DEL ARCHIVO Controller.gs:
+function guardarClienteCRM(datos) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    const sCli = obtenerHojaSegura("CLIENTES");
+    const data = sCli.getDataRange().getValues();
+
+    let fila = -1;
+    if (datos.id && datos.id.trim() !== "") {
+        for (let i = 1; i < data.length; i++) {
+            if (String(data[i][0]).trim() === String(datos.id).trim()) {
+                fila = i + 1;
+                break;
+            }
+        }
+    }
+
+    if (fila > 0) {
+        sCli.getRange(fila, 2).setValue(datos.nombre);
+        sCli.getRange(fila, 3).setValue(datos.empresa);
+        sCli.getRange(fila, 4).setValue(datos.tipo);
+        sCli.getRange(fila, 5).setValue(datos.telefono);
+        sCli.getRange(fila, 6).setValue(datos.email);
+        return { success: true, id: datos.id };
+    } else {
+        let nuevoId = "CLI-" + Math.floor(Date.now() / 1000);
+        sCli.appendRow([nuevoId, datos.nombre, datos.empresa, datos.tipo, datos.telefono, datos.email, "[]"]);
+        return { success: true, id: nuevoId };
+    }
+  } catch(e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function agregarDireccionCliente(idCliente, nuevaDireccion) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    const sCli = obtenerHojaSegura("CLIENTES");
+    const data = sCli.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === String(idCliente).trim()) {
+        let dirs = [];
+        try { dirs = JSON.parse(data[i][6] || "[]"); } catch(e) {}
+        
+        if (!dirs.includes(nuevaDireccion)) {
+            dirs.push(nuevaDireccion);
+            sCli.getRange(i + 1, 7).setValue(JSON.stringify(dirs)); 
+        }
+        return { success: true, direcciones: dirs };
+      }
+    }
+    throw new Error("Cliente no encontrado.");
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function actualizarDireccionesCliente(idCliente, arrayDirecciones) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    const sCli = obtenerHojaSegura("CLIENTES");
+    const data = sCli.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === String(idCliente).trim()) {
+        sCli.getRange(i + 1, 7).setValue(JSON.stringify(arrayDirecciones));
+        return { success: true, direcciones: arrayDirecciones };
+      }
+    }
+    throw new Error("Cliente no encontrado.");
+  } catch(e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
 }

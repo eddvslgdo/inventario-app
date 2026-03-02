@@ -1878,6 +1878,23 @@
       textoStatus = "En Proceso";
     }
 
+    // --- INTELIGENCIA VISUAL PARA DIRECCIÓN DEL TRAYECTO ---
+  var tituloEmpresaUI = "👤 DATOS DEL CLIENTE";
+  var tituloLogisticaUI = "🚚 DETALLES DE ENVÍO";
+
+  if (cab.id.startsWith("EXT-")) {
+      if (cab.comentarios && cab.comentarios.includes("RECEPCIÓN")) {
+          tituloEmpresaUI = "🏢 DATOS DEL REMITENTE (ORIGEN)";
+          tituloLogisticaUI = "📥 DETALLES DE RECEPCIÓN";
+      } else if (cab.comentarios && cab.comentarios.includes("TRIANGULACIÓN")) {
+          tituloEmpresaUI = "🏢 EMPRESA INVOLUCRADA";
+          tituloLogisticaUI = "🔄 DETALLES DE TRIANGULACIÓN";
+      } else {
+          tituloEmpresaUI = "🏢 DATOS DEL DESTINATARIO";
+          tituloLogisticaUI = "📤 DETALLES DE ENVÍO";
+      }
+  }
+
     modalPadre.innerHTML = `
     ${ESTILOS_MODAL_PREMIUM}
     <div class="clean-header">
@@ -1895,7 +1912,7 @@
        <div class="clean-grid">
           <div class="clean-col">
               <div class="info-card">
-                 <div class="card-label">👤 DATOS DEL CLIENTE</div>
+<div class="card-label">${tituloEmpresaUI}</div>
                  <div class="data-item"><span class="data-icon">😊</span> <span class="data-bold">${cab.cliente}</span></div>
                  <div class="data-item"><span class="data-icon">🏢</span> <span style="font-weight:600; color:#475569;">${displayEmpresa}</span></div>
                  <div class="data-item"><span class="data-icon">📞</span> ${cab.telefono || "--"}</div>
@@ -1904,7 +1921,7 @@
           </div>
           <div class="clean-col">
               <div class="info-card">
-                 <div class="card-label">🚚 DETALLES DE ENVÍO</div>
+<div class="card-label">${tituloLogisticaUI}</div>
                  <div class="data-item"><span class="data-icon">📦</span> <span class="data-bold">${cab.paqueteria}</span></div>
                  <div class="data-item"><span class="data-icon">🎫</span> ${htmlGuia}</div>
                  <div class="data-item" style="margin-top:10px;"><span class="data-icon">📍</span> <span style="line-height:1.4;">${cab.direccion}</span></div>
