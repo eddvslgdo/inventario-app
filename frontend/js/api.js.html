@@ -124,6 +124,48 @@ guardarClienteCRM(datos, success, failure) {
       .withSuccessHandler(success)
       .withFailureHandler(failure || mostrarError)
       .actualizarDireccionesCliente(idCliente, direcciones);
+  },
+
+  obtenerCatalogoMaestro(success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerCatalogoMaestro();
+  },
+
+  guardarItemCatalogo(datos, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .guardarItemCatalogo(datos);
+  },
+
+  subirDocumentoCatalogo(idCatalogo, nombreProducto, tipoDoc, base64Data, mimeType, nombreArchivo, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .subirDocumentoCatalogo(idCatalogo, nombreProducto, tipoDoc, base64Data, mimeType, nombreArchivo);
+  },
+
+  eliminarItemCatalogo(id, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .eliminarItemCatalogo(id);
+  },
+
+  analizarEquivalenciaConIA(idProducto, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .analizarEquivalenciaConIA(idProducto);
+  },
+
+  generarRecomendacionID(perfil, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .generarRecomendacionID(perfil);
   }
 
 };

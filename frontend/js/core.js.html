@@ -49,6 +49,7 @@ if (vistaId === 'vista-operacion') {
   if (vistaId === 'vista-admin' && typeof cargarDashboardAdmin === 'function') cargarDashboardAdmin();
   if (vistaId === 'vista-dashboard' && typeof cargarDashboardPrincipal === 'function') cargarDashboardPrincipal();
   if (vistaId === 'vista-clientes') cargarDashboardClientes();
+  if (vistaId === 'vista-catalogo' && typeof cargarDashboardCatalogo === 'function') cargarDashboardCatalogo();
 };
 
 function recargarSelectores() {

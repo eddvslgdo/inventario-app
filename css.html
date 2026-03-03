@@ -2281,8 +2281,94 @@ tr.fila-bloqueada {
   100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
 }
 
+/* =========================================================
+   ESTILOS DEL CATÁLOGO TÉCNICO Y MODO VERSUS
+   ========================================================= */
 
+.catalogo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding-bottom: 20px;
+}
 
+.cat-card {
+    background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: transform 0.2s; cursor: pointer;
+}
+.cat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px rgba(0,0,0,0.05); }
+
+/* Clases de poder basadas en la imagen (Mapa de Calor) */
+.lvl-4 { background-color: #81c784 !important; color: #064e3b !important; font-weight: 800; } /* Verde Fuerte (++++) */
+.lvl-3 { background-color: #c8e6c9 !important; color: #064e3b !important; font-weight: 800; } /* Verde Claro (+++) */
+.lvl-2 { background-color: #ffb74d !important; color: #78350f !important; font-weight: 800; } /* Naranja (++) */
+.lvl-1 { background-color: #ef5350 !important; color: #7f1d1d !important; font-weight: 800; } /* Rojo (+) */
+.lvl-0 { background-color: #f1f5f9 !important; color: #94a3b8 !important; font-weight: bold; } /* N/A */
+
+.btn-video-proof {
+    background: #ef4444; color: white; border-radius: 6px; padding: 4px 10px;
+    font-size: 0.75rem; cursor: pointer; border: none; font-weight: bold;
+    display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(239,68,68,0.3);
+}
+.btn-video-proof:hover { background: #dc2626; }
+
+/* =========================================================
+   ESTILOS PREMIUM PARA EL ASESOR INTELIGENTE (MATCHMAKER)
+   ========================================================= */
+
+/* Sliders personalizados (Rango) */
+.slider-premium {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: #e2e8f0;
+    outline: none;
+    transition: background 0.1s;
+    margin: 15px 0;
+}
+.slider-premium::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #7e22ce;
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    transition: transform 0.1s;
+}
+.slider-premium::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+/* Tarjetas de controles a la izquierda */
+.card-control-asesor {
+    background: white;
+    padding: 15px 18px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    margin-bottom: 12px;
+    position: relative;
+    transition: border-color 0.2s;
+}
+.card-control-asesor:hover { border-color: #c084fc; }
+
+/* Botones de acción del asesor */
+.btn-add-premium {
+    background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; border-radius: 10px;
+    font-weight: 800; padding: 0 20px; cursor: pointer; height: 42px; white-space: nowrap;
+    transition: all 0.2s; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+}
+.btn-add-premium:hover { background: #e9d5ff; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(107, 33, 168, 0.1); }
+
+/* Tarjetas de resultados a la derecha */
+.card-result-asesor {
+    background: white; border: 1px solid #cbd5e1; border-radius: 16px; padding: 20px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.03); transition: all 0.25s ease; cursor: pointer;
+    position: relative; overflow: hidden;
+}
+.card-result-asesor:hover { transform: translateY(-4px); border-color: #94a3b8; box-shadow: 0 12px 20px rgba(0,0,0,0.06); }
 
 </style>
 

@@ -543,7 +543,7 @@
           "
         >
           <button id="nav-dashboard" class="nav-btn active" onclick="cambiarVista('vista-dashboard')" style="display: none;">🏠 Inicio</button>
-
+          <button id="nav-catalogo" class="nav-btn" onclick="cambiarVista('vista-catalogo')">📖 Catálogo</button>
           <button
             id="nav-entradas"
             class="nav-btn active"
@@ -1860,6 +1860,239 @@
              </div>
         </div>
       </div>
+
+      <div id="vista-catalogo" class="vista" style="display: none; padding-top: 10px;">
+  <div style="max-width: 1200px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+    
+    <div style="background: white; padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eef2f6; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
+      <div>
+        <h2 style="margin: 0; font-size: 1.5rem; color: #1e293b;">📖 Catálogo Técnico y PIM</h2>
+        <span style="color: #64748b; font-size: 0.9rem;">Fichas técnicas, demostraciones y comparativas.</span>
+      </div>
+<div style="display: flex; gap: 10px;">
+          <button onclick="abrirAsesor()" class="btn-field" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none; width: auto; padding: 0 20px; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3);">
+            ✨ Asesor Técnico
+          </button>
+          <button onclick="abrirModalFormCatalogo()" class="btn-field" style="background: #10b981; color: white; border: none; width: auto; padding: 0 20px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+            + Nuevo Documento
+          </button>
+      </div>
+    </div>
+
+    <div class="toolbar-container" style="background: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); border: 1px solid #e2e8f0;">
+       <div class="search-box-styled" style="max-width: 400px;">
+          <span class="search-icon-pos">🔍</span>
+          <input type="text" id="buscadorCatalogo" placeholder="Buscar producto o contratipo..." onkeyup="filtrarCatalogo()">
+       </div>
+       <div class="filter-tabs" style="margin-left: auto;">
+          <button class="filter-tab active" onclick="filtrarTipoCat('Todos', this)">Todos</button>
+          <button class="filter-tab" onclick="filtrarTipoCat('Línea', this)">📦 De Línea</button>
+          <button class="filter-tab" onclick="filtrarTipoCat('Desarrollo', this)">🧪 Desarrollos</button>
+          <button class="filter-tab" onclick="filtrarTipoCat('Contratipo', this)">🔀 Contratipos</button>
+       </div>
+    </div>
+
+    <div id="loading-catalogo" style="text-align: center; padding: 40px; color: #64748b;"><div class="modern-spinner"></div><p>Cargando información técnica...</p></div>
+    
+    <div id="grid-catalogo" class="catalogo-grid"></div>
+  </div>
+</div>
+
+<div id="modalPerfilCatalogo" class="modal-overlay" style="display: none; z-index: 3005;">
+  <div class="modal-content" style="max-width: 950px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; background: #f8fafc;">
+    
+    <div style="background: #1e293b; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+         <h3 id="cat_titulo_modal" style="margin: 0; color: white; font-size: 1.3rem;">Perfil del Producto</h3>
+         <span id="cat_empresa_modal" style="color: #94a3b8; font-size: 0.85rem;">Polaquimia</span>
+      </div>
+      <div style="display: flex; gap: 10px;">
+         <button id="btn_editar_cat" style="display: none; background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">✏️ Editar</button>
+         <button id="btn_borrar_cat" style="display: none; background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">🗑️ Eliminar</button>
+         <button onclick="cerrarModalGenerico('modalPerfilCatalogo')" style="background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; margin-left: 10px;">&times;</button>
+      </div>
+    </div>
+    
+    <div class="clean-body" style="padding: 25px; overflow-y: auto; flex: 1;">
+
+      <div id="cat_seccion_derivados" style="display: none; margin-top: 20px; background: #faf5ff; border: 1px solid #e9d5ff; padding: 20px; border-radius: 12px;">
+         <h4 style="margin: 0 0 15px 0; color: #6b21a8; display: flex; align-items: center; gap: 8px;">
+            🧬 Variantes y Desarrollos Derivados
+         </h4>
+         <div id="cat_lista_derivados" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+            </div>
+      </div>
+      
+      <div class="clean-grid">
+         <div class="clean-col" style="flex: 1; text-align: center; background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
+             <div style="font-size: 5rem; margin-bottom: 10px;" id="cat_img_placeholder">🧪</div>
+             <div id="cat_badge_estatus"></div>
+             
+             <div id="cat_relaciones" style="margin-top: 15px; font-size: 0.8rem; color: #64748b; background: #f1f5f9; padding: 10px; border-radius: 8px; display: none;"></div>
+
+             <p id="cat_desc" style="color: #475569; font-size: 0.9rem; line-height: 1.5; margin-top: 15px; text-align: left; flex: 1;"></p>
+         </div>
+
+         <div class="clean-col" style="flex: 2; display: flex; flex-direction: column; gap: 15px;" id="contenedor_datos_tecnicos">
+             </div>
+      </div>
+
+      <div id="seccion_versus" style="display: none; margin-top: 25px;">
+         <h4 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            🥊 MATRIZ DE FUNCIONALIDADES (VERSUS)
+         </h4>
+         <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02); overflow-x: auto;">
+            <table class="modern-table" style="width: 100%; text-align: center; margin: 0; min-width: 600px;">
+              <thead>
+                <tr style="background: #1e293b; color: white;">
+                  <th style="text-align: left; padding: 15px;">FUNCIONALIDAD</th>
+                  <th style="width: 25%; color: #cbd5e1;" id="th_competencia">COMPETENCIA<br><small>---</small></th>
+                  <th style="width: 25%; background: #007aff; color: white;" id="th_polaquimia">POLAQUIMIA<br><small>---</small></th>
+                  <th style="width: 15%;">EVIDENCIA</th>
+                </tr>
+              </thead>
+              <tbody id="tbody_versus"></tbody>
+            </table>
+         </div>
+      </div>
+
+      <div id="seccion_videos_extra" style="display: none; margin-top: 25px;">
+         <h4 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">🎥 Galería de Evidencias Adicionales</h4>
+         <div id="grid_videos_extra" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+             </div>
+      </div>
+
+      <div id="cat_admin_uploads" style="margin-top: 25px; padding: 20px; background: #f1f5f9; border-radius: 12px; border: 1px dashed #cbd5e1; display: none;">
+          <h4 style="font-size: 0.9rem; font-weight: bold; color: #334155; margin-top: 0; margin-bottom: 15px;">🛠️ Zona de Administrador: Subir Documentos</h4>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #bfdbfe; text-align: center;">
+                  <div style="color: #2563eb; font-weight: bold; margin-bottom: 10px;">📄 Ficha Técnica (PDF)</div>
+                  <input type="file" id="file_cat_ft" accept=".pdf" style="max-width: 100%; font-size: 0.8rem; margin-bottom: 10px;">
+                  <button onclick="subirMediaCat('ft')" class="btn-field" style="width: 100%; background: #2563eb; color: white; border: none; font-size: 0.85rem;">⬆️ Subir Ficha</button>
+              </div>
+              <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #fecaca; text-align: center;">
+                  <div style="color: #dc2626; font-weight: bold; margin-bottom: 10px;">⚠️ Hoja de Seguridad (PDF)</div>
+                  <input type="file" id="file_cat_hds" accept=".pdf" style="max-width: 100%; font-size: 0.8rem; margin-bottom: 10px;">
+                  <button onclick="subirMediaCat('hds')" class="btn-field" style="width: 100%; background: #dc2626; color: white; border: none; font-size: 0.85rem;">⬆️ Subir HDS</button>
+              </div>
+          </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="modalFormCatalogo" class="modal-overlay" style="display: none; z-index: 3010;">
+  <div class="modal-content" style="max-width: 750px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+    
+    <div style="background: #10b981; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+      <h3 style="margin: 0; color: white; font-size: 1.2rem;">📝 Editor de Producto (Ficha Técnica)</h3>
+      <button onclick="cerrarModalGenerico('modalFormCatalogo')" style="background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer;">&times;</button>
+    </div>
+    
+    <div class="clean-body" style="padding: 25px; background: #f8fafc; overflow-y: auto; flex: 1;">
+       <input type="hidden" id="form_cat_id">
+
+       <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+               <div class="form-group" style="margin: 0;">
+                   <label>Tipo de Registro *</label>
+                   <select id="form_cat_tipo" class="input-modern" onchange="toggleFormCatalogo()">
+                       <option value="Línea">📦 Producto de Línea</option>
+                       <option value="Desarrollo">🧪 Nuevo Desarrollo</option>
+                       <option value="Contratipo">🔀 Contratipo (Competencia)</option>
+                   </select>
+               </div>
+               <div class="form-group" style="margin: 0;">
+                   <label>Empresa Fabricante *</label>
+                   <input type="text" id="form_cat_empresa" class="input-modern" value="Polaquimia">
+               </div>
+           </div>
+
+           <div class="form-group" style="margin-top: 15px;">
+               <label>Nombre del Producto *</label>
+               <input type="text" id="form_cat_nombre" class="input-modern" placeholder="Ej: MULTITASK o DP-04" style="font-size: 1.1rem; font-weight: bold; color: #1e293b;">
+           </div>
+       </div>
+
+       <div id="div_relaciones" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #eff6ff; padding: 15px; border-radius: 8px; border: 1px dashed #bfdbfe; margin-bottom: 15px;">
+           <div class="form-group" style="margin: 0;">
+               <label style="color: #1e40af; font-size: 0.8rem;">Es variante / hijo de:</label>
+               <select id="form_cat_padre" class="input-modern"></select>
+           </div>
+           <div class="form-group" style="margin: 0;">
+               <label style="color: #1e40af; font-size: 0.8rem;">Nombre Comercial (Alias / Marca Blanca):</label>
+               <input type="text" id="form_cat_alias" class="input-modern" placeholder="Ej: Distribuido como SuperAdyuvante">
+           </div>
+       </div>
+
+       <div class="form-group">
+           <label>Descripción / Usos</label>
+           <textarea id="form_cat_desc" class="input-modern" style="min-height: 60px; resize: vertical;"></textarea>
+       </div>
+
+       <div style="margin-top: 15px; padding: 15px; background: white; border: 1px solid #cbd5e1; border-radius: 8px;">
+           <h4 style="margin: 0 0 10px 0; color: #0f172a;">🎯 Usos y Dosis Recomendadas</h4>
+           <table style="width: 100%; border-collapse: collapse;">
+               <thead>
+                   <tr style="font-size: 0.8rem; color: #64748b; text-align: left; border-bottom: 1px solid #e2e8f0;">
+                       <th style="padding-bottom: 5px; width: 45%;">Tipo de Aplicación</th>
+                       <th style="padding-bottom: 5px;">Dosis (Ej: 1-2 mL/L)</th>
+                   </tr>
+               </thead>
+               <tbody id="tbody_builder_aplicaciones"></tbody>
+           </table>
+           <small style="color: #64748b; margin-top: 10px; display: block;">Deja en blanco las que no apliquen para este producto.</small>
+       </div>
+
+       <div style="margin-top: 25px; padding: 15px; background: white; border: 1px solid #cbd5e1; border-radius: 8px;">
+           <h4 style="margin: 0 0 10px 0; color: #0f172a; display: flex; justify-content: space-between; align-items: center;">
+               🧬 Formulación (Activos)
+               <button type="button" onclick="agregarFilaActivo()" style="background: #e0e7ff; color: #4f46e5; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.75rem;">+ Agregar Activo</button>
+           </h4>
+           <table style="width: 100%; border-collapse: collapse;">
+               <thead>
+                   <tr style="font-size: 0.8rem; color: #64748b; text-align: left; border-bottom: 1px solid #e2e8f0;">
+                       <th style="padding-bottom: 5px;">Ingrediente Activo</th>
+                       <th style="padding-bottom: 5px; width: 100px;">%</th>
+                       <th style="width: 40px;"></th>
+                   </tr>
+               </thead>
+               <tbody id="tbody_builder_activos"></tbody>
+           </table>
+       </div>
+
+       <div style="margin-top: 15px; padding: 15px; background: white; border: 1px solid #cbd5e1; border-radius: 8px;">
+           <h4 style="margin: 0 0 10px 0; color: #0f172a; display: flex; justify-content: space-between; align-items: center;">
+               📈 Funcionalidades (Mapa de Calor)
+               <button type="button" onclick="agregarFilaFuncionalidad()" style="background: #e0e7ff; color: #4f46e5; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.75rem;">+ Agregar Atributo</button>
+           </h4>
+           <div style="overflow-x: auto;">
+               <table style="width: 100%; border-collapse: collapse; min-width: 450px;">
+                   <thead>
+                       <tr style="font-size: 0.8rem; color: #64748b; text-align: left; border-bottom: 1px solid #e2e8f0;">
+                           <th style="padding-bottom: 5px;">Funcionalidad (Ej. Penetrante)</th>
+                           <th style="padding-bottom: 5px; width: 100px; text-align: center;">Nivel (1-4)</th>
+                           <th style="padding-bottom: 5px; width: 180px;">Video Demostrativo</th>
+                           <th style="width: 40px;"></th>
+                       </tr>
+                   </thead>
+                   <tbody id="tbody_builder_funcionalidades"></tbody>
+               </table>
+           </div>
+           <small style="color: #64748b; margin-top: 10px; display: block;">Escala: 1 = Rojo (+), 2 = Naranja (++), 3 = Verde Claro (+++), 4 = Verde Fuerte (++++).</small>
+       </div>
+
+    </div>
+
+    <div class="clean-footer" style="flex-shrink: 0; padding: 15px 25px; background: white; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between;">
+       <button onclick="cerrarModalGenerico('modalFormCatalogo')" class="btn-action-modal btn-close">Cancelar</button>
+       <button onclick="guardarDatosCatalogoV2()" class="btn-action-modal btn-save" style="background: #10b981;">💾 Guardar Producto</button>
+    </div>
+
+  </div>
+</div>
 
       <div id="modalPerfilCliente" class="modal-overlay" style="display: none; z-index: 2005;">
         <div class="modal-content" style="max-width: 900px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
@@ -3395,6 +3628,103 @@
         </p>
       </div>
 
+<div id="barra-comparacion" style="display: none; position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 8px 20px; border-radius: 40px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 2000; align-items: center; gap: 15px; border: 1px solid #334155;">
+    <span id="txt-contador-comparar" style="font-weight: 600; font-size: 0.85rem;">0 productos en la balanza</span>
+    <div style="display: flex; gap: 8px;">
+        <button onclick="limpiarComparacion()" style="background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.75rem; transition: background 0.2s;" onmouseover="this.style.background='#334155'" onmouseout="this.style.background='transparent'">Limpiar</button>
+        <button onclick="abrirComparador()" style="background: #3b82f6; border: none; color: white; padding: 6px 18px; border-radius: 20px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(59,130,246,0.3); font-size: 0.75rem; transition: background 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">🥊 Comparar</button>
+    </div>
+</div>
+
+<div id="modalAsesor" class="modal-overlay" style="display: none; z-index: 3030;">
+    <div class="modal-content" style="max-width: 950px; padding: 0; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; background: #f8fafc;">
+        
+        <div style="background: linear-gradient(135deg, #6b21a8 0%, #4c1d95 100%); padding: 22px 30px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; border-bottom: 4px solid #a855f7;">
+            <div>
+                <h3 style="margin: 0; color: white; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; font-weight: 800;">
+                    <span style="font-size: 1.6rem; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));">✨</span> Asesor Técnico
+                </h3>
+                <span style="color: #d8b4fe; font-size: 0.85rem; font-weight: 500;">Encuentra el producto ideal basándote en necesidades técnicas.</span>
+            </div>
+            <button onclick="cerrarModalGenerico('modalAsesor')" style="background: rgba(255,255,255,0.1); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✕</button>
+        </div>
+        
+        <div class="clean-body" style="padding: 0; display: flex; flex-direction: row; height: 100%; overflow: hidden;">
+            
+            <div style="flex: 1; padding: 25px; background: #ffffff; border-right: 1px solid #e2e8f0; overflow-y: auto; min-width: 340px; box-shadow: 4px 0 15px rgba(0,0,0,0.01); z-index: 2;">
+                
+                <h4 style="margin: 0 0 12px 0; color: #1e293b; font-size: 0.95rem; font-weight: 800;">1. Aplicación Principal</h4>
+                <select id="asesor_aplicacion" class="input-modern" style="margin-bottom: 30px; font-weight: 700; color: #4c1d95; cursor: pointer; border: 2px solid #e9d5ff; background: #faf5ff; height: 45px;" onchange="ejecutarAsesor()">
+                    </select>
+                
+                    <h4 style="margin: 0 0 12px 0; color: #1e293b; font-size: 0.95rem; font-weight: 800;">2. Niveles Mínimos Requeridos</h4>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                    <select id="asesor_sel_funcionalidad" style="flex: 1; height: 40px; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; outline: none; background-color: white; color: #334155; cursor: pointer; -webkit-appearance: auto; appearance: auto; margin: 0;">
+                        </select>
+                    
+                    <button onclick="agregarSliderAsesor()" class="btn-add-premium" style="width: auto !important; height: 40px; margin: 0 !important; padding: 0 15px; font-size: 0.85rem; flex-shrink: 0;">
+                        + Añadir
+                    </button>
+                </div>
+                
+                <div id="asesor_sliders" style="display: flex; flex-direction: column; gap: 10px;">
+                    </div>
+            </div>
+
+            <div style="flex: 1.6; padding: 25px 30px; background: #f8fafc; overflow-y: auto; min-width: 450px; position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: #f8fafc; z-index: 10; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;">
+                    <h4 style="margin: 0; color: #1e293b; font-size: 1.15rem; font-weight: 800;">🏆 Ranking de Recomendación</h4>
+                    <span id="asesor_count" style="background: #e9d5ff; color: #6b21a8; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 900; box-shadow: 0 2px 4px rgba(107,33,168,0.1);">0 Encontrados</span>
+                </div>
+                <div id="asesor_resultados" style="display: flex; flex-direction: column; gap: 18px;">
+                    </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div id="modalComparador" class="modal-overlay" style="display: none; z-index: 3020;">
+    <div class="modal-content" style="max-width: 95%; width: 1200px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+        
+        <div style="background: #0f172a; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+            <h3 style="margin: 0; color: white; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">🥊 Comparativa Técnica</h3>
+            <button onclick="cerrarModalGenerico('modalComparador')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; opacity: 0.8;">&times;</button>
+        </div>
+        
+        <div class="clean-body" style="padding: 0; background: #f8fafc; overflow-y: auto; flex: 1;">
+            <div style="overflow-x: auto; background: white; width: 100%; padding-bottom: 40px;">
+                <table class="modern-table" style="width: 100%; text-align: center; border-collapse: collapse; min-width: 800px; margin: 0;" id="tabla_n_versus">
+                    <thead id="thead_n_versus" style="position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"></thead>
+                    <tbody id="tbody_n_versus"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="modalComparador" class="modal-overlay" style="display: none; z-index: 3020;">
+    <div class="modal-content" style="max-width: 95%; width: 1200px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+        
+        <div style="background: #0f172a; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+            <h3 style="margin: 0; color: white; font-size: 1.3rem;">🥊 Comparativa Técnica</h3>
+            <button onclick="cerrarModalGenerico('modalComparador')" style="background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer;">&times;</button>
+        </div>
+        
+        <div class="clean-body" style="padding: 0; background: #f8fafc; overflow-y: auto; flex: 1;">
+            <div style="overflow-x: auto; background: white; width: 100%;">
+                <table class="modern-table" style="width: 100%; text-align: center; border-collapse: collapse; min-width: 800px; margin: 0;" id="tabla_n_versus">
+                    <thead id="thead_n_versus" style="position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"></thead>
+                    <tbody id="tbody_n_versus"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
@@ -3734,6 +4064,1178 @@
               .getLogoBase64();
           }
         });
+
+
+        let CACHE_CATALOGO_TECNICO = [];
+let FILTRO_TIPO_CAT = "Todos";
+let ITEM_ACTIVO_CATALOGO = null;
+
+function cargarDashboardCatalogo() {
+    const grid = document.getElementById("grid-catalogo");
+    const loader = document.getElementById("loading-catalogo");
+    
+    grid.innerHTML = "";
+    loader.style.display = "block";
+
+    // Llamamos a la API (paso 1)
+    if(typeof api !== 'undefined') {
+        api.obtenerCatalogoMaestro(function(res) {
+            loader.style.display = "none";
+            if(res.success) {
+                CACHE_CATALOGO_TECNICO = res.data;
+                renderizarGridCatalogo();
+            } else {
+                Swal.fire("Error", res.error, "error");
+            }
+        });
+    }
+}
+
+function renderizarGridCatalogo() {
+    const grid = document.getElementById("grid-catalogo");
+    const inputSearch = document.getElementById("buscadorCatalogo");
+    grid.innerHTML = "";
+
+    let texto = inputSearch ? inputSearch.value.toLowerCase() : "";
+
+    let filtrados = CACHE_CATALOGO_TECNICO.filter(c => {
+        let txtDoc = (c.nombre + " " + c.empresa + " " + c.estatusFisico).toLowerCase();
+        let pasaTexto = txtDoc.includes(texto);
+        
+        let pasaTipo = true;
+        if (FILTRO_TIPO_CAT !== 'Todos') {
+            if (FILTRO_TIPO_CAT === 'Línea' && !c.estatusFisico.includes('Línea')) pasaTipo = false;
+            if (FILTRO_TIPO_CAT === 'Desarrollo' && !c.estatusFisico.includes('Desarrollo')) pasaTipo = false;
+            if (FILTRO_TIPO_CAT === 'Contratipo' && !c.estatusFisico.includes('Contratipo')) pasaTipo = false;
+        }
+
+        return pasaTexto && pasaTipo;
+    });
+
+    if (filtrados.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #94a3b8; background: white; border-radius: 12px;">No se encontraron productos.</div>`;
+        return;
+    }
+
+    filtrados.forEach(c => {
+        let badgeColor = "#3b82f6"; let badgeBg = "#eff6ff"; let icono = "🧪";
+        if (c.estatusFisico.includes("Línea")) { badgeColor = "#10b981"; badgeBg = "#d1fae5"; icono = "📦"; }
+        if (c.estatusFisico.includes("Contratipo")) { badgeColor = "#ea580c"; badgeBg = "#ffedd5"; icono = "🔀"; }
+
+        let card = document.createElement("div");
+        card.className = "cat-card";
+        card.onclick = () => abrirPerfilCatalogo(c.id);
+
+let isSelected = PRODS_COMPARAR.includes(c.id);
+        let btnCompareText = isSelected ? "✓ Seleccionado" : "+ Comparar";
+        let btnCompareStyle = isSelected ? "background: #10b981; color: white; border: none;" : "background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;";
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <div style="font-size: 2.5rem; background: #f8fafc; padding: 10px; border-radius: 12px;">${icono}</div>
+                <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">${c.estatusFisico}</span>
+            </div>
+            <h3 style="margin: 0 0 5px 0; color: #1e293b; font-size: 1.15rem;">${c.nombre}</h3>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 500; margin-bottom: 10px;">${c.empresa}</div>
+            <p style="font-size: 0.85rem; color: #475569; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                ${c.datosBasicos.descripcion || "Sin descripción disponible."}
+            </p>
+            
+            <div style="margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <button onclick="event.stopPropagation(); abrirPerfilCatalogo('${c.id}')" style="background: transparent; color: #2563eb; border: none; font-weight: bold; cursor: pointer; padding: 5px; font-size: 0.85rem;">Ver Perfil</button>
+                <button onclick="event.stopPropagation(); toggleComparar('${c.id}')" style="${btnCompareStyle} padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: all 0.2s;">${btnCompareText}</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+// ==========================================
+// NUEVA LÓGICA ATÓMICA DE FORMULARIOS (V2)
+// ==========================================
+
+window.toggleFormCatalogo = function() {
+    let tipo = document.getElementById("form_cat_tipo").value;
+    let inputEmpresa = document.getElementById("form_cat_empresa");
+    let divRelaciones = document.getElementById("div_relaciones");
+
+    if (tipo === "Contratipo") {
+        divRelaciones.style.display = "none";
+        if (inputEmpresa.value === "Polaquimia") inputEmpresa.value = ""; 
+    } else {
+        divRelaciones.style.display = "grid";
+        inputEmpresa.value = "Polaquimia";
+    }
+};
+
+// --- LA LISTA MAESTRA DE FUNCIONALIDADES ---
+const FUNCIONALIDADES_BASE = [
+    "PENETRACIÓN", 
+    "DISPERSIÓN / HUMECTACIÓN", 
+    "ADHERENCIA", 
+    "ANTIDERIVA", 
+    "ANTIEVAPORANTE", 
+    "ENCAPSULANTE",
+    "BUFFERIZANTE (REGULADOR PH)", 
+    "ACIDIFICANTE", 
+    "ANTIESPUMANTE", 
+    "COMPATIBILIZANTE", 
+    "ACONDICIONADOR DE AGUA"
+];
+
+const APLICACIONES_BASE = [
+    "INSECTICIDAS / ACARICIDAS",
+    "HERBICIDAS",
+    "FUNGICIDAS",
+    "BIOESTIMULANTES / NUTRICIÓN FOL.",
+    "FERTILIZANTES AL SUELO"
+];
+
+// ===================================================================
+// 1. ABRIR FORMULARIO (Se quitó el bloqueo de niveles infinitos)
+// ===================================================================
+window.abrirModalFormCatalogo = function(prodExistente = null) {
+    document.getElementById("form_cat_id").value = prodExistente ? prodExistente.id : "";
+    document.getElementById("form_cat_nombre").value = prodExistente ? prodExistente.nombre : "";
+    document.getElementById("form_cat_tipo").value = prodExistente ? prodExistente.tipo : "Línea";
+    document.getElementById("form_cat_empresa").value = prodExistente ? prodExistente.empresa : "Polaquimia";
+    
+    let basicos = prodExistente ? prodExistente.datosBasicos : {};
+    document.getElementById("form_cat_desc").value = basicos.descripcion || "";
+    document.getElementById("form_cat_alias").value = basicos.alias || "";
+
+    // MAGIA: Llenar Select de Padre permitiendo INFINITOS niveles (Cualquiera puede ser padre, excepto él mismo)
+    let selPadre = document.getElementById("form_cat_padre");
+    selPadre.innerHTML = '<option value="">Ninguno (Es producto raíz / original)</option>';
+    
+    if (typeof CACHE_CATALOGO_TECNICO !== 'undefined') {
+        CACHE_CATALOGO_TECNICO.forEach(p => {
+            if (prodExistente && p.id === prodExistente.id) return; // Evita ser padre de sí mismo (Paradoja)
+            if (p.tipo !== "Contratipo") { 
+                // Ya NO limitamos. Todo producto propio puede tener derivados.
+                selPadre.innerHTML += `<option value="${p.id}">${p.nombre} (${p.estatusFisico})</option>`;
+            }
+        });
+    }
+    if (prodExistente) selPadre.value = basicos.idPadre || "";
+
+    // Constructor de ACTIVOS
+    document.getElementById("tbody_builder_activos").innerHTML = "";
+    if (prodExistente && basicos.activos_lista && basicos.activos_lista.length > 0) {
+        basicos.activos_lista.forEach(a => agregarFilaActivo(a.nombre, a.porcentaje));
+    } else {
+        agregarFilaActivo("", ""); 
+    }
+
+    // Constructor de APLICACIONES Y DOSIS
+    document.getElementById("tbody_builder_aplicaciones").innerHTML = "";
+    let savedApps = basicos.aplicaciones || [];
+    APLICACIONES_BASE.forEach(appNombre => {
+        let found = savedApps.find(sa => sa.categoria === appNombre);
+        let dosisVal = found ? found.dosis : "";
+        let tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid #f1f5f9";
+        tr.innerHTML = `<td style="padding:8px 4px; font-weight:600; color:#475569; font-size:0.8rem;">${appNombre}<input type="hidden" class="b-app-cat" value="${appNombre}"></td>
+                        <td style="padding:4px 2px;"><input type="text" class="input-modern b-app-dos" value="${dosisVal}" placeholder="Ej: 1-2 mL/L" style="height:35px; margin:0; font-size:0.85rem;"></td>`;
+        document.getElementById("tbody_builder_aplicaciones").appendChild(tr);
+    });
+
+    // Constructor de FUNCIONALIDADES
+    document.getElementById("tbody_builder_funcionalidades").innerHTML = "";
+    let savedFuncs = prodExistente ? (prodExistente.matrizVs || []) : [];
+    FUNCIONALIDADES_BASE.forEach(funcNombre => {
+        let found = savedFuncs.find(sf => sf.caracteristica.toUpperCase() === funcNombre);
+        let val = found ? ((prodExistente && prodExistente.tipo === "Contratipo") ? (found.contratipo || 0) : (found.valor || found.nosotros || 0)) : 0;
+        let vid = found ? (found.video_id || found.video || "") : "";
+        agregarFilaFuncionalidadFija(funcNombre, val, vid);
+    });
+
+    toggleFormCatalogo();
+    abrirModalGenerico('modalFormCatalogo');
+};
+
+
+// ===================================================================
+// 2. GUARDAR DATOS (Blindado contra errores 'null')
+// ===================================================================
+window.guardarDatosCatalogoV2 = function() {
+    let elNombre = document.getElementById("form_cat_nombre");
+    if (!elNombre || !elNombre.value.trim()) return Swal.fire("Atención", "El nombre es obligatorio.", "warning");
+    let nombre = elNombre.value.trim();
+
+    let tipo = document.getElementById("form_cat_tipo").value;
+    
+    // Arrays Atómicos
+    let arrActivos = [];
+    document.querySelectorAll("#tbody_builder_activos tr").forEach(tr => {
+        let n = tr.querySelector(".b-act-nom").value.trim();
+        let p = parseFloat(tr.querySelector(".b-act-pct").value) || 0;
+        if (n) arrActivos.push({ nombre: n, porcentaje: p });
+    });
+
+    let arrAplicaciones = [];
+    document.querySelectorAll("#tbody_builder_aplicaciones tr").forEach(tr => {
+        let c = tr.querySelector(".b-app-cat").value;
+        let d = tr.querySelector(".b-app-dos").value.trim();
+        if (d) arrAplicaciones.push({ categoria: c, dosis: d }); 
+    });
+
+    let arrFunciones = [];
+    document.querySelectorAll("#tbody_builder_funcionalidades tr").forEach(tr => {
+        let n = tr.querySelector(".b-fun-nom").value.trim();
+        let v = parseInt(tr.querySelector(".b-fun-val").value) || 0; 
+        let vid = tr.querySelector(".b-fun-vid").value.trim();
+        if (tipo === "Contratipo") {
+            arrFunciones.push({ caracteristica: n, contratipo: v, nosotros: 0, video_id: vid });
+        } else {
+            arrFunciones.push({ caracteristica: n, valor: v, video: vid });
+        }
+    });
+
+    let linksAntiguos = { foto: "", ft: "", hds: "", videos_extra: [] };
+    let catIdVal = document.getElementById("form_cat_id").value;
+    if (ITEM_ACTIVO_CATALOGO && ITEM_ACTIVO_CATALOGO.id === catIdVal) {
+        if (ITEM_ACTIVO_CATALOGO.mediaLinks) linksAntiguos = ITEM_ACTIVO_CATALOGO.mediaLinks;
+    }
+
+    // Objeto seguro (usamos optional chaining para evitar nulos)
+    let datos = {
+        id: catIdVal,
+        nombre: nombre,
+        tipo: tipo,
+        empresa: document.getElementById("form_cat_empresa")?.value.trim() || "Desconocida",
+        idEquivalente: "", // Siempre vacío por ahora
+        datosBasicos: {
+            descripcion: document.getElementById("form_cat_desc")?.value.trim() || "",
+            idPadre: document.getElementById("form_cat_padre")?.value || "",
+            alias: document.getElementById("form_cat_alias")?.value.trim() || "",
+            activos_lista: arrActivos,
+            aplicaciones: arrAplicaciones 
+        },
+        matrizVs: arrFunciones, 
+        mediaLinks: linksAntiguos
+    };
+
+    mostrarCargando("Guardando producto...");
+    api.guardarItemCatalogo(datos, function(res) {
+        ocultarCargando();
+        if (res.success) {
+            cerrarModalGenerico('modalFormCatalogo');
+            Swal.fire("¡Guardado!", "Producto estructurado correctamente.", "success");
+            cargarDashboardCatalogo(); 
+        } else {
+            Swal.fire("Error", res.error, "error");
+        }
+    });
+};
+
+
+// ===================================================================
+// 3. RENDERIZAR PERFIL (Ahora busca a todos sus hijos)
+// ===================================================================
+window.abrirPerfilCatalogo = function(id) {
+    const prod = CACHE_CATALOGO_TECNICO.find(p => p.id === id);
+    if (!prod) return;
+    ITEM_ACTIVO_CATALOGO = prod;
+
+    document.getElementById("cat_titulo_modal").innerText = prod.nombre;
+    document.getElementById("cat_empresa_modal").innerText = prod.empresa;
+    
+    // Relaciones HACIA ARRIBA (Padre y Alias)
+    let relHtml = "";
+    if (prod.datosBasicos.alias) relHtml += `<b>Alias / Comercializado como:</b> ${prod.datosBasicos.alias}<br>`;
+    if (prod.datosBasicos.idPadre) {
+        let padre = CACHE_CATALOGO_TECNICO.find(p => p.id === prod.datosBasicos.idPadre);
+        if (padre) relHtml += `<b>Es una variante/derivado de:</b> <a href="#" onclick="abrirPerfilCatalogo('${padre.id}')" style="color:#2563eb; font-weight:bold; text-decoration:none;">${padre.nombre}</a>`;
+    }
+    let divRel = document.getElementById("cat_relaciones");
+    if (relHtml) { divRel.innerHTML = relHtml; divRel.style.display = "block"; } else { divRel.style.display = "none"; }
+
+    let badgeColor = prod.estatusFisico.includes("Línea") ? "#10b981" : (prod.estatusFisico.includes("Contratipo") ? "#ea580c" : "#3b82f6");
+    document.getElementById("cat_badge_estatus").innerHTML = `<span style="background: ${badgeColor}20; color: ${badgeColor}; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">${prod.estatusFisico}</span>`;
+    document.getElementById("cat_desc").innerText = prod.datosBasicos.descripcion || "Sin descripción disponible.";
+
+    // Render Side-by-Side o Sencillo
+    let contenedorDts = document.getElementById("contenedor_datos_tecnicos");
+    let htmlSideBySide = "";
+
+    const renderInfoBox = (p, titulo, colorTheme) => {
+        let fts = p.mediaLinks || {};
+        let btnFT = fts.ft ? `<button onclick="window.open('${fts.ft}', '_blank')" class="btn-field" style="width:100%; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.8rem; margin-bottom:5px;">⬇️ Ficha Técnica</button>` : `<span style="color:#94a3b8; font-size:0.8rem; display:block; text-align:center; padding:5px;">Ficha no disponible</span>`;
+        let btnHDS = fts.hds ? `<button onclick="window.open('${fts.hds}', '_blank')" class="btn-field" style="width:100%; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-size:0.8rem;">⚠️ HDS</button>` : `<span style="color:#94a3b8; font-size:0.8rem; display:block; text-align:center; padding:5px;">HDS no disponible</span>`;
+        
+        let activosHtml = "<span style='color:#94a3b8; font-style:italic;'>No especificado</span>";
+        if (p.datosBasicos && p.datosBasicos.activos_lista && p.datosBasicos.activos_lista.length > 0) {
+            activosHtml = p.datosBasicos.activos_lista.map(a => `• <b>${a.nombre}</b> <span style="color:#10b981; font-weight:bold;">(${a.porcentaje}%)</span>`).join("<br>");
+        }
+
+        let appsHtml = "<span style='color:#94a3b8; font-style:italic; font-size:0.8rem;'>No especificadas</span>";
+        if (p.datosBasicos && p.datosBasicos.aplicaciones && p.datosBasicos.aplicaciones.length > 0) {
+            appsHtml = `<div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">`;
+            p.datosBasicos.aplicaciones.forEach(app => {
+                appsHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #e2e8f0; padding-bottom:4px;">
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:700;">${app.categoria}</span>
+                                <span style="font-size:0.85rem; color:#0f172a; font-weight:bold;">${app.dosis}</span>
+                             </div>`;
+            });
+            appsHtml += `</div>`;
+        }
+
+        return `
+        <div class="info-card" style="border-top: 3px solid ${colorTheme}; flex: 1;">
+            <div class="card-label" style="color: ${colorTheme}; border-bottom-color: ${colorTheme}40;">${titulo}</div>
+            <div class="data-item"><span class="data-icon">🎯</span> <div style="width:100%;"><b>Usos y Dosis:</b><br>${appsHtml}</div></div>
+            <div class="data-item" style="margin-top:15px;"><span class="data-icon">🧬</span> <div style="font-size:0.85rem; width:100%;"><b>Composición (Activos):</b><br><div style="background:#f8fafc; padding:8px; border-radius:6px; margin-top:4px; border:1px solid #e2e8f0; line-height:1.4;">${activosHtml}</div></div></div>
+            <hr style="border:0; border-top: 1px dashed #e2e8f0; margin: 15px 0;">
+            ${btnFT}
+            ${btnHDS}
+        </div>`;
+    };
+
+// MAGIA DE INTELIGENCIA ARTIFICIAL EN EL PERFIL
+    if (prod.tipo === "Contratipo") {
+        // Si es competencia, mostramos sus datos a la izquierda, y a Gemini a la derecha
+        let cardCompetencia = renderInfoBox(prod, "PRODUCTO COMPETENCIA", "#ea580c");
+        
+        let bannerIA = `
+            <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 2px dashed #d8b4fe; border-radius: 12px; padding: 25px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; flex: 1;">
+                <span style="font-size: 3rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); line-height: 1;">🤖</span>
+                <h4 style="margin: 0; color: #6b21a8; font-size: 1.1rem; font-weight: 800;">¿Cuál es nuestro equivalente?</h4>
+                <p style="margin: 0; font-size: 0.85rem; color: #4c1d95; line-height: 1.4;">Deja que Gemini analice químicamente los activos de este producto y encuentre el sustituto ideal en el catálogo de Polaquimia.</p>
+                <button onclick="ejecutarAnalisisIA('${prod.id}')" style="background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%); color: white; border: none; padding: 10px 24px; border-radius: 25px; font-weight: 800; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 10px rgba(126,34,206,0.3); transition: transform 0.2s; margin-top: 10px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">✨ Analizar con IA</button>
+            </div>
+        `;
+        
+        htmlSideBySide = `<div style="display:flex; gap:15px; width:100%; align-items: stretch;">${cardCompetencia} ${bannerIA}</div>`;
+    } else {
+        // Si es nuestro, mostramos la ficha normal expandida
+        htmlSideBySide = renderInfoBox(prod, "DATOS TÉCNICOS OFICIALES", "#10b981");
+    }
+    
+    contenedorDts.innerHTML = htmlSideBySide;
+    // MAGIA: Relaciones HACIA ABAJO (Buscar a los Hijos)
+    let hijosDerivados = CACHE_CATALOGO_TECNICO.filter(p => p.datosBasicos && p.datosBasicos.idPadre === prod.id);
+    let divHijos = document.getElementById("cat_seccion_derivados");
+    let gridHijos = document.getElementById("cat_lista_derivados");
+
+    if (hijosDerivados.length > 0) {
+        divHijos.style.display = "block";
+        gridHijos.innerHTML = hijosDerivados.map(h => {
+            let icon = h.estatusFisico.includes("Línea") ? "📦" : "🧪";
+            let color = h.estatusFisico.includes("Línea") ? "#10b981" : "#3b82f6";
+            return `
+            <div onclick="abrirPerfilCatalogo('${h.id}')" style="background: white; border: 1px solid #e9d5ff; padding: 12px; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="font-weight: bold; color: #4c1d95; font-size: 0.9rem; margin-bottom: 5px;">${h.nombre}</div>
+                <div style="font-size: 0.75rem; color: ${color}; font-weight: bold; background: ${color}15; display: inline-block; padding: 2px 6px; border-radius: 10px;">${icon} ${h.estatusFisico}</div>
+            </div>`;
+        }).join("");
+    } else {
+        divHijos.style.display = "none";
+    }
+
+    // Controles de Admin
+    let esAdmin = localStorage.getItem("inventario_rol") === "admin";
+    document.getElementById("btn_editar_cat").style.display = esAdmin ? "inline-block" : "none";
+    document.getElementById("btn_borrar_cat").style.display = esAdmin ? "inline-block" : "none";
+    document.getElementById("cat_admin_uploads").style.display = esAdmin ? "block" : "none";
+    
+    document.getElementById("btn_editar_cat").onclick = () => editarProductoCatalogo(prod);
+    document.getElementById("btn_borrar_cat").onclick = () => eliminarProductoCatalogo(prod.id);
+
+    abrirModalGenerico('modalPerfilCatalogo');
+};
+
+// NUEVA FUNCIÓN: Agrega la fila sin opción a borrarla, y valida de 0 a 4
+window.agregarFilaFuncionalidadFija = function(carac, valor, video) {
+    let tbody = document.getElementById("tbody_builder_funcionalidades");
+    let tr = document.createElement("tr");
+    tr.style.borderBottom = "1px solid #f1f5f9";
+    tr.innerHTML = `
+        <td style="padding: 8px 4px; font-weight: 700; color: #334155; font-size: 0.8rem;">
+            ${carac}
+            <input type="hidden" class="b-fun-nom" value="${carac}">
+        </td>
+        <td style="padding: 4px 2px;">
+            <input type="number" min="0" max="4" class="input-modern b-fun-val" value="${valor}" style="height: 35px; margin: 0; text-align: center; font-weight: bold; background: ${valor > 0 ? '#f0fdf4' : '#fff'};">
+        </td>
+        <td style="padding: 4px 2px;">
+            <input type="text" class="input-modern b-fun-vid" value="${video}" placeholder="Enlace Video" style="height: 35px; margin: 0; font-size: 0.75rem;">
+        </td>
+    `;
+    tbody.appendChild(tr);
+};
+
+window.agregarFilaActivo = function(nombre = "", pct = "") {
+    let tbody = document.getElementById("tbody_builder_activos");
+    let tr = document.createElement("tr");
+    tr.innerHTML = `
+        <td style="padding: 4px 2px;"><input type="text" class="input-modern b-act-nom" value="${nombre}" placeholder="Ej: MSO" style="height: 35px; margin: 0;"></td>
+        <td style="padding: 4px 2px;"><input type="number" class="input-modern b-act-pct" value="${pct}" placeholder="%" style="height: 35px; margin: 0; text-align: center;"></td>
+        <td style="padding: 4px 2px; text-align: center;"><button type="button" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer; padding: 6px;">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+};
+
+window.filtrarCatalogo = function() { renderizarGridCatalogo(); };
+
+window.filtrarTipoCat = function(tipo, btnEl) {
+    document.querySelectorAll('#vista-catalogo .filter-tab').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+    FILTRO_TIPO_CAT = tipo;
+    renderizarGridCatalogo();
+};
+
+// --- CRUD: EDITAR Y ELIMINAR ---
+window.eliminarProductoCatalogo = function(id) {
+    Swal.fire({
+        title: '¿Eliminar del Catálogo?',
+        text: "Los archivos en Drive no se borrarán, pero el perfil desaparecerá.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, eliminar'
+    }).then((res) => {
+        if (res.isConfirmed) {
+            mostrarCargando("Borrando...");
+            api.eliminarItemCatalogo(id, function(r) {
+                ocultarCargando();
+                if (r.success) {
+                    cerrarModalGenerico('modalPerfilCatalogo');
+                    Swal.fire("Eliminado", "", "success");
+                    cargarDashboardCatalogo();
+                } else Swal.fire("Error", r.error, "error");
+            });
+        }
+    });
+};
+
+window.editarProductoCatalogo = function(prod) {
+    cerrarModalGenerico('modalPerfilCatalogo');
+    abrirModalFormCatalogo(prod); // Pasamos el producto para que lo llene
+};
+
+// --- CONSTRUCTOR DE FORMULARIO MEJORADO ---
+window.agregarFilaMatriz = function(carac = "", rival = 2, nos = 4, video = "") {
+    let tbody = document.getElementById("tbody_builder_matriz");
+    let tr = document.createElement("tr");
+    tr.style.borderBottom = "1px dashed #e2e8f0";
+    tr.innerHTML = `
+        <td style="padding: 6px 2px;"><input type="text" class="input-modern mat-carac" value="${carac}" placeholder="Ej: Penetrante" style="height: 35px; margin: 0;"></td>
+        <td style="padding: 6px 2px;"><input type="number" min="1" max="4" class="input-modern mat-rival" value="${rival}" style="height: 35px; margin: 0; text-align: center;"></td>
+        <td style="padding: 6px 2px;"><input type="number" min="1" max="4" class="input-modern mat-nos" value="${nos}" style="height: 35px; margin: 0; text-align: center;"></td>
+        <td style="padding: 6px 2px;"><input type="text" class="input-modern mat-vid" value="${video}" placeholder="Link Drive" style="height: 35px; margin: 0; font-size: 0.75rem;"></td>
+        <td style="padding: 6px 2px; text-align: center;"><button type="button" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer; padding: 6px;">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+};
+
+window.agregarFilaVideo = function(titulo = "", url = "") {
+    let div = document.getElementById("lista_builder_videos");
+    let row = document.createElement("div");
+    row.style.cssText = "display: flex; gap: 10px; align-items: center;";
+    row.innerHTML = `
+        <input type="text" class="input-modern vid-tit" value="${titulo}" placeholder="Título del Video" style="flex: 1; height: 35px; margin: 0;">
+        <input type="text" class="input-modern vid-url" value="${url}" placeholder="URL de Google Drive" style="flex: 1.5; height: 35px; margin: 0; font-size: 0.8rem;">
+        <button type="button" onclick="this.parentNode.remove()" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer; padding: 8px;">🗑️</button>
+    `;
+    div.appendChild(row);
+};
+
+// --- SUBIR PDFs A DRIVE (DISEÑO ARREGLADO) ---
+window.subirMediaCat = function(tipoDoc) {
+    if (!ITEM_ACTIVO_CATALOGO) return;
+    
+    let inputId = tipoDoc === 'ft' ? 'file_cat_ft' : 'file_cat_hds';
+    let input = document.getElementById(inputId);
+    
+    if (!input.files || input.files.length === 0) return Swal.fire("Atención", "Selecciona un archivo PDF primero.", "warning");
+    
+    let file = input.files[0];
+    let reader = new FileReader();
+    mostrarCargando("Subiendo a Google Drive...");
+    
+    reader.onload = function(e) {
+        let base64Data = e.target.result.split(',')[1];
+        let mimeType = e.target.result.split(';')[0].split(':')[1];
+        
+        api.subirDocumentoCatalogo(ITEM_ACTIVO_CATALOGO.id, ITEM_ACTIVO_CATALOGO.nombre, tipoDoc, base64Data, mimeType, file.name, function(res) {
+            ocultarCargando();
+            input.value = ""; 
+            if (res.success) {
+                mostrarToast("Archivo subido ✅", "success");
+                if(!ITEM_ACTIVO_CATALOGO.mediaLinks) ITEM_ACTIVO_CATALOGO.mediaLinks = {};
+                ITEM_ACTIVO_CATALOGO.mediaLinks[tipoDoc] = res.url;
+                abrirPerfilCatalogo(ITEM_ACTIVO_CATALOGO.id); // Refresca el modal para mostrar el botón nuevo
+            } else Swal.fire("Error", res.error, "error");
+        });
+    };
+    reader.readAsDataURL(file);
+};
+
+window.abrirDoc = function(tipo) {
+    if (!ITEM_ACTIVO_CATALOGO || !ITEM_ACTIVO_CATALOGO.mediaLinks) return Swal.fire("No disponible", "Aún no se ha subido este documento.", "info");
+    let link = ITEM_ACTIVO_CATALOGO.mediaLinks[tipo];
+    if (link) window.open(link, "_blank");
+    else Swal.fire("No disponible", "Aún no se ha subido este documento.", "info");
+};
+
+// Generar una fila en blanco para el Mapa de Calor
+window.agregarFilaMatriz = function(carac = "", rival = 2, nos = 4, video = "") {
+    let tbody = document.getElementById("tbody_builder_matriz");
+    let tr = document.createElement("tr");
+    tr.style.borderBottom = "1px dashed #e2e8f0";
+    tr.innerHTML = `
+        <td style="padding: 6px 2px;"><input type="text" class="input-modern mat-carac" value="${carac}" placeholder="Ej: Penetrante" style="height: 35px; margin: 0;"></td>
+        <td style="padding: 6px 2px;"><input type="number" min="1" max="4" class="input-modern mat-rival" value="${rival}" style="height: 35px; margin: 0; text-align: center;"></td>
+        <td style="padding: 6px 2px;"><input type="number" min="1" max="4" class="input-modern mat-nos" value="${nos}" style="height: 35px; margin: 0; text-align: center;"></td>
+        <td style="padding: 6px 2px;"><input type="text" class="input-modern mat-vid" value="${video}" placeholder="Link Drive" style="height: 35px; margin: 0; font-size: 0.75rem;"></td>
+        <td style="padding: 6px 2px; text-align: center;"><button type="button" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; cursor: pointer; padding: 6px;">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+};
+
+// --- NUEVO: Función para Subir PDFs a Drive ---
+window.subirMediaCat = function(tipoDoc) {
+    if (!ITEM_ACTIVO_CATALOGO) return;
+    
+    let inputId = tipoDoc === 'ft' ? 'file_cat_ft' : 'file_cat_hds';
+    let input = document.getElementById(inputId);
+    
+    if (!input.files || input.files.length === 0) {
+        return Swal.fire("Atención", "Selecciona un archivo PDF primero.", "warning");
+    }
+    
+    let file = input.files[0];
+    let reader = new FileReader();
+    
+    mostrarCargando("Subiendo a Google Drive...");
+    
+    reader.onload = function(e) {
+        let base64Data = e.target.result.split(',')[1];
+        let mimeType = e.target.result.split(';')[0].split(':')[1];
+        
+        api.subirDocumentoCatalogo(
+            ITEM_ACTIVO_CATALOGO.id, 
+            ITEM_ACTIVO_CATALOGO.nombre, 
+            tipoDoc, 
+            base64Data, 
+            mimeType, 
+            file.name, 
+            function(res) {
+                ocultarCargando();
+                input.value = ""; // Limpiar input
+                if (res.success) {
+                    mostrarToast("Archivo subido y enlazado ✅", "success");
+                    // Actualizar el enlace en memoria para poder abrirlo sin recargar
+                    if(!ITEM_ACTIVO_CATALOGO.mediaLinks) ITEM_ACTIVO_CATALOGO.mediaLinks = {};
+                    ITEM_ACTIVO_CATALOGO.mediaLinks[tipoDoc] = res.url;
+                } else {
+                    Swal.fire("Error", res.error, "error");
+                }
+            }
+        );
+    };
+    reader.readAsDataURL(file);
+};
+
+// ==========================================
+// LÓGICA DEL COMPARADOR MÚLTIPLE (N-VERSUS)
+// ==========================================
+let PRODS_COMPARAR = [];
+
+window.toggleComparar = function(id) {
+    let idx = PRODS_COMPARAR.indexOf(id);
+    if (idx === -1) {
+        if (PRODS_COMPARAR.length >= 4) return Swal.fire("Límite", "Para una visualización óptima, compara máximo 4 productos a la vez.", "warning");
+        PRODS_COMPARAR.push(id);
+    } else {
+        PRODS_COMPARAR.splice(idx, 1);
+    }
+    renderizarGridCatalogo(); // Redibuja las tarjetas para pintar el botón verde
+    actualizarBarraComparacion();
+};
+
+window.actualizarBarraComparacion = function() {
+    let barra = document.getElementById("barra-comparacion");
+    let txt = document.getElementById("txt-contador-comparar");
+    if (PRODS_COMPARAR.length > 0) {
+        barra.style.display = "flex";
+        txt.innerText = `${PRODS_COMPARAR.length} producto(s) en la balanza`;
+    } else {
+        barra.style.display = "none";
+    }
+};
+
+window.limpiarComparacion = function() {
+    PRODS_COMPARAR = [];
+    renderizarGridCatalogo();
+    actualizarBarraComparacion();
+};
+
+window.abrirComparador = function() {
+    if (PRODS_COMPARAR.length < 2) return Swal.fire("Atención", "Selecciona al menos 2 productos para iniciar el combate.", "info");
+
+    let productos = PRODS_COMPARAR.map(id => CACHE_CATALOGO_TECNICO.find(p => p.id === id)).filter(p => p);
+
+    let thead = document.getElementById("thead_n_versus");
+    let tbody = document.getElementById("tbody_n_versus");
+
+// 1. CABECERAS MÁS COMPACTAS (Estilo UI Moderno)
+    let anchoCol = 80 / productos.length; 
+    let trHead = `<tr style="background: #1e293b; color: white;">`;
+    
+    // Redujimos el padding y la fuente de "CARACTERÍSTICA"
+    trHead += `<th style="text-align: left; padding: 8px 15px; width: 20%; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">CARACTERÍSTICA</th>`;
+    
+    productos.forEach(p => {
+        // Colores ligeramente más vivos para que resalten mejor en el fondo oscuro
+        let colorEmpresa = p.tipo === "Contratipo" ? "#fb923c" : "#60a5fa"; 
+        
+        // Redujimos padding vertical, achicamos fuente de empresa a 0.65rem y producto a 0.9rem
+        trHead += `<th style="padding: 8px 10px; width: ${anchoCol}%; border-left: 1px solid #334155; line-height: 1.2;">
+                      <span style="color: ${colorEmpresa}; font-size: 0.65rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">${p.empresa}</span><br>
+                      <span style="font-size: 0.9rem; font-weight: bold;">${p.nombre}</span>
+                   </th>`;
+    });
+    trHead += `</tr>`;
+    thead.innerHTML = trHead;
+
+    let trBody = "";
+
+    // 2. FILA DE ACTIVOS (Diseño ajustado)
+    trBody += `<tr><td style="text-align: left; padding: 10px 15px; font-weight: bold; background: #f8fafc; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 0.8rem;">🧬 Activos Principales</td>`;
+    productos.forEach(p => {
+        let activos = "<span style='color:#94a3b8; font-style:italic;'>N/D</span>";
+        if (p.datosBasicos && p.datosBasicos.activos_lista && p.datosBasicos.activos_lista.length > 0) {
+            activos = p.datosBasicos.activos_lista.map(a => `• <span style="font-weight:600;">${a.nombre}</span> <span style="color:#10b981; font-weight:bold;">(${a.porcentaje}%)</span>`).join("<br>");
+        }
+        trBody += `<td style="padding: 10px; border-left: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; font-size: 0.8rem; text-align: left; line-height: 1.4; vertical-align: top;">${activos}</td>`;
+    });
+    trBody += `</tr>`;
+
+    // 3. FILA DE DOSIS / APLICACIONES (Diseño ajustado)
+    trBody += `<tr><td style="text-align: left; padding: 10px 15px; font-weight: bold; background: #f8fafc; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 0.8rem;">🎯 Usos y Dosis</td>`;
+    productos.forEach(p => {
+        let dosis = "<span style='color:#94a3b8; font-style:italic;'>N/D</span>";
+        if (p.datosBasicos && p.datosBasicos.aplicaciones && p.datosBasicos.aplicaciones.length > 0) {
+            dosis = p.datosBasicos.aplicaciones.map(a => `<div style="margin-bottom:6px;"><span style="color:#64748b; font-size:0.7rem; font-weight:bold; display:block;">${a.categoria}</span><span style="font-weight:bold; color:#0f172a;">${a.dosis}</span></div>`).join("");
+        }
+        trBody += `<td style="padding: 10px; border-left: 1px solid #e2e8f0; font-size: 0.8rem; text-align: left; line-height: 1.3; vertical-align: top; border-bottom: 1px solid #e2e8f0;">${dosis}</td>`;
+    });
+    trBody += `</tr>`;
+
+    // 4. MAPA DE CALOR (Generación Dinámica)
+    trBody += `<tr><td colspan="${productos.length + 1}" style="background: #e2e8f0; padding: 6px; font-weight: bold; color: #0f172a; text-align: center; letter-spacing: 1px; font-size: 0.8rem;">COMPARACION DE FUNCIONALIDADES</td></tr>`;
+
+    const getPoderInfo = (num) => {
+        if (num >= 4) return { css: "lvl-4", txt: "++++" };
+        if (num === 3) return { css: "lvl-3", txt: "+++" };
+        if (num === 2) return { css: "lvl-2", txt: "++" };
+        if (num === 1) return { css: "lvl-1", txt: "+" };
+        return { css: "lvl-0", txt: "-" };
+    };
+
+    // --- MAGIA: FILTRAR FUNCIONALIDADES VACÍAS ---
+    // Solo dejamos las funcionalidades donde AL MENOS UN producto tenga un valor mayor a 0
+    let funcionalidadesActivas = FUNCIONALIDADES_BASE.filter(func => {
+        return productos.some(p => {
+            let saved = (p.matrizVs || []).find(f => f.caracteristica.toUpperCase() === func);
+            if (!saved) return false;
+            let val = (p.tipo === "Contratipo") ? (saved.contratipo || 0) : (saved.valor || saved.nosotros || 0);
+            return val > 0; 
+        });
+    });
+
+    if (funcionalidadesActivas.length === 0) {
+        trBody += `<tr><td colspan="${productos.length + 1}" style="padding: 20px; text-align: center; color: #94a3b8; font-style: italic;">No hay funcionalidades registradas para comparar.</td></tr>`;
+    }
+
+    // Dibujamos solo las relevantes
+    funcionalidadesActivas.forEach(func => {
+        trBody += `<tr><td style="text-align: left; padding: 8px 15px; font-weight: 800; color: #334155; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem;">${func}</td>`;
+        
+        productos.forEach(p => {
+            let saved = (p.matrizVs || []).find(f => f.caracteristica.toUpperCase() === func);
+            let val = 0;
+            let vidHtml = "";
+
+            if (saved) {
+                val = (p.tipo === "Contratipo") ? (saved.contratipo || 0) : (saved.valor || saved.nosotros || 0);
+                let vLink = saved.video_id || saved.video;
+                
+                // Botón de video súper compacto incrustado en la celda térmica
+                if (vLink) {
+                    vidHtml = `<div style="margin-top: 4px;"><button onclick="window.open('${vLink}', '_blank')" style="background: rgba(255,255,255,0.9); color: #dc2626; border: none; border-radius: 12px; font-size: 0.65rem; font-weight: 800; padding: 2px 8px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: transform 0.1s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">▶ Video</button></div>`;
+                }
+            }
+            
+            let info = getPoderInfo(val);
+            
+            // Celdas más compactas (8px de padding vertical)
+            trBody += `<td class="${info.css}" style="padding: 8px 5px; border-left: 2px solid white; border-right: 2px solid white; border-bottom: 2px solid white; text-align: center; vertical-align: middle;">
+                         <div style="font-size: 1.1rem; line-height: 1;">${info.txt}</div>
+                         ${vidHtml}
+                       </td>`;
+        });
+        trBody += `</tr>`;
+    });
+
+    tbody.innerHTML = trBody;
+    abrirModalGenerico('modalComparador');
+};    
+
+// ==========================================
+// LÓGICA DEL ASESOR INTELIGENTE (V2 - TIEMPO REAL & DOSIS)
+// ==========================================
+
+let ASESOR_FUNCIONES_ACTIVAS = [];
+
+window.abrirAsesor = function() {
+    // 1. Limpiar memoria y UI
+    ASESOR_FUNCIONES_ACTIVAS = [];
+    document.getElementById("asesor_sliders").innerHTML = "";
+    document.getElementById("asesor_resultados").innerHTML = `<div style="text-align: center; color: #a855f7; margin-top: 60px; font-style: italic; font-size: 0.95rem;">Agrega propiedades en el panel izquierdo para ver recomendaciones al instante.</div>`;
+    document.getElementById("asesor_count").innerText = "0 Encontrados";
+
+    // 2. Llenar select de aplicaciones
+    let selApp = document.getElementById("asesor_aplicacion");
+    selApp.innerHTML = '<option value="">Cualquier Aplicación (General)</option>';
+    APLICACIONES_BASE.forEach(app => {
+        selApp.innerHTML += `<option value="${app}">${app}</option>`;
+    });
+
+    // 3. Llenar select de funcionalidades
+    refrescarSelectFuncionalidades();
+    
+    abrirModalGenerico('modalAsesor');
+};
+
+// Refresca el dropdown ocultando las que ya elegiste
+window.refrescarSelectFuncionalidades = function() {
+    let sel = document.getElementById("asesor_sel_funcionalidad");
+    sel.innerHTML = '<option value="">Selecciona una propiedad...</option>';
+    FUNCIONALIDADES_BASE.forEach(func => {
+        if (!ASESOR_FUNCIONES_ACTIVAS.includes(func)) {
+            sel.innerHTML += `<option value="${func}">${func}</option>`;
+        }
+    });
+};
+
+// Agrega un slider nuevo a la pantalla
+// Agrega un slider nuevo a la pantalla (DISEÑO COMPACTO Y ELEGANTE)
+window.agregarSliderAsesor = function() {
+    let sel = document.getElementById("asesor_sel_funcionalidad");
+    let func = sel.value;
+    if (!func) return;
+
+    ASESOR_FUNCIONES_ACTIVAS.push(func);
+    refrescarSelectFuncionalidades();
+
+    let idLimpio = func.replace(/[^a-zA-Z0-9]/g, '');
+    let divSliders = document.getElementById("asesor_sliders");
+    
+    let sliderDiv = document.createElement("div");
+    sliderDiv.id = `box_slider_${idLimpio}`;
+    // Padding reducido y márgenes limpios para quitar lo "tosco"
+    sliderDiv.style.cssText = "background: white; padding: 10px 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 0px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);";
+    
+    let onInputCode = `
+        let pct = (this.value / 4) * 100;
+        this.style.background = 'linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ' + pct + '%, #e2e8f0 ' + pct + '%, #e2e8f0 100%)';
+        document.getElementById('txt_val_${idLimpio}').innerText = '+'.repeat(this.value);
+        ejecutarAsesor();
+    `;
+
+    sliderDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <label style="font-size: 0.75rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">${func}</label>
+            <button onclick="removerSliderAsesor('${func}', '${idLimpio}')" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 1.1rem; font-weight: bold; line-height: 1; padding: 0; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">×</button>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <input type="range" id="val_slider_${idLimpio}" min="1" max="4" value="1" class="slider-premium" style="margin: 0; background: linear-gradient(to right, #8b5cf6 0%, #8b5cf6 25%, #e2e8f0 25%, #e2e8f0 100%);" oninput="${onInputCode}">
+            <span id="txt_val_${idLimpio}" style="width: 35px; text-align: right; font-weight: 900; color: #6b21a8; font-size: 1.1rem; letter-spacing: 1px;">+</span>
+        </div>
+    `;
+    
+    divSliders.appendChild(sliderDiv);
+    ejecutarAsesor(); 
+};
+
+// Quita el slider y lo regresa al select
+window.removerSliderAsesor = function(func, idLimpio) {
+    ASESOR_FUNCIONES_ACTIVAS = ASESOR_FUNCIONES_ACTIVAS.filter(f => f !== func);
+    document.getElementById(`box_slider_${idLimpio}`).remove();
+    refrescarSelectFuncionalidades();
+    ejecutarAsesor(); // Refresca resultados al quitar un filtro
+};
+
+// ==========================================
+// EL MOTOR MATEMÁTICO (MATCHMAKER + DOSIS)
+// ==========================================
+
+window.ejecutarAsesor = function() {
+    let appReq = document.getElementById("asesor_aplicacion").value;
+    
+    let reqs = [];
+    let totalPuntosIdeales = 0;
+
+    ASESOR_FUNCIONES_ACTIVAS.forEach(func => {
+        let idLimpio = func.replace(/[^a-zA-Z0-9]/g, '');
+        let val = parseInt(document.getElementById(`val_slider_${idLimpio}`).value) || 1;
+        reqs.push({ caracteristica: func, valorEsperado: val });
+        totalPuntosIdeales += val;
+    });
+
+    let contenedor = document.getElementById("asesor_resultados");
+    let countBadge = document.getElementById("asesor_count");
+
+    if (reqs.length === 0 && !appReq) {
+        contenedor.innerHTML = `<div style="text-align: center; color: #a855f7; margin-top: 60px; font-style: italic; font-size: 0.95rem;">Agrega propiedades en el panel izquierdo para ver recomendaciones al instante.</div>`;
+        countBadge.innerText = "0 Encontrados";
+        return;
+    }
+
+    let resultados = [];
+
+    CACHE_CATALOGO_TECNICO.forEach(p => {
+        
+        // 1. CÁLCULO INTELIGENTE DE DOSIS
+        let dosisText = "N/D"; 
+        let dosisNumber = 9999;
+        
+        if (appReq) {
+            // Buscó una aplicación estricta (Ej. Herbicida)
+            let tieneApp = false;
+            if (p.datosBasicos && p.datosBasicos.aplicaciones) {
+                let appData = p.datosBasicos.aplicaciones.find(a => a.categoria === appReq);
+                if (appData && appData.dosis.trim() !== "") {
+                    tieneApp = true;
+                    dosisText = appData.dosis; // Extraemos la dosis exacta para Herbicida
+                }
+            }
+            if (!tieneApp) return; // Si no sirve para esta aplicación, lo descartamos
+        } else {
+            // Buscó "Cualquier Aplicación". Tomamos la primera dosis registrada como referencia visual.
+            if (p.datosBasicos && p.datosBasicos.aplicaciones && p.datosBasicos.aplicaciones.length > 0) {
+                let primeraValida = p.datosBasicos.aplicaciones.find(a => a.dosis && a.dosis.trim() !== "");
+                if (primeraValida) {
+                    // Muestra la dosis y en chiquito para qué aplicación es
+                    dosisText = `${primeraValida.dosis} <span style="font-size:0.65rem; font-weight:normal; color:#64748b;">(${primeraValida.categoria.split('/')[0]})</span>`;
+                }
+            } else if (p.datosBasicos && p.datosBasicos.dosis) {
+                dosisText = p.datosBasicos.dosis; // Compatibilidad con datos viejos
+            }
+        }
+
+        // Extraer el número más bajo de la dosis para evaluar EFICIENCIA (Ej: "0.5-1 ml/ha" saca 0.5)
+        let matchNum = String(dosisText).match(/\d+(\.\d+)?/);
+        if (matchNum) dosisNumber = parseFloat(matchNum[0]);
+
+        // 2. ALGORITMO DE MATCH DE FUNCIONALIDADES
+        let puntosObtenidos = 0;
+        let detallesFunc = [];
+
+        if (reqs.length > 0) {
+            let matriz = p.matrizVs || [];
+            
+            reqs.forEach(req => {
+                let funcObj = matriz.find(f => f.caracteristica.toUpperCase() === req.caracteristica.toUpperCase());
+                let valProd = 0;
+                if (funcObj) {
+                    valProd = (p.tipo === "Contratipo") ? (funcObj.contratipo || 0) : (funcObj.valor || funcObj.nosotros || 0);
+                }
+                
+                let puntosAsignados = Math.min(valProd, req.valorEsperado);
+                puntosObtenidos += puntosAsignados;
+
+                detallesFunc.push({
+                    carac: req.caracteristica, expected: req.valorEsperado, obtained: valProd
+                });
+            });
+        } else {
+            puntosObtenidos = 100;
+            totalPuntosIdeales = 100;
+        }
+
+        let porcentaje = totalPuntosIdeales > 0 ? Math.round((puntosObtenidos / totalPuntosIdeales) * 100) : 0;
+
+        if (porcentaje >= 25) { 
+            resultados.push({
+                producto: p,
+                score: porcentaje,
+                detalles: detallesFunc,
+                dosisLabel: dosisText,
+                dosisValue: dosisNumber // Valor oculto para desempatar ganadores
+            });
+        }
+    });
+
+    // 3. EL DESEMPATE (Mayor Score gana. Si empatan en Score, gana la dosis más baja)
+    resultados.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score; 
+        return a.dosisValue - b.dosisValue; 
+    });
+
+// 4. RENDERIZAR RESULTADOS
+    countBadge.innerText = `${resultados.length} Encontrados`;
+    contenedor.innerHTML = "";
+
+    // BLOQUE PARA CUANDO NO HAY RESULTADOS EXACTOS
+    if (resultados.length === 0) {
+        contenedor.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; background: #fef2f2; border-radius: 12px; border: 2px dashed #fca5a5; margin-bottom: 20px;">
+                <h4 style="color: #ef4444; margin-top: 0; font-size: 1.2rem;">Ningún producto cumple este perfil</h4>
+                <p style="color: #7f1d1d; font-size: 0.9rem; margin-bottom: 20px;">Sin embargo, esto es una oportunidad para formular un nuevo desarrollo (I+D).</p>
+                <button onclick="consultarSugerenciaDesarrolloIA()" style="background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 10px rgba(126, 34, 206, 0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    🧪 Pedir Ruta de Formulación a Gemini
+                </button>
+            </div>`;
+        return;
+    }
+
+    let dosisContextual = appReq ? `Dosis para ${appReq}` : `Dosis Recomendada`;
+
+    // (DIBUJAMOS LAS TARJETAS DE RESULTADOS NORMALMENTE)
+    resultados.forEach((res, index) => {
+        let p = res.producto;
+        let scoreColor = "#dc2626"; let scoreBg = "#fef2f2";
+        if (res.score >= 80) { scoreColor = "#059669"; scoreBg = "#d1fae5"; }
+        else if (res.score >= 50) { scoreColor = "#d97706"; scoreBg = "#fef3c7"; }
+
+        let trophyHtml = (index === 0 && res.score === 100) ? `<div style="position: absolute; top: -12px; left: -12px; font-size: 2rem; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); z-index: 5;">🥇</div>` : "";
+
+        let htmlDetalles = "";
+        res.detalles.forEach(d => {
+            let color = "#ef4444"; let icon = "✕"; let colorTexto = "#7f1d1d";
+            if (d.obtained >= d.expected) { color = "#10b981"; icon = "✓"; colorTexto = "#064e3b"; }
+            else if (d.obtained > 0) { color = "#f59e0b"; icon = "⚠️"; colorTexto = "#78350f"; }
+            htmlDetalles += `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; border-bottom: 1px dashed #e2e8f0; padding: 6px 0;"><span style="color: #475569; font-weight: 600;"><span style="color: ${color}; font-weight:bold; margin-right:4px;">${icon}</span> ${d.carac}</span><span style="color: ${colorTexto}; font-weight: 800; background: ${color}20; padding: 2px 8px; border-radius: 10px;">T: ${d.obtained} / P: ${d.expected}</span></div>`;
+        });
+
+        let act = "<span style='color:#94a3b8; font-size:0.75rem;'>Sin activos declarados</span>";
+        if (p.datosBasicos && p.datosBasicos.activos_lista && p.datosBasicos.activos_lista.length > 0) {
+            act = p.datosBasicos.activos_lista.map(a => `<span style="background:#f1f5f9; border: 1px solid #e2e8f0; padding:4px 10px; border-radius:20px; font-size:0.7rem; font-weight: 600; color:#334155; margin-right:6px; display: inline-block; margin-bottom: 6px;">${a.nombre}</span>`).join("");
+        }
+
+        let tarjeta = document.createElement("div");
+        tarjeta.className = "card-result-asesor";
+        tarjeta.onclick = () => abrirPerfilCatalogo(p.id);
+
+        tarjeta.innerHTML = `
+            ${trophyHtml}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <div style="padding-right: 15px;">
+                    <h4 style="margin: 0 0 6px 0; color: #0f172a; font-size: 1.25rem; font-weight: 900; letter-spacing: -0.5px;">${p.nombre}</h4>
+                    <span style="font-size: 0.7rem; color: #1d4ed8; background: #eff6ff; text-transform: uppercase; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">${p.empresa} (${p.tipo})</span>
+                </div>
+                <div style="background: ${scoreBg}; color: ${scoreColor}; font-weight: 900; font-size: 1.5rem; padding: 8px 16px; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); border: 1px solid ${scoreColor}40;">${res.score}%</div>
+            </div>
+            <div style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #3b82f6;">
+                <span style="font-size: 0.8rem; color: #475569; font-weight: bold;">🎯 ${dosisContextual}:</span>
+                <span style="font-size: 1.1rem; font-weight: 900; color: #1e40af;">${res.dosisLabel}</span>
+            </div>
+            <div style="margin-bottom: 15px;">${act}</div>
+            <div style="background: #ffffff; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; margin-bottom: 8px; text-transform: uppercase;">Detalle de Compatibilidad:</div>
+                ${htmlDetalles || '<span style="font-size:0.8rem; color:#10b981; font-weight:bold;">✅ Filtro por aplicación superado con éxito.</span>'}
+            </div>
+        `;
+        contenedor.appendChild(tarjeta);
+    });
+
+    // BANNER INFERIOR PARA DESARROLLO (I+D)
+    contenedor.innerHTML += `
+        <div style="margin-top: 10px; background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 2px dashed #d8b4fe; border-radius: 12px; padding: 20px; text-align: center;">
+            <h4 style="margin: 0 0 10px 0; color: #6b21a8; font-size: 1.05rem; font-weight: 800;">¿Buscas crear un producto aún mejor?</h4>
+            <p style="margin: 0 0 15px 0; font-size: 0.85rem; color: #4c1d95;">Gemini puede sugerir una fórmula química basada en estos exactos sliders.</p>
+            <button onclick="consultarSugerenciaDesarrolloIA()" style="background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 6px rgba(126, 34, 206, 0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                🧪 Sugerencia de Formulación (I+D)
+            </button>
+        </div>
+    `;
+};
+
+
+// ==========================================
+// FUNCIÓN QUE DETONA LA IA DE DESARROLLO
+// ==========================================
+window.consultarSugerenciaDesarrolloIA = function() {
+    let appReq = document.getElementById("asesor_aplicacion").value || "Uso Agrícola General";
+    let reqs = [];
+    
+    ASESOR_FUNCIONES_ACTIVAS.forEach(func => {
+        let idLimpio = func.replace(/[^a-zA-Z0-9]/g, '');
+        let val = parseInt(document.getElementById(`val_slider_${idLimpio}`).value) || 1;
+        reqs.push({ caracteristica: func, nivelRequerido: val });
+    });
+
+    if(reqs.length === 0) return Swal.fire("Aviso", "Agrega al menos una funcionalidad en los controles de la izquierda para que la IA tenga un punto de partida.", "info");
+
+    Swal.fire({
+        title: '🧪 Analizando Rutas de Síntesis...',
+        html: 'Gemini está evaluando familias químicas y porcentajes de mezcla para lograr este perfil exacto...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    api.generarRecomendacionID({ aplicacion: appReq, propiedades: reqs }, function(res) {
+        if(!res.success) return Swal.fire("Error", res.error, "error");
+
+        let ia = res.sugerencia;
+        let fams = ia.familias_quimicas.map(f => `<span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 800; margin-right: 5px; display: inline-block; margin-bottom: 5px;">${f}</span>`).join('');
+
+        Swal.fire({
+            title: '✨ Propuesta de Desarrollo (I+D)',
+            html: `
+                <div style="text-align: left; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #cbd5e1; margin-top: 10px;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e293b; font-size: 1.3rem; font-weight: 900;">${ia.titulo_desarrollo}</h4>
+                    <hr style="border: 0; border-top: 2px dashed #e2e8f0; margin: 15px 0;">
+
+                    <div style="font-size: 0.8rem; color: #64748b; font-weight: 900; text-transform: uppercase; margin-bottom: 10px;">Familias Químicas Clave:</div>
+                    <div style="margin-bottom: 20px;">${fams}</div>
+
+                    <div style="font-size: 0.8rem; color: #64748b; font-weight: 900; text-transform: uppercase; margin-bottom: 8px;">Fórmula Sugerida (Concentración):</div>
+                    <div style="background: #d1fae5; border-left: 5px solid #10b981; padding: 15px; color: #064e3b; font-weight: 800; font-size: 1rem; margin-bottom: 20px; border-radius: 0 8px 8px 0; line-height: 1.4;">
+                        ${ia.activos_sugeridos}
+                    </div>
+
+                    <div style="font-size: 0.8rem; color: #64748b; font-weight: 900; text-transform: uppercase; margin-bottom: 8px;">Justificación Técnica:</div>
+                    <div style="font-style: italic; color: #475569; font-size: 0.95rem; line-height: 1.6; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        "${ia.justificacion_tecnica}"
+                    </div>
+                </div>
+            `,
+            width: '650px',
+            confirmButtonText: 'Genial, cerrar',
+            confirmButtonColor: '#7e22ce'
+        });
+    });
+};
+
+// ==========================================
+// EJECUTOR DE INTELIGENCIA ARTIFICIAL (GEMINI)
+// ==========================================
+window.ejecutarAnalisisIA = function(idContratipo) {
+    Swal.fire({
+        title: 'Consultando a Gemini IA...',
+        html: 'Analizando composición química y buscando equivalentes en el catálogo de Polaquimia.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    api.analizarEquivalenciaConIA(idContratipo, function(res) {
+        if (!res.success) return Swal.fire("Error en IA", res.error, "error");
+        
+        let ia = res.analisis;
+
+        if (ia.match_encontrado) {
+            Swal.fire({
+                title: '¡Sustituto Encontrado! 🎯',
+                html: `
+                    <div style="text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 10px;">
+                        <div style="font-size: 0.85rem; color: #64748b; font-weight: bold; text-transform: uppercase;">Producto Sugerido:</div>
+                        <div style="font-size: 1.4rem; font-weight: 900; color: #2563eb; margin-bottom: 10px;">${ia.nombre_nuestro_producto}</div>
+                        
+                        <div style="font-size: 0.85rem; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Similitud Química:</div>
+                        <div style="background: #d1fae5; color: #059669; display: inline-block; padding: 4px 10px; border-radius: 12px; font-weight: bold; margin-bottom: 15px;">${ia.porcentaje_similitud}% Match</div>
+                        
+                        <div style="font-size: 0.85rem; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Dictamen del Ingeniero IA:</div>
+                        <div style="font-size: 0.95rem; color: #334155; line-height: 1.5; font-style: italic; border-left: 3px solid #a855f7; padding-left: 10px;">
+                            "${ia.explicacion_tecnica}"
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonColor: '#7e22ce',
+                confirmButtonText: 'Genial, cerrar'
+            });
+        } else {
+            Swal.fire("Sin Equivalencia", "La IA analizó el catálogo pero no encontró un producto químicamente similar para competir directamente.", "info");
+        }
+    });
+};
+
+// ==========================================
+// EJECUTOR DE INTELIGENCIA ARTIFICIAL (MULTI-RIVAL)
+// ==========================================
+window.ejecutarAnalisisIA = function(idContratipo) {
+    Swal.fire({
+        title: '✨ Consultando a Gemini 2.5...',
+        html: 'Analizando rutas químicas y buscando las mejores alternativas en el catálogo...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    api.analizarEquivalenciaConIA(idContratipo, function(res) {
+        if (!res.success) return Swal.fire("Error en IA", res.error, "error");
+        
+        let ia = res.analisis;
+
+        if (ia.match_encontrado && ia.sugerencias && ia.sugerencias.length > 0) {
+            
+            // Construimos las tarjetas de los resultados
+            let htmlTarjetas = "";
+            let idsParaComparar = [idContratipo]; // Metemos primero al rival para el comparador
+
+            ia.sugerencias.forEach(sug => {
+                idsParaComparar.push(sug.id_nuestro_producto);
+                
+                let colorGlow = sug.porcentaje_similitud >= 90 ? "#10b981" : "#f59e0b";
+                htmlTarjetas += `
+                    <div style="background: white; padding: 12px; border-radius: 10px; border-left: 4px solid ${colorGlow}; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span style="font-weight: 900; color: #1e293b; font-size: 1.1rem;">${sug.nombre_nuestro_producto}</span>
+                            <span style="background: ${colorGlow}20; color: ${colorGlow}; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 0.8rem;">${sug.porcentaje_similitud}% Match</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #475569; line-height: 1.4; font-style: italic;">
+                            " ${sug.ventaja_competitiva} "
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Guardamos el array de IDs como un string para pasarlo al botón
+            let arrayIdsString = JSON.stringify(idsParaComparar).replace(/"/g, '&quot;');
+
+            Swal.fire({
+                title: '¡Alternativas Encontradas! 🎯',
+                html: `
+                    <div style="text-align: left; background: #f8fafc; padding: 15px; border-radius: 12px; margin-top: 10px;">
+                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0;">Gemini ha encontrado estas opciones basadas en composición y dosis:</p>
+                        
+                        ${htmlTarjetas}
+                        
+                        <div style="margin-top: 20px; text-align: center;">
+                            <button onclick="mandarAlComparadorIA('${arrayIdsString}')" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 10px rgba(59,130,246,0.3); width: 100%; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                Ir a comparar
+                            </button>
+                        </div>
+                    </div>
+                `,
+                showConfirmButton: false,
+                showCloseButton: true,
+                width: '600px'
+            });
+        } else {
+            Swal.fire("Sin Equivalencia", "La IA no encontró ningún producto que compita químicamente con este.", "info");
+        }
+    });
+};
+
+// Función puente para mandar los resultados directos al N-Versus
+window.mandarAlComparadorIA = function(idsString) {
+    let ids = JSON.parse(idsString);
+    Swal.close(); // Cerramos la alerta
+    cerrarModalGenerico('modalPerfilCatalogo'); // Cerramos el perfil actual
+    
+    // Sobrescribimos la balanza del comparador global
+    PRODS_COMPARAR = ids;
+    actualizarBarraComparacion();
+    renderizarGridCatalogo();
+    
+    // Abrimos la pantalla gigante
+    abrirComparador();
+};  
       </script>
     </div>
   </body>

@@ -10,6 +10,7 @@
 // ==========================================
 // Usamos un nombre ÚNICO para evitar choque con otros archivos
 
+
 // BORRAMOS EL ID FIJO Y USAMOS EL GESTOR DE ENTORNOS
 function obtenerSpreadsheet() {
   try {
@@ -40,6 +41,18 @@ function obtenerHojaOCrear(nombre, encabezados) {
   }
   return sheet;
 }
+
+// ==========================================
+// CONFIGURACIÓN DE INTELIGENCIA ARTIFICIAL
+// ==========================================
+const GEMINI_API_KEY = "AIzaSyCnj7VkCjhDot8nBgM7bJfzFzmyE86REVg"; // Usa tu llave completa aquí
+
+// ==========================================
+// CONFIGURACIÓN DE DRIVE: CATÁLOGO TÉCNICO Y MEDIA
+// ==========================================
+// Reemplaza esto con el ID de tu nueva carpeta SGI_MEDIA_CATALOGO
+const ID_CARPETA_MEDIA_CATALOGO = "1mjKlu2MSP0X2WN5LwQZN2WPMkMtiGKz9";
+
 
 // Auxiliar para normalizar fechas visualmente
 function _fmtFechaDisplay(valor) {
@@ -2956,6 +2969,382 @@ function actualizarDireccionesCliente(idCliente, arrayDirecciones) {
     }
     throw new Error("Cliente no encontrado.");
   } catch(e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ==========================================
+// MÓDULO 11: CATÁLOGO TÉCNICO Y PIM (MODO VERSUS)
+// ==========================================
+
+// ⚠️ IMPORTANTE: Si aún no pusiste la constante de tu carpeta, asegúrate de que esté aquí:
+// const ID_CARPETA_MEDIA_CATALOGO = "PEGA_AQUI_TU_ID_DE_DRIVE";
+
+/**
+ * 1. Obtiene el catálogo y lo cruza con el almacén para saber su estatus real.
+ */
+function obtenerCatalogoMaestro() {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    
+    const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
+    if (!sCat || sCat.getLastRow() < 2) return { success: true, data: [] };
+    
+    const dataCat = sCat.getDataRange().getDisplayValues();
+    
+    // Traemos los productos operativos para cruzar datos
+    const sProd = obtenerHojaSegura("PRODUCTOS");
+    const dataProd = sProd ? sProd.getDataRange().getValues() : [];
+    
+    // Mapear productos que ya existen en el almacén físico
+    let operativos = new Set();
+    for(let i = 1; i < dataProd.length; i++) {
+        operativos.add(String(dataProd[i][1]).trim().toUpperCase()); // Por nombre
+    }
+    
+    let catalogo = [];
+    
+    for (let i = 1; i < dataCat.length; i++) {
+        if (!dataCat[i][0]) continue;
+        
+        let id = String(dataCat[i][0]).trim();
+        let nombre = String(dataCat[i][1]).trim();
+        let tipo = String(dataCat[i][2]).trim() || "Propio";
+        
+        // --- LA MAGIA DEL CRUCE DE DATOS ---
+        let estatus = "🧪 Desarrollo";
+        if (tipo !== "Contratipo" && operativos.has(nombre.toUpperCase())) {
+            estatus = "📦 De Línea";
+        } else if (tipo === "Contratipo") {
+            estatus = "🔀 Contratipo";
+        }
+        
+        catalogo.push({
+            id: id,
+            nombre: nombre,
+            tipo: tipo,
+            empresa: String(dataCat[i][3]).trim(),
+            idEquivalente: String(dataCat[i][4]).trim(),
+            datosBasicos: dataCat[i][5] ? JSON.parse(dataCat[i][5]) : {},
+            mediaLinks: dataCat[i][6] ? JSON.parse(dataCat[i][6]) : { foto: "", ft: "", hds: "", videos: [] },
+            matrizVs: dataCat[i][7] ? JSON.parse(dataCat[i][7]) : null,
+            estatusFisico: estatus
+        });
+    }
+    
+    return { success: true, data: catalogo };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 2. Guarda o actualiza un producto en el catálogo.
+ */
+function guardarItemCatalogo(datos) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    
+    const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
+    const data = sCat.getDataRange().getValues();
+    
+    let fila = -1;
+    let idItem = datos.id || ("CAT-" + Math.floor(Date.now() / 1000));
+    
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]).trim() === idItem) {
+            fila = i + 1;
+            break;
+        }
+    }
+    
+    // Empaquetamos en JSON
+    let jsonBasicos = JSON.stringify(datos.datosBasicos || {});
+    let jsonMedia = JSON.stringify(datos.mediaLinks || { foto: "", ft: "", hds: "", videos: [] });
+    let jsonMatriz = datos.matrizVs ? JSON.stringify(datos.matrizVs) : "";
+    
+    if (fila > 0) {
+        sCat.getRange(fila, 2).setValue(datos.nombre);
+        sCat.getRange(fila, 3).setValue(datos.tipo);
+        sCat.getRange(fila, 4).setValue(datos.empresa);
+        sCat.getRange(fila, 5).setValue(datos.idEquivalente);
+        sCat.getRange(fila, 6).setValue(jsonBasicos);
+        
+        // Solo sobreescribimos Media y Matriz si vienen en el envío (para no borrar las fotos subidas)
+        if (datos.mediaLinks) sCat.getRange(fila, 7).setValue(jsonMedia);
+        if (datos.matrizVs) sCat.getRange(fila, 8).setValue(jsonMatriz);
+    } else {
+        sCat.appendRow([idItem, datos.nombre, datos.tipo, datos.empresa, datos.idEquivalente, jsonBasicos, jsonMedia, jsonMatriz]);
+    }
+    
+    return { success: true, id: idItem };
+  } catch(e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 3. Motor de Drive: Crea carpeta por producto, sube el archivo y guarda el link.
+ */
+function subirDocumentoCatalogo(idCatalogo, nombreProducto, tipoDoc, base64Data, mimeType, nombreArchivo) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+    verificarAccesoServidor();
+    
+    if (typeof ID_CARPETA_MEDIA_CATALOGO === 'undefined') {
+        throw new Error("Falta definir la constante ID_CARPETA_MEDIA_CATALOGO en el código.");
+    }
+
+    // 1. Obtener la carpeta maestra
+    let carpetaMaestra;
+    try {
+        carpetaMaestra = DriveApp.getFolderById(ID_CARPETA_MEDIA_CATALOGO);
+    } catch(e) {
+        throw new Error("No se encuentra la carpeta maestra en Drive. Revisa el ID.");
+    }
+    
+    // 2. Buscar o crear la subcarpeta del producto (Ej: CAT-1234_MULTITASK)
+    let nombreSubCarpeta = `${idCatalogo}_${nombreProducto.replace(/[^a-zA-Z0-9]/g, "_")}`;
+    let subCarpeta;
+    let carpetas = carpetaMaestra.searchFolders(`title = '${nombreSubCarpeta}'`);
+    
+    if (carpetas.hasNext()) {
+        subCarpeta = carpetas.next();
+    } else {
+        subCarpeta = carpetaMaestra.createFolder(nombreSubCarpeta);
+        subCarpeta.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    }
+    
+    // 3. Crear el archivo físico
+    const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, nombreArchivo);
+    const file = subCarpeta.createFile(blob);
+    const urlArchivo = file.getUrl();
+    
+    // 4. Actualizar el registro JSON en Sheets
+    const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
+    const data = sCat.getDataRange().getValues();
+    let fila = -1;
+    let mediaLinks = { foto: "", ft: "", hds: "", videos: [] };
+    
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]).trim() === String(idCatalogo)) {
+            fila = i + 1;
+            if (data[i][6]) {
+                try { mediaLinks = JSON.parse(data[i][6]); } catch(e) {}
+            }
+            break;
+        }
+    }
+    
+    if (fila > 0) {
+        if (tipoDoc === "foto") mediaLinks.foto = urlArchivo;
+        else if (tipoDoc === "ft") mediaLinks.ft = urlArchivo;
+        else if (tipoDoc === "hds") mediaLinks.hds = urlArchivo;
+        
+        sCat.getRange(fila, 7).setValue(JSON.stringify(mediaLinks));
+    }
+    
+    return { success: true, url: urlArchivo };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+/**
+ * Elimina un producto del catálogo.
+ */
+function eliminarItemCatalogo(idCatalogo) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    verificarAccesoServidor();
+    
+    const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
+    const data = sCat.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]).trim() === String(idCatalogo)) {
+            sCat.deleteRow(i + 1);
+            return { success: true };
+        }
+    }
+    return { success: false, error: "Producto no encontrado en la base de datos." };
+  } catch(e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 4. MOTOR DE IA: Analiza un contratipo y busca su equivalente químico en nuestro catálogo.
+ */
+function analizarEquivalenciaConIA(idProductoRaro) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+    verificarAccesoServidor();
+    
+if (!GEMINI_API_KEY || GEMINI_API_KEY === "") {
+        throw new Error("Falta configurar la API Key de Gemini en Controller.gs.");
+    }
+
+    const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
+    const dataCat = sCat.getDataRange().getDisplayValues();
+    
+    let productoObjetivo = null;
+    let nuestrosProductos = [];
+
+    // 1. Recolectar datos del catálogo
+    for (let i = 1; i < dataCat.length; i++) {
+        if (!dataCat[i][0]) continue;
+        
+        let id = String(dataCat[i][0]).trim();
+        let basicos = dataCat[i][5] ? JSON.parse(dataCat[i][5]) : {};
+        
+        let prodData = {
+            id: id,
+            nombre: String(dataCat[i][1]).trim(),
+            activos: basicos.activos_lista || [],
+            aplicaciones: basicos.aplicaciones || [],
+            dosis: basicos.dosis || ""
+        };
+
+        if (id === idProductoRaro) {
+            productoObjetivo = prodData;
+            productoObjetivo.empresa = String(dataCat[i][3]).trim();
+        } else if (String(dataCat[i][2]).trim() !== "Contratipo") {
+            // Guardamos nuestros productos para que la IA los analice
+            nuestrosProductos.push(prodData);
+        }
+    }
+
+    if (!productoObjetivo) throw new Error("No se encontró el producto a analizar.");
+    if (nuestrosProductos.length === 0) throw new Error("No hay productos de línea registrados para comparar.");
+
+// 2. Construir el Prompt (La instrucción para la IA) Multi-Opciones
+    let prompt = `Eres un ingeniero químico Senior experto en formulaciones de adyuvantes agrícolas y agroquímicos.
+    Analiza este producto de la competencia:
+    - Nombre: ${productoObjetivo.nombre} (Fabricante: ${productoObjetivo.empresa})
+    - Activos declarados: ${JSON.stringify(productoObjetivo.activos)}
+    - Dosis / Aplicaciones: ${JSON.stringify(productoObjetivo.aplicaciones)}
+    
+    Revisa nuestro catálogo de productos:
+    ${JSON.stringify(nuestrosProductos)}
+    
+    TAREA:
+    Encuentra los 1, 2 o hasta 3 mejores equivalentes o sustitutos en nuestro catálogo para competir contra este producto. 
+    Analiza química, concentración y dosis. Cada sugerencia debe tener un por qué (Ej. "Este es mejor en concentración", "Este es más eficiente en dosis").
+    
+    Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura (sin texto markdown alrededor):
+    {
+        "match_encontrado": true,
+        "sugerencias": [
+            {
+                "id_nuestro_producto": "ID_DEL_PRODUCTO",
+                "nombre_nuestro_producto": "Nombre",
+                "porcentaje_similitud": 95,
+                "ventaja_competitiva": "Breve explicación técnica de por qué este producto es una excelente alternativa o en qué destaca (ej. composición, dosis, funcionalidad)."
+            }
+        ]
+    }`;
+
+    // 3. Llamada a la API de Gemini 1.5 Flash (Súper rápida)
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    let payload = {
+        "contents": [{ "parts": [{ "text": prompt }] }],
+        "generationConfig": { "response_mime_type": "application/json" } // Obligamos a que responda en JSON puro
+    };
+
+    let options = {
+        "method": "post",
+        "contentType": "application/json",
+        "payload": JSON.stringify(payload),
+        "muteHttpExceptions": true
+    };
+
+    let response = UrlFetchApp.fetch(url, options);
+    let json = JSON.parse(response.getContentText());
+
+    if (json.error) throw new Error(json.error.message);
+
+    // 4. Extraer respuesta y mandarla al frontend
+    let respuestaIA = json.candidates[0].content.parts[0].text;
+    return { success: true, analisis: JSON.parse(respuestaIA) };
+    
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 5. MOTOR DE IA (I+D): Sugiere una formulación química en base a un perfil requerido.
+ */
+function generarRecomendacionID(perfilBuscado) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+    verificarAccesoServidor();
+    
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "") throw new Error("Falta configurar la API Key de Gemini.");
+
+    // Construimos el Prompt para el Ingeniero de Desarrollo
+    let prompt = `Eres un ingeniero químico Senior en Investigación y Desarrollo (I+D) de agroquímicos y adyuvantes.
+    Tu equipo comercial está buscando desarrollar o recomendar un producto que cumpla EXACTAMENTE con este perfil técnico (en una escala de 1 a 4 cruces de potencia):
+    
+    - Aplicación objetivo: ${perfilBuscado.aplicacion}
+    - Propiedades Requeridas: ${JSON.stringify(perfilBuscado.propiedades)}
+
+    TAREA:
+    Sugiere qué familias químicas, ingredientes activos específicos y en qué concentraciones aproximadas se requerirían para formular un producto que logre este perfil con la mayor eficiencia posible.
+    
+    Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura estricta (sin markdown, solo el JSON puro):
+    {
+      "titulo_desarrollo": "Nombre descriptivo de la posible fórmula (Ej. Base Siliconada Acidificante)",
+      "familias_quimicas": ["Familia 1", "Familia 2"],
+      "activos_sugeridos": "Escribe aquí la mezcla y los porcentajes sugeridos. Ej: Mezcla de Ésteres Metílicos (60%) y Organosilicona (10%)",
+      "justificacion_tecnica": "Explica brevemente por qué esta mezcla química específica lograría los niveles solicitados en el perfil."
+    }`;
+
+    // Llamamos a Gemini 2.5 Flash
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    let payload = {
+        "contents": [{ "parts": [{ "text": prompt }] }],
+        "generationConfig": { "response_mime_type": "application/json" }
+    };
+
+    let options = {
+        "method": "post",
+        "contentType": "application/json",
+        "payload": JSON.stringify(payload),
+        "muteHttpExceptions": true
+    };
+
+    let response = UrlFetchApp.fetch(url, options);
+    let json = JSON.parse(response.getContentText());
+
+    if (json.error) throw new Error(json.error.message);
+
+    let respuestaIA = json.candidates[0].content.parts[0].text;
+    return { success: true, sugerencia: JSON.parse(respuestaIA) };
+    
+  } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
