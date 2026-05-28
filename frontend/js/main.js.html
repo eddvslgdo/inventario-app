@@ -13,26 +13,31 @@ window.APP_STATE = {
 // INICIALIZACIÓN DE LA APLICACIÓN
 // =========================================================
 function initApp() {
+  // 🚀 MAGIA QR: Si hay un parámetro en la URL, secuestramos el inicio
+  if (window.QR_UBICACION_ESCANEADA) {
+      document.getElementById("vista-login").style.display = "none";
+      document.getElementById("app-principal").style.display = "none";
+      document.getElementById("vista-qr-mobile").style.display = "flex";
+      cargarVistaQR(window.QR_UBICACION_ESCANEADA);
+      return; // Detenemos el flujo normal de login
+  }
+
+  // --- FLUJO NORMAL DE LOGIN ---
   const userEmail = localStorage.getItem("inventario_email");
 
   if (userEmail) {
-     // Mostramos la pantalla de login...
      document.getElementById("vista-login").style.display = "flex";
      document.getElementById("app-principal").style.display = "none";
      document.getElementById("input-correo").value = userEmail;
      
-     // ...pero encendemos la animación bonita del botón directamente
      const btn = document.getElementById("btn-login");
      if (btn) {
          btn.innerText = "Restaurando";
          btn.classList.add("loading-dots", "btn-pulsing");
          btn.disabled = true;
      }
-     
-     // Verificamos en silencio
      ejecutarAutenticacion(userEmail, "", true); 
   } else {
-     // Si NO hay sesión, mostramos el login normal
      mostrarPantallaLogin();
   }
 }

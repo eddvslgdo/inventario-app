@@ -223,10 +223,11 @@
       var card = document.createElement("div");
       card.className = "card-ubicacion";
 
-      var headerHtml = `
+    var headerHtml = `
       <div class="card-header-ubic">
         <h4 class="card-title">${u.nombre}</h4>
         <div class="card-actions">
+           <button class="btn-icon-small" onclick="imprimirQR('${u.id}', '${u.nombre}')" title="Imprimir QR de la Caja">🖨️</button>
            <button class="btn-icon-small" onclick="editarUbicacion('${u.id}', '${u.nombre}')" title="Editar Nombre">✏️</button>
            <button class="btn-icon-small delete" onclick="eliminarUbicacion('${u.id}', ${u.items.length})" title="Eliminar Ubicación">🗑️</button>
         </div>
@@ -1421,6 +1422,112 @@
       }
     });
   };
+
+  // ==========================================
+// GENERADOR DE QR DINÁMICO
+// ==========================================
+window.imprimirQR = function(idUbicacion, nombreUbicacion) {
+    if(event) event.stopPropagation();
+
+    // USAMOS LA URL EXACTA QUE NOS MANDÓ EL BACKEND
+    let urlParaQR = `${window.APP_BASE_URL}?ubicacion=${idUbicacion}`;
+    
+    // API Segura para generar el QR
+    let qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(urlParaQR)}`;
+
+    // Creamos la ventana emergente para imprimir
+    let printWindow = window.open('', '', 'width=600,height=600');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Imprimir QR - ${nombreUbicacion}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+                    .etiqueta { border: 2px dashed #000; padding: 20px; display: inline-block; border-radius: 10px; }
+                    h2 { margin: 0 0 10px 0; font-size: 24px; text-transform: uppercase;}
+                    p { margin: 0 0 15px 0; font-size: 12px; color: #555; }
+                    img { width: 250px; height: 250px; }
+                    .footer { font-size: 10px; margin-top: 10px; font-family: monospace; }
+                    @media print {
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="no-print" style="margin-bottom: 20px;">
+                    <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background: #007aff; color: white; border: none; border-radius: 5px;">Imprimir Etiqueta</button>
+                </div>
+                <div class="etiqueta">
+                    <h2>${nombreUbicacion}</h2>
+                    <p>ESCANEAR PARA VER CONTENIDO ACTUALIZADO</p>
+                    <img src="${qrImageUrl}" alt="QR Code" />
+                    <div class="footer">ID: ${idUbicacion}</div>
+                </div>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+};
+
+// ==========================================
+// VISTA MÓVIL: RENDERIZADO DE LA CAJA ESCANEADA
+// ==========================================
+window.cargarVistaQR = function(idUbicacion) {
+    // Limpieza indestructible: quitamos cualquier comilla (') o (") y espacios que traiga la URL
+    let idLimpio = String(idUbicacion).replace(/['"]/g, '').trim();
+
+    google.script.run
+        .withSuccessHandler(function(ubicaciones) {
+            // Buscamos usando el ID completamente limpio
+            let ubic = ubicaciones.find(u => String(u.id).trim() === idLimpio);
+            let titulo = document.getElementById("qr-titulo-ubicacion");
+            let contenedor = document.getElementById("qr-contenido-ubicacion");
+
+            if (!ubic) {
+                titulo.innerText = "Caja No Encontrada";
+                contenedor.innerHTML = "<div style='text-align:center; color:#dc2626; padding:30px; background:#fef2f2; border-radius:12px; border:2px dashed #fca5a5;'><b>Error 404:</b><br><br>Esta caja o estante no existe en la base de datos o fue eliminada.</div>";
+                return;
+            }
+
+            titulo.innerText = ubic.nombre;
+
+            if (!ubic.items || ubic.items.length === 0) {
+                contenedor.innerHTML = "<div style='text-align:center; padding:40px 20px; color:#94a3b8; background:#f8fafc; border-radius:12px; border:2px dashed #cbd5e1; font-weight:500;'>📦<br><br>Esta ubicación está actualmente vacía.</div>";
+                return;
+            }
+
+            let html = "";
+            ubic.items.forEach(item => {
+                let uni = item.unidad || "L";
+                let volDisp = (uni === "Pza") ? Math.round(item.volumen) : Number(item.volumen).toFixed(2);
+                
+                let colorBg = "#f8fafc"; let colorBorder = "#e2e8f0"; let colorVol = "#007aff";
+                if(uni === "Kg") { colorBg = "#fffbeb"; colorBorder = "#fde68a"; colorVol = "#d97706"; }
+                if(uni === "Pza") { colorBg = "#faf5ff"; colorBorder = "#e9d5ff"; colorVol = "#9333ea"; }
+
+                html += `
+                <div style="background: ${colorBg}; border: 1px solid ${colorBorder}; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                        <div style="font-weight:800; color:#1e293b; font-size:1.05rem; line-height:1.2;">${item.producto}</div>
+                        <div style="font-size:1.3rem; font-weight:900; color:${colorVol}; white-space:nowrap; margin-left:10px;">${volDisp} <span style="font-size:0.8rem;">${uni}</span></div>
+                    </div>
+                    <div style="color:#64748b; font-size:0.85rem; margin-bottom:10px;">📦 ${item.presentacion}</div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #cbd5e1; padding-top:10px;">
+                        <span style="font-family:monospace; color:#dc2626; font-weight:bold; background:white; padding:4px 8px; border-radius:6px; font-size:0.95rem; border:1px solid #fecaca;">Lote: ${item.lote}</span>
+                        <span style="font-size:0.85rem; color:#64748b; font-weight:600;">⏳ ${item.caducidad || '--'}</span>
+                    </div>
+                </div>`;
+            });
+            contenedor.innerHTML = html;
+        })
+        .withFailureHandler(function(err) {
+            document.getElementById("qr-titulo-ubicacion").innerText = "Error de conexión";
+            document.getElementById("qr-contenido-ubicacion").innerHTML = `<div style="color:#dc2626; text-align:center; padding:20px;">No se pudo conectar con el servidor.<br><br><small>${err.message}</small></div>`;
+        })
+        .obtenerDatosUbicaciones();
+};
+
 </script>
 
 <script>

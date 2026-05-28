@@ -413,6 +413,25 @@
   </head>
 
   <body>
+
+    <div id="vista-qr-mobile" style="display: none; padding: 15px; background: #f2f2f7; min-height: 100vh; align-items: flex-start; justify-content: center;">
+      <div style="background: white; border-radius: 16px; padding: 25px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; width: 100%; max-width: 450px; margin-top: 5vh;">
+         <div style="font-size: 3.5rem; margin-bottom: 5px; line-height: 1;">📦</div>
+         <h2 id="qr-titulo-ubicacion" style="margin: 0 0 5px 0; color: #1e293b; font-size: 1.4rem; font-weight: 800;">Consultando caja...</h2>
+         <p style="color: #64748b; font-size: 0.9rem; margin: 0 0 20px 0; font-weight: 500;">Inventario en tiempo real</p>
+
+         <div id="qr-contenido-ubicacion" style="text-align: left; min-height: 150px;">
+            <div style="display: flex; justify-content: center; padding: 40px;">
+                <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #007aff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+            </div>
+         </div>
+
+         <button onclick="window.location.href = window.location.href.split('?')[0]" style="margin-top: 25px; width: 100%; padding: 16px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            Ir al Sistema Completo ➡️
+         </button>
+      </div>
+    </div>
+
     <div
       id="vista-login"
       style="
@@ -3730,6 +3749,11 @@
 
       <div id="toast-container"></div>
       <?!= include('frontend/js.loader'); ?>
+
+      <script>
+        window.QR_UBICACION_ESCANEADA = <?!= qrUbicacionId ? "'" + qrUbicacionId + "'" : "null" ?>;
+        window.APP_BASE_URL = "<?= appUrl ?>";
+      </script>
 
       <script>
         // ==========================================

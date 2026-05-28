@@ -10,7 +10,6 @@
 // ==========================================
 // Usamos un nombre ÚNICO para evitar choque con otros archivos
 
-
 // BORRAMOS EL ID FIJO Y USAMOS EL GESTOR DE ENTORNOS
 function obtenerSpreadsheet() {
   try {
@@ -52,7 +51,6 @@ const GEMINI_API_KEY = "AIzaSyCnj7VkCjhDot8nBgM7bJfzFzmyE86REVg"; // Usa tu llav
 // ==========================================
 // Reemplaza esto con el ID de tu nueva carpeta SGI_MEDIA_CATALOGO
 const ID_CARPETA_MEDIA_CATALOGO = "1mjKlu2MSP0X2WN5LwQZN2WPMkMtiGKz9";
-
 
 // Auxiliar para normalizar fechas visualmente
 function _fmtFechaDisplay(valor) {
@@ -103,7 +101,7 @@ function obtenerCatalogos() {
       .map((r) => ({
         id: String(r[0]).trim(),
         nombre: r[1],
-        volumen: esPres ? (Number(String(r[2]).replace(",", ".")) || 0) : 0,
+        volumen: esPres ? Number(String(r[2]).replace(",", ".")) || 0 : 0,
         unidad: esPres ? "" : r[3] || "L", // <--- Aquí ya lee si es L, Kg o Pza
       }))
       .filter((i) => i.id);
@@ -153,7 +151,7 @@ const leer = (s, esPres) => {
     .map((r) => ({
       id: String(r[0]).trim(),
       nombre: r[1],
-      volumen: esPres ? (Number(String(r[2]).replace(",", ".")) || 0) : 0,
+      volumen: esPres ? Number(String(r[2]).replace(",", ".")) || 0 : 0,
       unidad: esPres ? "" : r[3] || "L", // <--- AHORA LEE LA UNIDAD (L, Kg, Pza)
     }))
     .filter((i) => i.id);
@@ -163,24 +161,25 @@ const leer = (s, esPres) => {
 function obtenerListaClientes() {
   const s = obtenerHojaSegura("CLIENTES");
   if (!s || s.getLastRow() < 2) return [];
-  
+
   const data = s.getDataRange().getDisplayValues();
   let clientes = [];
-  
+
   for (let i = 1; i < data.length; i++) {
     if (!data[i][0]) continue;
-    
+
     let dirs = [];
     try {
-       // Extrae las direcciones guardadas en la Columna G (Índice 6)
-       dirs = JSON.parse(data[i][6] || "[]");
-    } catch(e) {
-       // Compatibilidad si tenías direcciones viejas
-       if (data[i][3] && !data[i][3].includes("terno")) dirs = [data[i][3]]; 
+      // Extrae las direcciones guardadas en la Columna G (Índice 6)
+      dirs = JSON.parse(data[i][6] || "[]");
+    } catch (e) {
+      // Compatibilidad si tenías direcciones viejas
+      if (data[i][3] && !data[i][3].includes("terno")) dirs = [data[i][3]];
     }
 
     let tipoActual = String(data[i][3]).trim();
-    if (!tipoActual.includes("terno") && !tipoActual.includes("nterno")) tipoActual = "Externo"; 
+    if (!tipoActual.includes("terno") && !tipoActual.includes("nterno"))
+      tipoActual = "Externo";
 
     clientes.push({
       id: String(data[i][0]).trim(),
@@ -190,7 +189,7 @@ function obtenerListaClientes() {
       telefono: String(data[i][4]).trim(),
       correo: String(data[i][5]).trim(), // <--- Esto enciende los correos en la tarjeta
       email: String(data[i][5]).trim(),
-      direcciones: Array.isArray(dirs) ? dirs : []
+      direcciones: Array.isArray(dirs) ? dirs : [],
     });
   }
   return clientes;
@@ -333,28 +332,41 @@ function obtenerDatosUbicaciones() {
 function obtenerDatosProductos() {
   const sInv = obtenerHojaOCrear("INVENTARIO", []);
   if (sInv.getLastRow() < 2) return [];
-  
+
   // Agregamos mapPresVol para poder calcular equivalencias
-  const mapProd = {}, mapUbic = {}, mapPres = {}, mapPresVol = {};
+  const mapProd = {},
+    mapUbic = {},
+    mapPres = {},
+    mapPresVol = {};
   const sP = obtenerHojaOCrear("PRODUCTOS", []),
-        sU = obtenerHojaOCrear("UBICACIONES", []),
-        sPr = obtenerHojaOCrear("PRESENTACIONES", []);
-        
+    sU = obtenerHojaOCrear("UBICACIONES", []),
+    sPr = obtenerHojaOCrear("PRESENTACIONES", []);
+
   if (sP.getLastRow() > 1) {
-    sP.getDataRange().getValues().slice(1).forEach((r) => {
+    sP.getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => {
         mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: r[3] || "L" };
-    });
+      });
   }
   if (sU.getLastRow() > 1) {
-    sU.getDataRange().getValues().slice(1).forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
+    sU.getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
   }
   if (sPr.getLastRow() > 1) {
-    sPr.getDataRange().getValues().slice(1).forEach((r) => {
+    sPr
+      .getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => {
         mapPres[String(r[0]).trim()] = r[1];
         mapPresVol[String(r[0]).trim()] = Number(r[2]) || 0; // Extraemos el volumen nominal
-    });
+      });
   }
-  
+
   const dataInv = sInv.getDataRange().getValues();
   let productosMap = {};
 
@@ -367,7 +379,7 @@ function obtenerDatosProductos() {
       let baseName = rawName;
       let subName = "";
       let match = rawName.match(/(.*)\(([^)]+)\)$/);
-      
+
       if (match) {
         subName = match[1].trim();
         baseName = match[2].trim();
@@ -389,33 +401,34 @@ function obtenerDatosProductos() {
       const uName = mapUbic[uId] || uId;
       let presName = mapPres[prId] || prId;
       const cadStr = _fmtFechaDisplay(dataInv[i][4]);
-      
+
       let loteExistente = productosMap[baseName].lotes.find(
-        (l) => l.lote === String(dataInv[i][6]).trim() &&
-               l.ubicacion === uName &&
-               l.presentacion === presName &&
-               l.caducidad === cadStr &&
-               l.alias === subName
+        (l) =>
+          l.lote === String(dataInv[i][6]).trim() &&
+          l.ubicacion === uName &&
+          l.presentacion === presName &&
+          l.caducidad === cadStr &&
+          l.alias === subName,
       );
-if (loteExistente) {
-          loteExistente.volumen += stock;
-        } else {
-          productosMap[baseName].lotes.push({
-            lote: String(dataInv[i][6]).trim(),
-            volumen: stock,
-            ubicacion: uName,
-            ubicacion_id: uId,           
-            presentacion: presName,
-            presentacion_id: prId,       
-            alias: subName, 
-            caducidad: cadStr,
-            volumen_nominal: mapPresVol[prId] || 0,
-            
-            // --- NUEVO: IDENTIDAD REAL DE LA VARIANTE ---
-            raw_producto_id: pId,           
-            raw_producto_nombre: rawName    
-          });
-        }
+      if (loteExistente) {
+        loteExistente.volumen += stock;
+      } else {
+        productosMap[baseName].lotes.push({
+          lote: String(dataInv[i][6]).trim(),
+          volumen: stock,
+          ubicacion: uName,
+          ubicacion_id: uId,
+          presentacion: presName,
+          presentacion_id: prId,
+          alias: subName,
+          caducidad: cadStr,
+          volumen_nominal: mapPresVol[prId] || 0,
+
+          // --- NUEVO: IDENTIDAD REAL DE LA VARIANTE ---
+          raw_producto_id: pId,
+          raw_producto_nombre: rawName,
+        });
+      }
     }
   }
 
@@ -760,7 +773,7 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
     const idPedido = "PED-" + Math.floor(Date.now() / 1000);
     const fechaHoy = new Date();
 
-if (guardarCliente) {
+    if (guardarCliente) {
       const sCli = obtenerHojaOCrear("CLIENTES", [
         "ID",
         "NOMBRE",
@@ -781,8 +794,8 @@ if (guardarCliente) {
         datosPedido.telefono,
         datosPedido.email,
       ]);
-      
-      // 🔥 CORRECCIÓN CLAVE: Le asignamos el nuevo ID al pedido 
+
+      // 🔥 CORRECCIÓN CLAVE: Le asignamos el nuevo ID al pedido
       // para que quede enlazado permanentemente al cliente en la base de datos.
       datosPedido.idCliente = idCli;
     }
@@ -909,22 +922,30 @@ function obtenerHistorialPedidos() {
       let id = String(dDet[i][0]).trim();
       if (id) {
         if (!mapProd[id]) mapProd[id] = [];
-        
+
         let prodName = dDet[i][1];
         let presentacion = String(dDet[i][2]).toLowerCase();
         let volumen = Number(dDet[i][4]) || 0;
-        
+
         // Deducir unidad de la presentación en lugar de usar las piezas
         let uni = "L";
-        if (presentacion.includes("kg") || presentacion.includes("kilo") || presentacion.includes("gramo")) {
-            uni = "Kg";
-        } else if (presentacion.includes("unid") || presentacion.includes("pza") || presentacion.includes("pieza")) {
-            uni = "Pza";
+        if (
+          presentacion.includes("kg") ||
+          presentacion.includes("kilo") ||
+          presentacion.includes("gramo")
+        ) {
+          uni = "Kg";
+        } else if (
+          presentacion.includes("unid") ||
+          presentacion.includes("pza") ||
+          presentacion.includes("pieza")
+        ) {
+          uni = "Pza";
         }
-        
+
         // Si es pieza quitamos decimales, si no, lo dejamos normal
-        let volMostrar = (uni === "Pza") ? Math.round(volumen) : volumen;
-        
+        let volMostrar = uni === "Pza" ? Math.round(volumen) : volumen;
+
         mapProd[id].push(`${prodName} (${volMostrar} ${uni})`);
       }
     }
@@ -993,12 +1014,22 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
     const data = sheetInv.getDataRange().getValues();
 
     // 1. Obtener Nombres
-    const mapUbic = {}, mapPres = {};
-    const sU = obtenerHojaSegura("UBICACIONES"), sP = obtenerHojaSegura("PRESENTACIONES");
-    
-    if (sU) sU.getDataRange().getValues().slice(1).forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
-    if (sP) sP.getDataRange().getValues().slice(1).forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
-    
+    const mapUbic = {},
+      mapPres = {};
+    const sU = obtenerHojaSegura("UBICACIONES"),
+      sP = obtenerHojaSegura("PRESENTACIONES");
+
+    if (sU)
+      sU.getDataRange()
+        .getValues()
+        .slice(1)
+        .forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
+    if (sP)
+      sP.getDataRange()
+        .getValues()
+        .slice(1)
+        .forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
+
     let lotes = [];
 
     // 2. Leer y Agrupar
@@ -1009,7 +1040,7 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
         const lote = String(data[i][6]).trim();
         const caducidadStr = _fmtFechaDisplay(data[i][4]);
         const stock = Number(data[i][3]);
-        
+
         let existente = lotes.find(
           (l) =>
             l.presentacion_id === presId &&
@@ -1045,7 +1076,7 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
             x.lote === String(item.lote).trim() &&
             x.ubicacion_id === String(item.ubicacion_id).trim(),
         );
-      
+
         if (l) l.stock_real -= Number(item.volumen_L);
       });
     }
@@ -1053,7 +1084,7 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
     const validos = lotes.filter((l) => l.stock_real > 0.001);
     if (validos.length === 0)
       return JSON.stringify({ success: false, error: "Sin stock disponible" });
-      
+
     const getMs = (d) => (d instanceof Date ? d.getTime() : 0);
     validos.sort(
       (a, b) =>
@@ -1485,21 +1516,29 @@ function obtenerDetallePedidoCompleto(idPedido) {
 
   const id = String(idPedido).trim();
   const dP = sPed.getDataRange().getDisplayValues();
-  let cab = null, items = [];
+  let cab = null,
+    items = [];
 
   const mapUnidadPorNombre = {};
   if (sProd && sProd.getLastRow() > 1) {
-    sProd.getDataRange().getDisplayValues().slice(1).forEach((r) => {
-        const nombre = String(r[1] || "").trim().toUpperCase();
+    sProd
+      .getDataRange()
+      .getDisplayValues()
+      .slice(1)
+      .forEach((r) => {
+        const nombre = String(r[1] || "")
+          .trim()
+          .toUpperCase();
         if (nombre) mapUnidadPorNombre[nombre] = _normalizarUnidadLabel(r[3]);
-    });
+      });
   }
 
   // 2. Buscar cabecera del pedido
   for (let i = 1; i < dP.length; i++) {
     if (String(dP[i][0]).trim() === id) {
       let r = dP[i];
-      let email = "---", empresa = "";
+      let email = "---",
+        empresa = "";
       let telefono = String(r[5] || "").trim(); // Telefono guardado originalmente
 
       // BÚSQUEDA INTELIGENTE EN EL CRM
@@ -1512,19 +1551,21 @@ function obtenerDetallePedidoCompleto(idPedido) {
           let nombrePedido = String(r[3]).trim().toLowerCase();
 
           // Magia: Busca coincidencia exacta por ID, o coincidencia por Nombre/Empresa (ideal para los externos)
-          if (idCli === String(r[2]).trim() || 
-             (nombrePedido !== "" && (nombreCli === nombrePedido || empresaCli === nombrePedido))) {
-            
+          if (
+            idCli === String(r[2]).trim() ||
+            (nombrePedido !== "" &&
+              (nombreCli === nombrePedido || empresaCli === nombrePedido))
+          ) {
             empresa = dC[k][2];
             email = dC[k][5]; // Rescatamos el correo del CRM
-            
+
             // Si el pedido no tenía teléfono, lo rescatamos del CRM también
-            if (!telefono || telefono === "---") telefono = dC[k][4]; 
+            if (!telefono || telefono === "---") telefono = dC[k][4];
             break;
           }
         }
       }
-      
+
       cab = {
         id: r[0],
         cliente: r[3],
@@ -1538,7 +1579,7 @@ function obtenerDetallePedidoCompleto(idPedido) {
         estatus: r[10],
         fechaEst: _fmtF(r[11]),
         fechaReal: _fmtF(r[12]),
-        comentarios: r[14] || ""
+        comentarios: r[14] || "",
       };
       break;
     }
@@ -1552,9 +1593,17 @@ function obtenerDetallePedidoCompleto(idPedido) {
     for (let i = 1; i < dD.length; i++) {
       if (String(dD[i][0]).trim() === id) {
         let pName = dD[i][1];
-        if (pName.includes("Selecciona") || pName === "undefined") pName = "⚠️ Error Datos";
+        if (pName.includes("Selecciona") || pName === "undefined")
+          pName = "⚠️ Error Datos";
         const unidadFila = _normalizarUnidadLabel(dD[i][6]);
-        const unidad = dD[i][6] && String(dD[i][6]).trim() !== "" ? unidadFila : mapUnidadPorNombre[String(pName || "").trim().toUpperCase()] || "L";
+        const unidad =
+          dD[i][6] && String(dD[i][6]).trim() !== ""
+            ? unidadFila
+            : mapUnidadPorNombre[
+                String(pName || "")
+                  .trim()
+                  .toUpperCase()
+              ] || "L";
 
         items.push({
           producto: pName,
@@ -1570,7 +1619,8 @@ function obtenerDetallePedidoCompleto(idPedido) {
   return { cabecera: cab, items: items };
 }
 
-function actualizarPedido(id, fe, fr, st, guia, comentarios) { // Añadido "comentarios"
+function actualizarPedido(id, fe, fr, st, guia, comentarios) {
+  // Añadido "comentarios"
   const s = obtenerHojaSegura("PEDIDOS");
   const d = s.getDataRange().getValues();
   for (let i = 1; i < d.length; i++) {
@@ -1582,10 +1632,10 @@ function actualizarPedido(id, fe, fr, st, guia, comentarios) { // Añadido "come
       if (guia && guia.trim() !== "") {
         s.getRange(i + 1, 8).setValue(guia);
       }
-      
+
       // NUEVO: Guardar comentarios
       if (comentarios !== undefined) {
-         s.getRange(i + 1, 15).setValue(comentarios); // Columna O
+        s.getRange(i + 1, 15).setValue(comentarios); // Columna O
       }
       return "OK";
     }
@@ -1822,55 +1872,59 @@ function transferirMasivo(origenId, destinoId, itemsMover) {
     verificarAccesoServidor();
     const sInv = obtenerHojaOCrear("INVENTARIO", []);
     const data = sInv.getDataRange().getValues();
-    
+
     let nuevasFilas = [];
 
     // Recorremos cada item que seleccionaste en la pantalla
-    itemsMover.forEach(item => {
-       let restante = Number(item.volumen);
-       
-       for (let i = 1; i < data.length; i++) {
-          if (restante <= 0.001) break;
+    itemsMover.forEach((item) => {
+      let restante = Number(item.volumen);
 
-          if (
-             String(data[i][0]) == String(item.productoId) &&
-             String(data[i][1]) == String(item.presentacionId) &&
-             String(data[i][2]) == String(origenId) &&
-             String(data[i][6]) == String(item.lote)
-          ) {
-             let stockFila = Number(data[i][3]);
-             if (stockFila > 0) {
-                 let restar = Math.min(stockFila, restante);
-                 let nuevoStock = stockFila - restar;
-                 
-                 // Descontamos del origen
-                 sInv.getRange(i + 1, 4).setValue(nuevoStock <= 0.001 ? 0 : nuevoStock);
-                 restante -= restar;
+      for (let i = 1; i < data.length; i++) {
+        if (restante <= 0.001) break;
 
-                 // Preparamos la fila para insertar en el destino
-                 nuevasFilas.push([
-                    item.productoId,
-                    item.presentacionId,
-                    destinoId,
-                    Number(restar),
-                    data[i][4], // Caducidad
-                    data[i][5], // Elaboracion
-                    item.lote,
-                    new Date(),
-                    "Transferencia Masiva"
-                 ]);
-             }
+        if (
+          String(data[i][0]) == String(item.productoId) &&
+          String(data[i][1]) == String(item.presentacionId) &&
+          String(data[i][2]) == String(origenId) &&
+          String(data[i][6]) == String(item.lote)
+        ) {
+          let stockFila = Number(data[i][3]);
+          if (stockFila > 0) {
+            let restar = Math.min(stockFila, restante);
+            let nuevoStock = stockFila - restar;
+
+            // Descontamos del origen
+            sInv
+              .getRange(i + 1, 4)
+              .setValue(nuevoStock <= 0.001 ? 0 : nuevoStock);
+            restante -= restar;
+
+            // Preparamos la fila para insertar en el destino
+            nuevasFilas.push([
+              item.productoId,
+              item.presentacionId,
+              destinoId,
+              Number(restar),
+              data[i][4], // Caducidad
+              data[i][5], // Elaboracion
+              item.lote,
+              new Date(),
+              "Transferencia Masiva",
+            ]);
           }
-       }
-       
-       if (restante > 0.001) {
-          throw new Error(`El stock del lote ${item.lote} se acabó antes de completar el movimiento.`);
-       }
+        }
+      }
+
+      if (restante > 0.001) {
+        throw new Error(
+          `El stock del lote ${item.lote} se acabó antes de completar el movimiento.`,
+        );
+      }
     });
 
     // Guardamos todas las nuevas entradas en el destino de un solo golpe
     if (nuevasFilas.length > 0) {
-        nuevasFilas.forEach(fila => sInv.appendRow(fila));
+      nuevasFilas.forEach((fila) => sInv.appendRow(fila));
     }
 
     return { success: true };
@@ -1887,10 +1941,10 @@ function transferirMasivo(origenId, destinoId, itemsMover) {
 function rutinaLimpiezaSemanalCeros() {
   // ATENCIÓN: Forzamos a que limpie la base de datos de PRODUCCIÓN
   // para que el trigger automático no dependa del botón de la interfaz web.
-  const DB_PROD = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E"; 
+  const DB_PROD = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E";
   const db = SpreadsheetApp.openById(DB_PROD);
   const sheet = db.getSheetByName("INVENTARIO");
-  
+
   if (!sheet) return;
 
   const data = sheet.getDataRange().getValues();
@@ -1899,15 +1953,17 @@ function rutinaLimpiezaSemanalCeros() {
   // IMPORTANTE: Recorremos de ABAJO hacia ARRIBA
   for (let i = data.length - 1; i >= 1; i--) {
     let stock = Number(data[i][3]); // La columna D (índice 3) es el Volumen
-    
+
     // Si el stock es 0 (o un decimal minúsculo por error de cálculo)
     if (stock <= 0.001) {
       sheet.deleteRow(i + 1);
       filasBorradas++;
     }
   }
-  
-  console.log(`🧹 Rutina completada: Se eliminaron ${filasBorradas} registros en 0.`);
+
+  console.log(
+    `🧹 Rutina completada: Se eliminaron ${filasBorradas} registros en 0.`,
+  );
 }
 
 // ==========================================
@@ -1918,7 +1974,7 @@ function cancelarPedido(idPedido, tipoCancelacion, idUbicacionDestino, motivo) {
   try {
     lock.waitLock(15000);
     verificarAccesoServidor();
-    
+
     const sPed = obtenerHojaSegura("PEDIDOS");
     const dPed = sPed.getDataRange().getValues();
     let filaPedido = -1;
@@ -1932,75 +1988,84 @@ function cancelarPedido(idPedido, tipoCancelacion, idUbicacionDestino, motivo) {
         break;
       }
     }
-    
+
     if (filaPedido === -1) throw new Error("Pedido no encontrado");
 
     // Escribimos el historial automático
     const emailUsuario = Session.getActiveUser().getEmail() || "Sistema";
-    const fechaTexto = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
+    const fechaTexto = Utilities.formatDate(
+      new Date(),
+      Session.getScriptTimeZone(),
+      "dd/MM/yyyy HH:mm",
+    );
     let notaSistema = `\n\n❌ [${fechaTexto} - ${emailUsuario}]: Pedido CANCELADO. Motivo: ${motivo}. `;
-    notaSistema += tipoCancelacion === "retorno" ? `Mercancía enviada a devolución.` : `Mercancía marcada como Merma/Pérdida.`;
-    
+    notaSistema +=
+      tipoCancelacion === "retorno"
+        ? `Mercancía enviada a devolución.`
+        : `Mercancía marcada como Merma/Pérdida.`;
+
     sPed.getRange(filaPedido, 11).setValue("Cancelado");
     sPed.getRange(filaPedido, 15).setValue(comentariosActuales + notaSistema);
 
     // 2. Si es Retorno, devolvemos el stock al Inventario RECUPERANDO LAS FECHAS
     if (tipoCancelacion === "retorno" && idUbicacionDestino) {
-        const sSal = obtenerHojaSegura("REGISTROS_SALIDA");
-        const sInv = obtenerHojaSegura("INVENTARIO");
-        const dSal = sSal.getDataRange().getValues();
-        const dInv = sInv.getDataRange().getValues();
-        
-        // --- MAGIA: MAPEAR LAS FECHAS ORIGINALES DEL INVENTARIO ---
-        let mapaFechas = {};
-        for(let i = 1; i < dInv.length; i++) {
-            let pId = String(dInv[i][0]).trim();
-            let lote = String(dInv[i][6]).trim().toUpperCase();
-            let key = pId + "|" + lote;
-            
-            // Guardamos la fecha de elaboración y caducidad asociadas a ese Lote
-            if (!mapaFechas[key]) {
-                mapaFechas[key] = {
-                    caducidad: dInv[i][4],
-                    elaboracion: dInv[i][5]
-                };
-            }
-        }
-        
-        let itemsARetornar = [];
-        // Buscamos todo lo que salió con este ID de Pedido
-        for (let i = 1; i < dSal.length; i++) {
-            if (String(dSal[i][11]).trim() === String(idPedido).trim()) {
-                itemsARetornar.push({
-                    producto_id: String(dSal[i][0]).trim(),
-                    presentacion_id: dSal[i][2],
-                    volumen_L: dSal[i][4],
-                    lote: String(dSal[i][7]).trim().toUpperCase()
-                });
-            }
-        }
-        
-        // Lo ingresamos como filas nuevas en el INVENTARIO inyectando las fechas rescatadas
-        itemsARetornar.forEach(item => {
-            if (Number(item.volumen_L) > 0) {
-                
-                // Buscamos si el lote existe en el mapa histórico para recuperar sus fechas
-                let keyBusqueda = item.producto_id + "|" + item.lote;
-                let fechasHistoricas = mapaFechas[keyBusqueda] || { caducidad: "SIN-FECHA", elaboracion: "SIN-FECHA" };
+      const sSal = obtenerHojaSegura("REGISTROS_SALIDA");
+      const sInv = obtenerHojaSegura("INVENTARIO");
+      const dSal = sSal.getDataRange().getValues();
+      const dInv = sInv.getDataRange().getValues();
 
-                sInv.appendRow([
-                    item.producto_id,
-                    item.presentacion_id,
-                    idUbicacionDestino,
-                    Number(item.volumen_L),
-                    fechasHistoricas.caducidad,    // <--- ¡AQUÍ SE RESTAURA LA CADUCIDAD!
-                    fechasHistoricas.elaboracion,  // <--- ¡AQUÍ SE RESTAURA LA ELABORACIÓN!
-                    item.lote,
-                    new Date(),
-                    `DEVOLUCIÓN ${idPedido}`
-                ]);
-            }
-        });
+      // --- MAGIA: MAPEAR LAS FECHAS ORIGINALES DEL INVENTARIO ---
+      let mapaFechas = {};
+      for (let i = 1; i < dInv.length; i++) {
+        let pId = String(dInv[i][0]).trim();
+        let lote = String(dInv[i][6]).trim().toUpperCase();
+        let key = pId + "|" + lote;
+
+        // Guardamos la fecha de elaboración y caducidad asociadas a ese Lote
+        if (!mapaFechas[key]) {
+          mapaFechas[key] = {
+            caducidad: dInv[i][4],
+            elaboracion: dInv[i][5],
+          };
+        }
+      }
+
+      let itemsARetornar = [];
+      // Buscamos todo lo que salió con este ID de Pedido
+      for (let i = 1; i < dSal.length; i++) {
+        if (String(dSal[i][11]).trim() === String(idPedido).trim()) {
+          itemsARetornar.push({
+            producto_id: String(dSal[i][0]).trim(),
+            presentacion_id: dSal[i][2],
+            volumen_L: dSal[i][4],
+            lote: String(dSal[i][7]).trim().toUpperCase(),
+          });
+        }
+      }
+
+      // Lo ingresamos como filas nuevas en el INVENTARIO inyectando las fechas rescatadas
+      itemsARetornar.forEach((item) => {
+        if (Number(item.volumen_L) > 0) {
+          // Buscamos si el lote existe en el mapa histórico para recuperar sus fechas
+          let keyBusqueda = item.producto_id + "|" + item.lote;
+          let fechasHistoricas = mapaFechas[keyBusqueda] || {
+            caducidad: "SIN-FECHA",
+            elaboracion: "SIN-FECHA",
+          };
+
+          sInv.appendRow([
+            item.producto_id,
+            item.presentacion_id,
+            idUbicacionDestino,
+            Number(item.volumen_L),
+            fechasHistoricas.caducidad, // <--- ¡AQUÍ SE RESTAURA LA CADUCIDAD!
+            fechasHistoricas.elaboracion, // <--- ¡AQUÍ SE RESTAURA LA ELABORACIÓN!
+            item.lote,
+            new Date(),
+            `DEVOLUCIÓN ${idPedido}`,
+          ]);
+        }
+      });
     }
 
     return { success: true };
@@ -2016,19 +2081,23 @@ function cancelarPedido(idPedido, tipoCancelacion, idUbicacionDestino, motivo) {
 // ==========================================
 function ejecutarReorganizacionBackend() {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(30000)) throw new Error("El sistema está ocupado. Intenta en unos segundos.");
-  
+  if (!lock.tryLock(30000))
+    throw new Error("El sistema está ocupado. Intenta en unos segundos.");
+
   try {
     verificarAccesoServidor();
 
     // --- VERIFICACIÓN DE ROL (Seguridad estricta) ---
     const emailUsuario = Session.getActiveUser().getEmail().toLowerCase();
-    const rawSessions = PropertiesService.getScriptProperties().getProperty('ACTIVE_SESSIONS');
+    const rawSessions =
+      PropertiesService.getScriptProperties().getProperty("ACTIVE_SESSIONS");
     if (rawSessions) {
-        let sessions = JSON.parse(rawSessions);
-        if (sessions[emailUsuario] && sessions[emailUsuario].rol !== "admin") {
-            throw new Error("🔒 SEGURIDAD: Acción bloqueada. Solo un Administrador puede reorganizar el almacén.");
-        }
+      let sessions = JSON.parse(rawSessions);
+      if (sessions[emailUsuario] && sessions[emailUsuario].rol !== "admin") {
+        throw new Error(
+          "🔒 SEGURIDAD: Acción bloqueada. Solo un Administrador puede reorganizar el almacén.",
+        );
+      }
     }
     // ------------------------------------------------
 
@@ -2042,180 +2111,212 @@ function ejecutarReorganizacionBackend() {
     const dataUbic = sUbic.getDataRange().getValues();
     const dataPres = sPres.getDataRange().getValues();
 
-// 1. Mapear presentaciones para saber su capacidad (vNom)
+    // 1. Mapear presentaciones para saber su capacidad (vNom)
     let mapPres = {};
     for (let i = 1; i < dataPres.length; i++) {
-        let id = String(dataPres[i][0]).trim();
-        let nombre = String(dataPres[i][1]).toLowerCase();
-        let esPieza = nombre.includes("pza") || nombre.includes("unid") || nombre.includes("pieza");
-        let vNom = parseFloat(dataPres[i][2]);
-        
-        if (isNaN(vNom) || vNom <= 0) {
-             let m = nombre.match(/[\d\.]+/);
-             if (m) {
-                 vNom = parseFloat(m[0]);
-                 if (nombre.includes("ml") || nombre.includes("gr")) vNom /= 1000;
-             }
+      let id = String(dataPres[i][0]).trim();
+      let nombre = String(dataPres[i][1]).toLowerCase();
+      let esPieza =
+        nombre.includes("pza") ||
+        nombre.includes("unid") ||
+        nombre.includes("pieza");
+      let vNom = parseFloat(dataPres[i][2]);
+
+      if (isNaN(vNom) || vNom <= 0) {
+        let m = nombre.match(/[\d\.]+/);
+        if (m) {
+          vNom = parseFloat(m[0]);
+          if (nombre.includes("ml") || nombre.includes("gr")) vNom /= 1000;
         }
-        if (!vNom || vNom <= 0) vNom = 1;
-        
-        let pts = 0;
-        let esCaja = false;
-        
-        // REGLA: Si es pieza abstracta, NUNCA va a las cajas. Se queda intacto en la BD.
-        if (!esPieza) {
-            if (Math.abs(vNom - 1.0) < 0.01) { esCaja = true; pts = 5; }
-            else if (Math.abs(vNom - 0.25) < 0.01) { esCaja = true; pts = 1; }
+      }
+      if (!vNom || vNom <= 0) vNom = 1;
+
+      let pts = 0;
+      let esCaja = false;
+
+      // REGLA: Si es pieza abstracta, NUNCA va a las cajas. Se queda intacto en la BD.
+      if (!esPieza) {
+        if (Math.abs(vNom - 1.0) < 0.01) {
+          esCaja = true;
+          pts = 5;
+        } else if (Math.abs(vNom - 0.25) < 0.01) {
+          esCaja = true;
+          pts = 1;
         }
-        
-        mapPres[id] = { vNom: vNom, pts: pts, esCaja: esCaja };
+      }
+
+      mapPres[id] = { vNom: vNom, pts: pts, esCaja: esCaja };
     }
 
     // 2. Mapear Ubicaciones existentes
     let mapUbicIds = {};
     for (let i = 1; i < dataUbic.length; i++) {
-        mapUbicIds[String(dataUbic[i][1]).trim().toUpperCase()] = String(dataUbic[i][0]).trim();
+      mapUbicIds[String(dataUbic[i][1]).trim().toUpperCase()] = String(
+        dataUbic[i][0],
+      ).trim();
     }
 
     let intactos = [];
     let piezasVigentes = [];
     let piezasCaducadas = [];
     const hoy = new Date();
-    hoy.setHours(0,0,0,0);
+    hoy.setHours(0, 0, 0, 0);
 
     // 3. Desarmar inventario en piezas físicas
     for (let i = 1; i < dataInv.length; i++) {
-        let row = dataInv[i];
-        let presId = String(row[1]).trim();
-        let infoPres = mapPres[presId];
-        
-        // Si no es 1L o 0.25L, se queda intacto en su lugar original
-        if (!infoPres || !infoPres.esCaja) {
-            intactos.push(row);
-            continue;
+      let row = dataInv[i];
+      let presId = String(row[1]).trim();
+      let infoPres = mapPres[presId];
+
+      // Si no es 1L o 0.25L, se queda intacto en su lugar original
+      if (!infoPres || !infoPres.esCaja) {
+        intactos.push(row);
+        continue;
+      }
+
+      let vol = parseFloat(row[3]);
+      let pzasFisicas = Math.floor(vol / infoPres.vNom);
+      let restoDecimal = vol - pzasFisicas * infoPres.vNom;
+
+      // Si hay líquido suelto (ej. medias botellas), lo dejamos intacto
+      if (restoDecimal > 0.001) {
+        let rowResto = [...row];
+        rowResto[3] = restoDecimal;
+        intactos.push(rowResto);
+      }
+
+      if (pzasFisicas > 0) {
+        let fCadStr = row[4];
+        let estaCaducado = false;
+        if (fCadStr && fCadStr !== "---" && fCadStr !== "SIN-FECHA") {
+          let partes = String(fCadStr).split("/");
+          if (partes.length === 3) {
+            let d = new Date(partes[2], partes[1] - 1, partes[0]);
+            if (d < hoy) estaCaducado = true;
+          }
         }
-        
-        let vol = parseFloat(row[3]);
-        let pzasFisicas = Math.floor(vol / infoPres.vNom);
-        let restoDecimal = vol - (pzasFisicas * infoPres.vNom);
-        
-        // Si hay líquido suelto (ej. medias botellas), lo dejamos intacto
-        if (restoDecimal > 0.001) {
-            let rowResto = [...row];
-            rowResto[3] = restoDecimal;
-            intactos.push(rowResto);
+
+        // Expandimos las botellas conservando su LOTE y FECHAS originales
+        for (let p = 0; p < pzasFisicas; p++) {
+          let pieza = {
+            prodId: row[0],
+            presId: row[1],
+            vNom: infoPres.vNom,
+            pts: infoPres.pts,
+            caducidad: row[4],
+            elaboracion: row[5],
+            lote: row[6],
+            fecha: row[7],
+            prov: row[8],
+          };
+          if (estaCaducado) piezasCaducadas.push(pieza);
+          else piezasVigentes.push(pieza);
         }
-        
-        if (pzasFisicas > 0) {
-            let fCadStr = row[4];
-            let estaCaducado = false;
-            if (fCadStr && fCadStr !== "---" && fCadStr !== "SIN-FECHA") {
-                 let partes = String(fCadStr).split('/');
-                 if (partes.length === 3) {
-                     let d = new Date(partes[2], partes[1]-1, partes[0]);
-                     if (d < hoy) estaCaducado = true;
-                 }
-            }
-            
-            // Expandimos las botellas conservando su LOTE y FECHAS originales
-            for (let p = 0; p < pzasFisicas; p++) {
-                let pieza = {
-                    prodId: row[0],
-                    presId: row[1],
-                    vNom: infoPres.vNom,
-                    pts: infoPres.pts,
-                    caducidad: row[4],
-                    elaboracion: row[5],
-                    lote: row[6],
-                    fecha: row[7],
-                    prov: row[8]
-                };
-                if (estaCaducado) piezasCaducadas.push(pieza);
-                else piezasVigentes.push(pieza);
-            }
-        }
+      }
     }
 
     // 4. Lógica de Bin Packing (Misma regla: 1L primero)
     function empaquetarBD(piezas, prefijoNombre) {
-        piezas.sort((a,b) => {
-            if (b.pts !== a.pts) return b.pts - a.pts;
-            return String(a.prodId).localeCompare(String(b.prodId));
-        });
-        
-        let cajas = [];
-        let cajaActual = { nombre: `${prefijoNombre} 1`, puntosUsados: 0, contenido: [] };
-        let contador = 1;
-        
-        for (let p of piezas) {
-            if (cajaActual.puntosUsados + p.pts > 60) {
-                cajas.push(cajaActual);
-                contador++;
-                cajaActual = { nombre: `${prefijoNombre} ${contador}`, puntosUsados: 0, contenido: [] };
-            }
-            cajaActual.contenido.push(p);
-            cajaActual.puntosUsados += p.pts;
+      piezas.sort((a, b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        return String(a.prodId).localeCompare(String(b.prodId));
+      });
+
+      let cajas = [];
+      let cajaActual = {
+        nombre: `${prefijoNombre} 1`,
+        puntosUsados: 0,
+        contenido: [],
+      };
+      let contador = 1;
+
+      for (let p of piezas) {
+        if (cajaActual.puntosUsados + p.pts > 60) {
+          cajas.push(cajaActual);
+          contador++;
+          cajaActual = {
+            nombre: `${prefijoNombre} ${contador}`,
+            puntosUsados: 0,
+            contenido: [],
+          };
         }
-        if (cajaActual.contenido.length > 0) cajas.push(cajaActual);
-        return cajas;
+        cajaActual.contenido.push(p);
+        cajaActual.puntosUsados += p.pts;
+      }
+      if (cajaActual.contenido.length > 0) cajas.push(cajaActual);
+      return cajas;
     }
 
-    let todasLasCajas = empaquetarBD(piezasVigentes, "CAJA VIGENTES").concat(empaquetarBD(piezasCaducadas, "CAJA CADUCADOS"));
+    let todasLasCajas = empaquetarBD(piezasVigentes, "CAJA VIGENTES").concat(
+      empaquetarBD(piezasCaducadas, "CAJA CADUCADOS"),
+    );
 
     // 5. Crear las ubicaciones en la Hoja si no existen
     let nuevasUbicacionesAInsertar = [];
-    todasLasCajas.forEach(c => {
-        let nombreUpp = c.nombre.toUpperCase();
-        if (!mapUbicIds[nombreUpp]) {
-            let newId = "UBIC-" + new Date().getTime() + "-" + Math.floor(Math.random()*1000);
-            mapUbicIds[nombreUpp] = newId;
-            nuevasUbicacionesAInsertar.push([newId, c.nombre]);
-        }
-        c.idUbicacion = mapUbicIds[nombreUpp];
+    todasLasCajas.forEach((c) => {
+      let nombreUpp = c.nombre.toUpperCase();
+      if (!mapUbicIds[nombreUpp]) {
+        let newId =
+          "UBIC-" +
+          new Date().getTime() +
+          "-" +
+          Math.floor(Math.random() * 1000);
+        mapUbicIds[nombreUpp] = newId;
+        nuevasUbicacionesAInsertar.push([newId, c.nombre]);
+      }
+      c.idUbicacion = mapUbicIds[nombreUpp];
     });
 
     if (nuevasUbicacionesAInsertar.length > 0) {
-        sUbic.getRange(sUbic.getLastRow() + 1, 1, nuevasUbicacionesAInsertar.length, 2).setValues(nuevasUbicacionesAInsertar);
+      sUbic
+        .getRange(
+          sUbic.getLastRow() + 1,
+          1,
+          nuevasUbicacionesAInsertar.length,
+          2,
+        )
+        .setValues(nuevasUbicacionesAInsertar);
     }
 
     // 6. Volver a armar las filas sumando botellas del mismo lote en la misma caja
     let filasEmpacadas = [];
-    todasLasCajas.forEach(c => {
-        let mapAgrupacion = {};
-        c.contenido.forEach(p => {
-            let key = p.prodId + "|" + p.presId + "|" + p.lote + "|" + p.caducidad;
-            if (!mapAgrupacion[key]) mapAgrupacion[key] = { ...p, pzas: 1 };
-            else mapAgrupacion[key].pzas++;
-        });
-        
-        for (let key in mapAgrupacion) {
-            let p = mapAgrupacion[key];
-            let volumenTotal = p.pzas * p.vNom;
-            filasEmpacadas.push([
-                p.prodId,
-                p.presId,
-                c.idUbicacion, 
-                volumenTotal,
-                p.caducidad,
-                p.elaboracion,
-                p.lote,
-                p.fecha,
-                p.prov + " (Auto-Reorg)"
-            ]);
-        }
+    todasLasCajas.forEach((c) => {
+      let mapAgrupacion = {};
+      c.contenido.forEach((p) => {
+        let key = p.prodId + "|" + p.presId + "|" + p.lote + "|" + p.caducidad;
+        if (!mapAgrupacion[key]) mapAgrupacion[key] = { ...p, pzas: 1 };
+        else mapAgrupacion[key].pzas++;
+      });
+
+      for (let key in mapAgrupacion) {
+        let p = mapAgrupacion[key];
+        let volumenTotal = p.pzas * p.vNom;
+        filasEmpacadas.push([
+          p.prodId,
+          p.presId,
+          c.idUbicacion,
+          volumenTotal,
+          p.caducidad,
+          p.elaboracion,
+          p.lote,
+          p.fecha,
+          p.prov + " (Auto-Reorg)",
+        ]);
+      }
     });
 
     // 7. Sobreescribir Inventario de manera limpia
     let nuevoDataInv = [headersInv].concat(intactos).concat(filasEmpacadas);
     sInv.clearContents();
-    sInv.getRange(1, 1, nuevoDataInv.length, nuevoDataInv[0].length).setValues(nuevoDataInv);
+    sInv
+      .getRange(1, 1, nuevoDataInv.length, nuevoDataInv[0].length)
+      .setValues(nuevoDataInv);
 
     return { success: true, totalCajas: todasLasCajas.length };
-    
   } catch (e) {
-      throw new Error(e.message);
+    throw new Error(e.message);
   } finally {
-      lock.releaseLock();
+    lock.releaseLock();
   }
 }
 
@@ -2227,52 +2328,71 @@ function obtenerHistorialEntradas() {
   try {
     lock.waitLock(10000);
     verificarAccesoServidor();
-    
-    const sheet = obtenerHojaSegura("REGISTROS_ENTRADA"); 
-    if (!sheet) return { headers: [], rows: [] };
-    
-    const data = sheet.getDataRange().getDisplayValues(); 
-    if (data.length <= 1) return { headers: data[0] || [], rows: [] };
-    
-    // --- MAGIA: Diccionarios blindados con toUpperCase() ---
-    const mapProd = {}, mapPres = {}, mapUbic = {};
-    try {
-        obtenerHojaSegura("PRODUCTOS").getDataRange().getValues().forEach(r => mapProd[String(r[0]).trim().toUpperCase()] = r[1]);
-        obtenerHojaSegura("PRESENTACIONES").getDataRange().getValues().forEach(r => mapPres[String(r[0]).trim().toUpperCase()] = r[1]);
-        obtenerHojaSegura("UBICACIONES").getDataRange().getValues().forEach(r => mapUbic[String(r[0]).trim().toUpperCase()] = r[1]);
-    } catch(e) {}
 
-    let headers = ["FECHA", "PRODUCTO", "PRESENTACIÓN", "DESTINO", "CANTIDAD", "LOTE", "PROVEEDOR"];
+    const sheet = obtenerHojaSegura("REGISTROS_ENTRADA");
+    if (!sheet) return { headers: [], rows: [] };
+
+    const data = sheet.getDataRange().getDisplayValues();
+    if (data.length <= 1) return { headers: data[0] || [], rows: [] };
+
+    // --- MAGIA: Diccionarios blindados con toUpperCase() ---
+    const mapProd = {},
+      mapPres = {},
+      mapUbic = {};
+    try {
+      obtenerHojaSegura("PRODUCTOS")
+        .getDataRange()
+        .getValues()
+        .forEach((r) => (mapProd[String(r[0]).trim().toUpperCase()] = r[1]));
+      obtenerHojaSegura("PRESENTACIONES")
+        .getDataRange()
+        .getValues()
+        .forEach((r) => (mapPres[String(r[0]).trim().toUpperCase()] = r[1]));
+      obtenerHojaSegura("UBICACIONES")
+        .getDataRange()
+        .getValues()
+        .forEach((r) => (mapUbic[String(r[0]).trim().toUpperCase()] = r[1]));
+    } catch (e) {}
+
+    let headers = [
+      "FECHA",
+      "PRODUCTO",
+      "PRESENTACIÓN",
+      "DESTINO",
+      "CANTIDAD",
+      "LOTE",
+      "PROVEEDOR",
+    ];
     let rows = [];
-    
+
     let limite = Math.max(1, data.length - 100);
     for (let i = data.length - 1; i >= limite; i--) {
       let r = data[i];
-      
+
       let fecha = r[0];
       let prod = mapProd[String(r[1]).trim().toUpperCase()] || r[1];
       let pres = mapPres[String(r[2]).trim().toUpperCase()] || r[2];
-      
+
       // Lógica inteligente para Ubicaciones Eliminadas
       let idUbicRaw = String(r[3]).trim();
       let ubic = mapUbic[idUbicRaw.toUpperCase()];
-      
+
       if (!ubic) {
-          // Si no existe y parece un ID (es muy largo), le ponemos una etiqueta limpia
-          if (idUbicRaw.length > 20 && idUbicRaw.includes("-")) {
-              ubic = "Ubic. Eliminada";
-          } else {
-              ubic = idUbicRaw;
-          }
+        // Si no existe y parece un ID (es muy largo), le ponemos una etiqueta limpia
+        if (idUbicRaw.length > 20 && idUbicRaw.includes("-")) {
+          ubic = "Ubic. Eliminada";
+        } else {
+          ubic = idUbicRaw;
+        }
       }
 
-      let cant = r[4]; 
+      let cant = r[4];
       let lote = r[5];
       let prov = r[6] || "---";
 
       rows.push([fecha, prod, pres, ubic, cant, lote, prov]);
     }
-    
+
     return { headers: headers, rows: rows };
   } catch (e) {
     throw new Error("Error al leer el historial: " + e.message);
@@ -2298,142 +2418,235 @@ function obtenerEstadisticasDashboard() {
     const sCli = obtenerHojaSegura("CLIENTES");
 
     const hoy = new Date();
-    hoy.setHours(0,0,0,0);
+    hoy.setHours(0, 0, 0, 0);
     const anioActual = hoy.getFullYear();
-    const mesActualStr = `${anioActual}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
-    
+    const mesActualStr = `${anioActual}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+
     let stats = {
       kpi: {
-        gastosMesActual: 0, gastosHistorico: 0, pedidosMesActual: 0,
-        enviosEnProceso: 0, enviosCompletados: 0, enviosCancelados: 0,
-        litrosActivos: 0, litrosCaducados: 0
+        gastosMesActual: 0,
+        gastosHistorico: 0,
+        pedidosMesActual: 0,
+        enviosEnProceso: 0,
+        enviosCompletados: 0,
+        enviosCancelados: 0,
+        litrosActivos: 0,
+        litrosCaducados: 0,
       },
       tendenciaAnual: {
-        meses: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
-        gastos: new Array(12).fill(0), pedidos: new Array(12).fill(0)
+        meses: [
+          "Ene",
+          "Feb",
+          "Mar",
+          "Abr",
+          "May",
+          "Jun",
+          "Jul",
+          "Ago",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dic",
+        ],
+        gastos: new Array(12).fill(0),
+        pedidos: new Array(12).fill(0),
       },
-      topProductosEnviados: {}, topStock: {}, topEmpresas: {}, geoTipo: {}, geoEstados: {} 
+      topProductosEnviados: {},
+      topStock: {},
+      topEmpresas: {},
+      geoTipo: {},
+      geoEstados: {},
     };
 
     // MAPEOS
     let mapPres = {};
-    if (sPres && sPres.getLastRow() > 1) sPres.getDataRange().getValues().slice(1).forEach(r => mapPres[String(r[0]).trim()] = Number(r[2]) || 0);
-    
+    if (sPres && sPres.getLastRow() > 1)
+      sPres
+        .getDataRange()
+        .getValues()
+        .slice(1)
+        .forEach((r) => (mapPres[String(r[0]).trim()] = Number(r[2]) || 0));
+
     let mapProd = {};
     if (sProd && sProd.getLastRow() > 1) {
-       sProd.getDataRange().getValues().slice(1).forEach(r => {
-           let uLow = String(r[3] || 'L').toLowerCase();
-           let uni = 'L';
-           if(uLow.includes('kg') || uLow.includes('kilo')) uni = 'Kg';
-           else if(uLow.includes('pza') || uLow.includes('unid') || uLow.includes('pieza')) uni = 'Pza';
-           mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: uni };
-       });
+      sProd
+        .getDataRange()
+        .getValues()
+        .slice(1)
+        .forEach((r) => {
+          let uLow = String(r[3] || "L").toLowerCase();
+          let uni = "L";
+          if (uLow.includes("kg") || uLow.includes("kilo")) uni = "Kg";
+          else if (
+            uLow.includes("pza") ||
+            uLow.includes("unid") ||
+            uLow.includes("pieza")
+          )
+            uni = "Pza";
+          mapProd[String(r[0]).trim()] = { nombre: r[1], unidad: uni };
+        });
     }
 
     // --- NUEVA LÓGICA PARA MAPEAR CLIENTES CON SU "TIPO" ---
     let mapEmpresas = {};
     if (sCli && sCli.getLastRow() > 1) {
-       sCli.getDataRange().getValues().slice(1).forEach(r => {
-           mapEmpresas[String(r[0]).trim()] = {
-               nombre: String(r[2]).trim() || String(r[1]).trim(),
-               tipo: String(r[3]).trim().toUpperCase() // Columna D (Interno/Externo)
-           };
-       });
+      sCli
+        .getDataRange()
+        .getValues()
+        .slice(1)
+        .forEach((r) => {
+          mapEmpresas[String(r[0]).trim()] = {
+            nombre: String(r[2]).trim() || String(r[1]).trim(),
+            tipo: String(r[3]).trim().toUpperCase(), // Columna D (Interno/Externo)
+          };
+        });
     }
 
     const obtenerNombrePadre = (rawName) => {
-        let match = String(rawName).match(/(.*)\(([^)]+)\)$/);
-        return match ? match[2].trim() : String(rawName).trim();
+      let match = String(rawName).match(/(.*)\(([^)]+)\)$/);
+      return match ? match[2].trim() : String(rawName).trim();
     };
 
     // 1. INVENTARIO
     if (sInv && sInv.getLastRow() > 1) {
       const dI = sInv.getDataRange().getValues();
       for (let i = 1; i < dI.length; i++) {
-        let pId = String(dI[i][0]).trim(); let prId = String(dI[i][1]).trim();
-        let stock = Number(dI[i][3]) || 0; let cadVal = dI[i][4];
-        
-        if (stock > 0.001) {
-          let fCad = (cadVal instanceof Date) ? cadVal : new Date(cadVal);
-          let estaCaducado = (!isNaN(fCad.getTime()) && fCad < hoy);
-          let prodInfo = mapProd[pId] || { nombre: pId, unidad: 'L' };
+        let pId = String(dI[i][0]).trim();
+        let prId = String(dI[i][1]).trim();
+        let stock = Number(dI[i][3]) || 0;
+        let cadVal = dI[i][4];
 
-          if (prodInfo.unidad === 'L') {
-              if (estaCaducado) stats.kpi.litrosCaducados += stock;
-              else stats.kpi.litrosActivos += stock;
-              
-              if (!estaCaducado) {
-                 let vNom = mapPres[prId] || 0;
-                 if (Math.abs(vNom - 1.0) < 0.01 || Math.abs(vNom - 0.25) < 0.01) {
-                    let parentName = obtenerNombrePadre(prodInfo.nombre);
-                    if (!stats.topStock[parentName]) stats.topStock[parentName] = 0;
-                    stats.topStock[parentName] += stock;
-                 }
+        if (stock > 0.001) {
+          let fCad = cadVal instanceof Date ? cadVal : new Date(cadVal);
+          let estaCaducado = !isNaN(fCad.getTime()) && fCad < hoy;
+          let prodInfo = mapProd[pId] || { nombre: pId, unidad: "L" };
+
+          if (prodInfo.unidad === "L") {
+            if (estaCaducado) stats.kpi.litrosCaducados += stock;
+            else stats.kpi.litrosActivos += stock;
+
+            if (!estaCaducado) {
+              let vNom = mapPres[prId] || 0;
+              if (Math.abs(vNom - 1.0) < 0.01 || Math.abs(vNom - 0.25) < 0.01) {
+                let parentName = obtenerNombrePadre(prodInfo.nombre);
+                if (!stats.topStock[parentName]) stats.topStock[parentName] = 0;
+                stats.topStock[parentName] += stock;
               }
+            }
           }
         }
       }
     }
 
     // 2. PEDIDOS (Muestras, Gastos y Geografía)
-    const ESTADOS_MX = ["AGUASCALIENTES", "BAJA CALIFORNIA", "CAMPECHE", "CHIAPAS", "CHIHUAHUA", "COAHUILA", "COLIMA", "DISTRITO FEDERAL", "CIUDAD DE MEXICO", "CDMX", "DURANGO", "GUANAJUATO", "GUERRERO", "HIDALGO", "JALISCO", "ESTADO DE MEXICO", "MICHOACAN", "MORELOS", "NAYARIT", "NUEVO LEON", "OAXACA", "PUEBLA", "QUERETARO", "QUINTANA ROO", "SAN LUIS POTOSI", "SINALOA", "SONORA", "TABASCO", "TAMAULIPAS", "TLAXCALA", "VERACRUZ", "YUCATAN", "ZACATECAS"];
-    
+    const ESTADOS_MX = [
+      "AGUASCALIENTES",
+      "BAJA CALIFORNIA",
+      "CAMPECHE",
+      "CHIAPAS",
+      "CHIHUAHUA",
+      "COAHUILA",
+      "COLIMA",
+      "DISTRITO FEDERAL",
+      "CIUDAD DE MEXICO",
+      "CDMX",
+      "DURANGO",
+      "GUANAJUATO",
+      "GUERRERO",
+      "HIDALGO",
+      "JALISCO",
+      "ESTADO DE MEXICO",
+      "MICHOACAN",
+      "MORELOS",
+      "NAYARIT",
+      "NUEVO LEON",
+      "OAXACA",
+      "PUEBLA",
+      "QUERETARO",
+      "QUINTANA ROO",
+      "SAN LUIS POTOSI",
+      "SINALOA",
+      "SONORA",
+      "TABASCO",
+      "TAMAULIPAS",
+      "TLAXCALA",
+      "VERACRUZ",
+      "YUCATAN",
+      "ZACATECAS",
+    ];
+
     let idPedAceptados = new Set();
     if (sPed && sPed.getLastRow() > 1) {
       const dP = sPed.getDataRange().getValues();
       for (let i = 1; i < dP.length; i++) {
-        let idPed = String(dP[i][0]).trim(); if(!idPed) continue;
+        let idPed = String(dP[i][0]).trim();
+        if (!idPed) continue;
         let isExterno = idPed.startsWith("EXT-");
-        let fVal = dP[i][1]; let f = (fVal instanceof Date) ? fVal : new Date(fVal);
-        if(isNaN(f.getTime())) continue;
+        let fVal = dP[i][1];
+        let f = fVal instanceof Date ? fVal : new Date(fVal);
+        if (isNaN(f.getTime())) continue;
 
-        let mesStr = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}`;
-        let costo = Number(String(dP[i][9] || "0").replace(/[^0-9.-]+/g, "")) || 0;
+        let mesStr = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}`;
+        let costo =
+          Number(String(dP[i][9] || "0").replace(/[^0-9.-]+/g, "")) || 0;
         let estatus = String(dP[i][10] || "").toUpperCase();
 
         // 💰 GASTOS SUMAN SIEMPRE
         stats.kpi.gastosHistorico += costo;
-        if(mesStr === mesActualStr) stats.kpi.gastosMesActual += costo;
-        if(f.getFullYear() === anioActual) stats.tendenciaAnual.gastos[f.getMonth()] += costo;
+        if (mesStr === mesActualStr) stats.kpi.gastosMesActual += costo;
+        if (f.getFullYear() === anioActual)
+          stats.tendenciaAnual.gastos[f.getMonth()] += costo;
 
         // 📦 PEDIDOS (Solo envíos de material reales)
         if (!isExterno) {
-            idPedAceptados.add(idPed);
-            if(mesStr === mesActualStr) {
-                stats.kpi.pedidosMesActual++;
-                if (estatus.includes("ENTREGADO")) stats.kpi.enviosCompletados++;
-                else if (estatus.includes("CANCELADO")) stats.kpi.enviosCancelados++;
-                else stats.kpi.enviosEnProceso++;
-            }
-            if(f.getFullYear() === anioActual) stats.tendenciaAnual.pedidos[f.getMonth()]++;
+          idPedAceptados.add(idPed);
+          if (mesStr === mesActualStr) {
+            stats.kpi.pedidosMesActual++;
+            if (estatus.includes("ENTREGADO")) stats.kpi.enviosCompletados++;
+            else if (estatus.includes("CANCELADO"))
+              stats.kpi.enviosCancelados++;
+            else stats.kpi.enviosEnProceso++;
+          }
+          if (f.getFullYear() === anioActual)
+            stats.tendenciaAnual.pedidos[f.getMonth()]++;
 
-            // --- FILTRO: TOP EMPRESAS SOLO EXTERNAS ---
-            let dataCli = mapEmpresas[String(dP[i][2]).trim()];
-            let empresaNombre = dataCli ? dataCli.nombre : "Ventas Generales";
-            let tipoCli = dataCli ? dataCli.tipo : "EXTERNO"; // Si no hay datos, asumimos externo
-            
-            // Si NO contiene la palabra INTERNO, entonces sí la contamos en la gráfica
-            if (!tipoCli.includes("INTERNO")) {
-                if(!stats.topEmpresas[empresaNombre]) stats.topEmpresas[empresaNombre] = 0;
-                stats.topEmpresas[empresaNombre]++;
-            }
+          // --- FILTRO: TOP EMPRESAS SOLO EXTERNAS ---
+          let dataCli = mapEmpresas[String(dP[i][2]).trim()];
+          let empresaNombre = dataCli ? dataCli.nombre : "Ventas Generales";
+          let tipoCli = dataCli ? dataCli.tipo : "EXTERNO"; // Si no hay datos, asumimos externo
 
-            // GEOGRAFÍA: Tipo y Estado
-            let tipoEnvio = String(dP[i][8] || "Nacional").trim();
-            if(!stats.geoTipo[tipoEnvio]) stats.geoTipo[tipoEnvio] = 0;
-            stats.geoTipo[tipoEnvio]++;
+          // Si NO contiene la palabra INTERNO, entonces sí la contamos en la gráfica
+          if (!tipoCli.includes("INTERNO")) {
+            if (!stats.topEmpresas[empresaNombre])
+              stats.topEmpresas[empresaNombre] = 0;
+            stats.topEmpresas[empresaNombre]++;
+          }
 
-            let direccion = String(dP[i][4] || "").toUpperCase();
-            direccion = direccion.replace(/Á/g, "A").replace(/É/g, "E").replace(/Í/g, "I").replace(/Ó/g, "O").replace(/Ú/g, "U");
-            let estadoDetectado = "OTRO";
-            for(let edo of ESTADOS_MX) {
-                if(direccion.includes(edo)) {
-                    estadoDetectado = (edo === "DISTRITO FEDERAL" || edo === "CIUDAD DE MEXICO") ? "CDMX" : edo;
-                    break;
-                }
+          // GEOGRAFÍA: Tipo y Estado
+          let tipoEnvio = String(dP[i][8] || "Nacional").trim();
+          if (!stats.geoTipo[tipoEnvio]) stats.geoTipo[tipoEnvio] = 0;
+          stats.geoTipo[tipoEnvio]++;
+
+          let direccion = String(dP[i][4] || "").toUpperCase();
+          direccion = direccion
+            .replace(/Á/g, "A")
+            .replace(/É/g, "E")
+            .replace(/Í/g, "I")
+            .replace(/Ó/g, "O")
+            .replace(/Ú/g, "U");
+          let estadoDetectado = "OTRO";
+          for (let edo of ESTADOS_MX) {
+            if (direccion.includes(edo)) {
+              estadoDetectado =
+                edo === "DISTRITO FEDERAL" || edo === "CIUDAD DE MEXICO"
+                  ? "CDMX"
+                  : edo;
+              break;
             }
-            if(!stats.geoEstados[estadoDetectado]) stats.geoEstados[estadoDetectado] = 0;
-            stats.geoEstados[estadoDetectado]++;
+          }
+          if (!stats.geoEstados[estadoDetectado])
+            stats.geoEstados[estadoDetectado] = 0;
+          stats.geoEstados[estadoDetectado]++;
         }
       }
     }
@@ -2442,25 +2655,33 @@ function obtenerEstadisticasDashboard() {
     if (sDet && sDet.getLastRow() > 1) {
       const dD = sDet.getDataRange().getDisplayValues();
       for (let i = 1; i < dD.length; i++) {
-         let idPed = String(dD[i][0]).trim();
-         if (!idPedAceptados.has(idPed)) continue; 
+        let idPed = String(dD[i][0]).trim();
+        if (!idPedAceptados.has(idPed)) continue;
 
-         let rawProdName = String(dD[i][1]).trim();
-         if(rawProdName) {
-            let parentName = obtenerNombrePadre(rawProdName);
-            if(!stats.topProductosEnviados[parentName]) stats.topProductosEnviados[parentName] = 0;
-            stats.topProductosEnviados[parentName] += 1;
-         }
+        let rawProdName = String(dD[i][1]).trim();
+        if (rawProdName) {
+          let parentName = obtenerNombrePadre(rawProdName);
+          if (!stats.topProductosEnviados[parentName])
+            stats.topProductosEnviados[parentName] = 0;
+          stats.topProductosEnviados[parentName] += 1;
+        }
       }
     }
 
     // ORDENAMIENTO DE TOPS
-    let sortObj = (obj) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e => ({label: e[0], value: e[1]}));
+    let sortObj = (obj) =>
+      Object.entries(obj)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map((e) => ({ label: e[0], value: e[1] }));
     stats.topProductosArr = sortObj(stats.topProductosEnviados);
     stats.topStockArr = sortObj(stats.topStock);
     stats.topEmpresasArr = sortObj(stats.topEmpresas);
-    stats.geoEstadosArr = Object.entries(stats.geoEstados).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e => ({label: e[0], value: e[1]}));
-    
+    stats.geoEstadosArr = Object.entries(stats.geoEstados)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map((e) => ({ label: e[0], value: e[1] }));
+
     return { success: true, data: stats };
   } catch (e) {
     return { success: false, error: e.message };
@@ -2477,25 +2698,55 @@ function registrarEnvioExterno(datos) {
   try {
     lock.waitLock(15000);
     verificarAccesoServidor();
-    
+
     const idPedido = "EXT-" + Math.floor(Date.now() / 1000);
     const fechaHoy = new Date();
 
     // Etiquetamos visualmente la descripción para el historial
     let etiqueta = "📤 ENVÍO EXTERNO";
     let tipoLogistica = "Externo";
-    
-    if(datos.sentido === "Recepcion") { 
-        etiqueta = "📥 RECEPCIÓN EXTERNA"; 
-        tipoLogistica = "Recepción"; 
-    } else if(datos.sentido === "Triangulacion") { 
-        etiqueta = "🔄 TRIANGULACIÓN"; 
-        tipoLogistica = "Triangulación"; 
+
+    if (datos.sentido === "Recepcion") {
+      etiqueta = "📥 RECEPCIÓN EXTERNA";
+      tipoLogistica = "Recepción";
+    } else if (datos.sentido === "Triangulacion") {
+      etiqueta = "🔄 TRIANGULACIÓN";
+      tipoLogistica = "Triangulación";
     }
 
-    const sPed = obtenerHojaOCrear("PEDIDOS", ["ID_PEDIDO", "FECHA", "ID_CLIENTE", "NOMBRE", "DIRECCION", "TELEFONO", "PAQUETERIA", "GUIA", "TIPO", "COSTO", "ESTATUS", "F_EST", "F_REAL", "LINK", "COMENTARIOS"]);
+    const sPed = obtenerHojaOCrear("PEDIDOS", [
+      "ID_PEDIDO",
+      "FECHA",
+      "ID_CLIENTE",
+      "NOMBRE",
+      "DIRECCION",
+      "TELEFONO",
+      "PAQUETERIA",
+      "GUIA",
+      "TIPO",
+      "COSTO",
+      "ESTATUS",
+      "F_EST",
+      "F_REAL",
+      "LINK",
+      "COMENTARIOS",
+    ]);
     sPed.appendRow([
-      idPedido, fechaHoy, "GENERICO-EXT", datos.nombreContacto, datos.direccion, "", datos.paqueteria, datos.guia, tipoLogistica, datos.costo, "Pendiente", "", "", "", etiqueta + ": " + datos.descripcion
+      idPedido,
+      fechaHoy,
+      "GENERICO-EXT",
+      datos.nombreContacto,
+      datos.direccion,
+      "",
+      datos.paqueteria,
+      datos.guia,
+      tipoLogistica,
+      datos.costo,
+      "Pendiente",
+      "",
+      "",
+      "",
+      etiqueta + ": " + datos.descripcion,
     ]);
     return { success: true, idPedido: idPedido };
   } catch (e) {
@@ -2516,12 +2767,15 @@ function ajustarStockFisico(datos) {
 
     // 🔒 SEGURIDAD ESTRICTA BACKEND: Verificar que quien dispara esto sea realmente un Admin
     const emailUsuario = Session.getActiveUser().getEmail().toLowerCase();
-    const rawSessions = PropertiesService.getScriptProperties().getProperty('ACTIVE_SESSIONS');
+    const rawSessions =
+      PropertiesService.getScriptProperties().getProperty("ACTIVE_SESSIONS");
     if (rawSessions) {
-        let sessions = JSON.parse(rawSessions);
-        if (sessions[emailUsuario] && sessions[emailUsuario].rol !== "admin") {
-            throw new Error("🔒 ALERTA DE SEGURIDAD: Acción denegada. Solo un Administrador tiene permisos para hacer ajustes directos de inventario.");
-        }
+      let sessions = JSON.parse(rawSessions);
+      if (sessions[emailUsuario] && sessions[emailUsuario].rol !== "admin") {
+        throw new Error(
+          "🔒 ALERTA DE SEGURIDAD: Acción denegada. Solo un Administrador tiene permisos para hacer ajustes directos de inventario.",
+        );
+      }
     }
 
     const sInv = obtenerHojaSegura("INVENTARIO");
@@ -2535,7 +2789,8 @@ function ajustarStockFisico(datos) {
         String(dataInv[i][0]).trim() === String(datos.productoId).trim() &&
         String(dataInv[i][1]).trim() === String(datos.presentacionId).trim() &&
         String(dataInv[i][2]).trim() === String(datos.ubicacionId).trim() &&
-        String(dataInv[i][6]).trim().toUpperCase() === String(datos.lote).trim().toUpperCase()
+        String(dataInv[i][6]).trim().toUpperCase() ===
+          String(datos.lote).trim().toUpperCase()
       ) {
         filaEncontrada = i + 1;
         stockAnterior = Number(dataInv[i][3]);
@@ -2543,7 +2798,8 @@ function ajustarStockFisico(datos) {
       }
     }
 
-    if (filaEncontrada === -1) throw new Error("No se encontró el lote exacto en el inventario.");
+    if (filaEncontrada === -1)
+      throw new Error("No se encontró el lote exacto en el inventario.");
 
     let nuevoStock = Number(datos.nuevoVolumen);
     if (nuevoStock < 0) nuevoStock = 0;
@@ -2553,9 +2809,10 @@ function ajustarStockFisico(datos) {
 
     // 2. Registrar en la Bitácora de Auditoría
     let diferencia = nuevoStock - stockAnterior;
-    let tipoMovimiento = diferencia >= 0 ? "AJUSTE POSITIVO (+)" : "MERMA / AJUSTE NEGATIVO (-)";
+    let tipoMovimiento =
+      diferencia >= 0 ? "AJUSTE POSITIVO (+)" : "MERMA / AJUSTE NEGATIVO (-)";
     let detalle = `Producto: ${datos.productoNombre} | Lote: ${datos.lote} | Cambio: de ${stockAnterior} a ${nuevoStock} | Motivo: ${datos.motivo}`;
-    
+
     registrarEnBitacora(emailUsuario, tipoMovimiento, detalle);
 
     return { success: true, diferencia: diferencia };
@@ -2574,31 +2831,33 @@ function obtenerKardexProducto(productoId, productoNombre) {
   try {
     lock.waitLock(10000);
     verificarAccesoServidor();
-    
+
     let historial = [];
     const nombreBuscado = String(productoNombre).trim().toUpperCase();
 
     // Función auxiliar para extraer el "Nombre Padre" ignorando lo que está en paréntesis
     const obtenerNombrePadre = (rawName) => {
-        let match = String(rawName).match(/(.*)\(([^)]+)\)$/);
-        return match ? match[2].trim().toUpperCase() : String(rawName).trim().toUpperCase();
+      let match = String(rawName).match(/(.*)\(([^)]+)\)$/);
+      return match
+        ? match[2].trim().toUpperCase()
+        : String(rawName).trim().toUpperCase();
     };
 
     // 0. MAPEAR TODOS LOS IDs DE ESTA FAMILIA DE PRODUCTOS
     const sProd = obtenerHojaSegura("PRODUCTOS");
     let idsValidos = new Set();
     idsValidos.add(String(productoId).trim()); // Siempre incluir el ID principal
-    
+
     if (sProd && sProd.getLastRow() > 1) {
-        const dP = sProd.getDataRange().getValues();
-        for (let i = 1; i < dP.length; i++) {
-            let pId = String(dP[i][0]).trim();
-            let pName = String(dP[i][1]).trim();
-            // Si el nombre base coincide, agregamos este ID a la bolsa de búsqueda
-            if (obtenerNombrePadre(pName) === nombreBuscado) {
-                idsValidos.add(pId);
-            }
+      const dP = sProd.getDataRange().getValues();
+      for (let i = 1; i < dP.length; i++) {
+        let pId = String(dP[i][0]).trim();
+        let pName = String(dP[i][1]).trim();
+        // Si el nombre base coincide, agregamos este ID a la bolsa de búsqueda
+        if (obtenerNombrePadre(pName) === nombreBuscado) {
+          idsValidos.add(pId);
         }
+      }
     }
 
     // 1. LEER ENTRADAS (De cualquier ID válido de la familia)
@@ -2607,13 +2866,13 @@ function obtenerKardexProducto(productoId, productoNombre) {
       const dataEnt = sEnt.getDataRange().getValues();
       for (let i = 1; i < dataEnt.length; i++) {
         let rowProdId = String(dataEnt[i][1]).trim();
-        if (idsValidos.has(rowProdId)) { 
+        if (idsValidos.has(rowProdId)) {
           historial.push({
-            fecha: dataEnt[i][0], 
+            fecha: dataEnt[i][0],
             tipo: "ENTRADA",
-            cantidad: Number(dataEnt[i][4]) || 0, 
+            cantidad: Number(dataEnt[i][4]) || 0,
             lote: dataEnt[i][5] || "---",
-            detalle: `Proveedor/Origen: ${dataEnt[i][6] || '---'}`
+            detalle: `Proveedor/Origen: ${dataEnt[i][6] || "---"}`,
           });
         }
       }
@@ -2625,14 +2884,18 @@ function obtenerKardexProducto(productoId, productoNombre) {
       const dataSal = sSal.getDataRange().getValues();
       for (let i = 1; i < dataSal.length; i++) {
         let rowProdId = String(dataSal[i][0]).trim();
-        if (idsValidos.has(rowProdId)) { 
-          let tipo = String(dataSal[i][8]).toUpperCase().includes("DESINCORPORACIÓN") ? "BAJA / MERMA" : "SALIDA";
+        if (idsValidos.has(rowProdId)) {
+          let tipo = String(dataSal[i][8])
+            .toUpperCase()
+            .includes("DESINCORPORACIÓN")
+            ? "BAJA / MERMA"
+            : "SALIDA";
           historial.push({
-            fecha: dataSal[i][10] || dataSal[i][0], 
+            fecha: dataSal[i][10] || dataSal[i][0],
             tipo: tipo,
             cantidad: -(Number(dataSal[i][4]) || 0),
             lote: dataSal[i][7] || "---",
-            detalle: `Destino: ${dataSal[i][8] || '---'} (Doc: ${dataSal[i][11] || '---'})`
+            detalle: `Destino: ${dataSal[i][8] || "---"} (Doc: ${dataSal[i][11] || "---"})`,
           });
         }
       }
@@ -2650,26 +2913,31 @@ function obtenerKardexProducto(productoId, productoNombre) {
           // Extraemos el nombre del producto directamente del texto del log
           let prodMatch = detalleStr.match(/Producto:\s([^|]+)/);
           let prodNameInBitacora = prodMatch ? prodMatch[1].trim() : "";
-          
+
           // Si el "Nombre Padre" del log coincide con el producto que estamos buscando
           if (obtenerNombrePadre(prodNameInBitacora) === nombreBuscado) {
-             let loteMatch = detalleStr.match(/Lote:\s([^|]+)/);
-             let lote = loteMatch ? loteMatch[1].trim() : "---";
+            let loteMatch = detalleStr.match(/Lote:\s([^|]+)/);
+            let lote = loteMatch ? loteMatch[1].trim() : "---";
 
-             let cambioMatch = detalleStr.match(/Cambio:\sde\s([\d.]+)\sa\s([\d.]+)/);
-             let cantidadDif = 0;
-             if (cambioMatch) cantidadDif = Number(cambioMatch[2]) - Number(cambioMatch[1]);
+            let cambioMatch = detalleStr.match(
+              /Cambio:\sde\s([\d.]+)\sa\s([\d.]+)/,
+            );
+            let cantidadDif = 0;
+            if (cambioMatch)
+              cantidadDif = Number(cambioMatch[2]) - Number(cambioMatch[1]);
 
-             let motivoMatch = detalleStr.split('| Motivo:');
-             let motivoText = motivoMatch[1] ? motivoMatch[1].trim() : "Ajuste Manual";
+            let motivoMatch = detalleStr.split("| Motivo:");
+            let motivoText = motivoMatch[1]
+              ? motivoMatch[1].trim()
+              : "Ajuste Manual";
 
-             historial.push({
-               fecha: dataBit[i][0], 
-               tipo: accion.includes("POSITIVO") ? "AJUSTE (+)" : "AJUSTE (-)",
-               cantidad: cantidadDif,
-               lote: lote,
-               detalle: `Autorizó: ${dataBit[i][1]} | Razón: ${motivoText}`
-             });
+            historial.push({
+              fecha: dataBit[i][0],
+              tipo: accion.includes("POSITIVO") ? "AJUSTE (+)" : "AJUSTE (-)",
+              cantidad: cantidadDif,
+              lote: lote,
+              detalle: `Autorizó: ${dataBit[i][1]} | Razón: ${motivoText}`,
+            });
           }
         }
       }
@@ -2683,10 +2951,22 @@ function obtenerKardexProducto(productoId, productoNombre) {
     });
 
     // 5. FORMATEAR FECHAS
-    let historialLimpio = historial.map(h => {
-        let f = new Date(h.fecha);
-        let fechaTexto = isNaN(f.getTime()) ? String(h.fecha) : Utilities.formatDate(f, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
-        return { fechaStr: fechaTexto, tipo: h.tipo, cantidad: h.cantidad, lote: h.lote, detalle: h.detalle };
+    let historialLimpio = historial.map((h) => {
+      let f = new Date(h.fecha);
+      let fechaTexto = isNaN(f.getTime())
+        ? String(h.fecha)
+        : Utilities.formatDate(
+            f,
+            Session.getScriptTimeZone(),
+            "dd/MM/yyyy HH:mm",
+          );
+      return {
+        fechaStr: fechaTexto,
+        tipo: h.tipo,
+        cantidad: h.cantidad,
+        lote: h.lote,
+        detalle: h.detalle,
+      };
     });
 
     return { success: true, data: historialLimpio };
@@ -2709,13 +2989,17 @@ function revisarCaducidadesYEnviarAlerta() {
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
-  
+
   const limite90Dias = new Date();
   limite90Dias.setDate(hoy.getDate() + 90);
 
   let mapProd = {};
   if (sProd && sProd.getLastRow() > 1) {
-    sProd.getDataRange().getValues().slice(1).forEach(r => mapProd[String(r[0]).trim()] = r[1]);
+    sProd
+      .getDataRange()
+      .getValues()
+      .slice(1)
+      .forEach((r) => (mapProd[String(r[0]).trim()] = r[1]));
   }
 
   // AHORA USAMOS OBJETOS PARA AGRUPAR LOTES IDÉNTICOS
@@ -2723,7 +3007,7 @@ function revisarCaducidadesYEnviarAlerta() {
   let mapProximos = {};
 
   const dataInv = sInv.getDataRange().getValues();
-  
+
   for (let i = 1; i < dataInv.length; i++) {
     let pId = String(dataInv[i][0]).trim();
     let stock = Number(dataInv[i][3]) || 0;
@@ -2746,16 +3030,32 @@ function revisarCaducidadesYEnviarAlerta() {
 
       if (fCad && !isNaN(fCad.getTime())) {
         let nombreProd = mapProd[pId] || pId;
-        let fechaStr = Utilities.formatDate(fCad, Session.getScriptTimeZone(), "dd/MM/yyyy");
-        
+        let fechaStr = Utilities.formatDate(
+          fCad,
+          Session.getScriptTimeZone(),
+          "dd/MM/yyyy",
+        );
+
         // Creamos una "llave única" combinando Nombre + Lote + Fecha
         let key = `${nombreProd}|${lote}|${fechaStr}`;
 
         if (fCad < hoy) {
-          if (!mapCaducados[key]) mapCaducados[key] = { nombre: nombreProd, lote: lote, stock: 0, vence: fechaStr };
+          if (!mapCaducados[key])
+            mapCaducados[key] = {
+              nombre: nombreProd,
+              lote: lote,
+              stock: 0,
+              vence: fechaStr,
+            };
           mapCaducados[key].stock += stock; // Sumamos el stock si ya existía
         } else if (fCad <= limite90Dias) {
-          if (!mapProximos[key]) mapProximos[key] = { nombre: nombreProd, lote: lote, stock: 0, vence: fechaStr };
+          if (!mapProximos[key])
+            mapProximos[key] = {
+              nombre: nombreProd,
+              lote: lote,
+              stock: 0,
+              vence: fechaStr,
+            };
           mapProximos[key].stock += stock; // Sumamos el stock si ya existía
         }
       }
@@ -2763,12 +3063,14 @@ function revisarCaducidadesYEnviarAlerta() {
   }
 
   // CONVERTIMOS LOS GRUPOS EN LÍNEAS DE HTML PARA EL CORREO
-  let caducados = Object.values(mapCaducados).map(item => 
-    `<li><b>${item.nombre}</b> (Lote: <span style="font-family:monospace;">${item.lote}</span>) - Stock Total: ${item.stock.toFixed(2)} - Vence: ${item.vence}</li>`
+  let caducados = Object.values(mapCaducados).map(
+    (item) =>
+      `<li><b>${item.nombre}</b> (Lote: <span style="font-family:monospace;">${item.lote}</span>) - Stock Total: ${item.stock.toFixed(2)} - Vence: ${item.vence}</li>`,
   );
 
-  let proximos = Object.values(mapProximos).map(item => 
-    `<li><b>${item.nombre}</b> (Lote: <span style="font-family:monospace;">${item.lote}</span>) - Stock Total: ${item.stock.toFixed(2)} - Vence: ${item.vence}</li>`
+  let proximos = Object.values(mapProximos).map(
+    (item) =>
+      `<li><b>${item.nombre}</b> (Lote: <span style="font-family:monospace;">${item.lote}</span>) - Stock Total: ${item.stock.toFixed(2)} - Vence: ${item.vence}</li>`,
   );
 
   // SI NO HAY ALERTAS, NO MANDAMOS CORREO
@@ -2778,14 +3080,17 @@ function revisarCaducidadesYEnviarAlerta() {
   let correosDestino = [];
   if (sPermisos && sPermisos.getLastRow() > 1) {
     const dataPerm = sPermisos.getDataRange().getValues();
-    for(let i = 1; i < dataPerm.length; i++) {
-       let esAdmin = dataPerm[i][8] === true || String(dataPerm[i][8]).toUpperCase() === 'TRUE';
-       let correo = String(dataPerm[i][0]).trim();
-       if (esAdmin && correo.includes("@")) correosDestino.push(correo);
+    for (let i = 1; i < dataPerm.length; i++) {
+      let esAdmin =
+        dataPerm[i][8] === true ||
+        String(dataPerm[i][8]).toUpperCase() === "TRUE";
+      let correo = String(dataPerm[i][0]).trim();
+      if (esAdmin && correo.includes("@")) correosDestino.push(correo);
     }
   }
-  
-  if (correosDestino.length === 0) correosDestino.push(Session.getActiveUser().getEmail());
+
+  if (correosDestino.length === 0)
+    correosDestino.push(Session.getActiveUser().getEmail());
 
   // ARMAR EL CORREO HTML
   let htmlBody = `
@@ -2832,10 +3137,9 @@ function revisarCaducidadesYEnviarAlerta() {
   MailApp.sendEmail({
     to: correosDestino.join(","),
     subject: "🚨 Alerta WMS: Tienes productos caducados o por caducar",
-    htmlBody: htmlBody
+    htmlBody: htmlBody,
   });
 }
-
 
 // ==========================================
 // MÓDULO: DIRECTORIO DE CLIENTES Y DIRECCIONES
@@ -2851,17 +3155,17 @@ function obtenerDirectorioClientes() {
 
     const data = sCli.getDataRange().getDisplayValues();
     let clientes = [];
-    
+
     for (let i = 1; i < data.length; i++) {
       if (!data[i][0]) continue; // Si no hay ID, saltar
-      
+
       let dirs = [];
       try {
-         // Intentamos leer el JSON de la columna G (índice 6)
-         dirs = JSON.parse(data[i][6] || "[]");
-      } catch(e) {
-         // Si era texto normal viejo, lo metemos como un elemento de lista
-         if (data[i][6]) dirs = [data[i][6]]; 
+        // Intentamos leer el JSON de la columna G (índice 6)
+        dirs = JSON.parse(data[i][6] || "[]");
+      } catch (e) {
+        // Si era texto normal viejo, lo metemos como un elemento de lista
+        if (data[i][6]) dirs = [data[i][6]];
       }
 
       clientes.push({
@@ -2871,13 +3175,13 @@ function obtenerDirectorioClientes() {
         tipo: String(data[i][3]).trim() || "Externo",
         telefono: String(data[i][4]).trim(),
         correo: String(data[i][5]).trim(),
-        direcciones: Array.isArray(dirs) ? dirs : []
+        direcciones: Array.isArray(dirs) ? dirs : [],
       });
     }
-    
+
     // Ordenar alfabéticamente por empresa
     clientes.sort((a, b) => a.empresa.localeCompare(b.empresa));
-    
+
     return { success: true, data: clientes };
   } catch (e) {
     return { success: false, error: e.message };
@@ -2885,7 +3189,6 @@ function obtenerDirectorioClientes() {
     lock.releaseLock();
   }
 }
-
 
 // 2. PEGA ESTAS 3 FUNCIONES NUEVAS AL FINAL DEL ARCHIVO Controller.gs:
 function guardarClienteCRM(datos) {
@@ -2898,27 +3201,35 @@ function guardarClienteCRM(datos) {
 
     let fila = -1;
     if (datos.id && datos.id.trim() !== "") {
-        for (let i = 1; i < data.length; i++) {
-            if (String(data[i][0]).trim() === String(datos.id).trim()) {
-                fila = i + 1;
-                break;
-            }
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]).trim() === String(datos.id).trim()) {
+          fila = i + 1;
+          break;
         }
+      }
     }
 
     if (fila > 0) {
-        sCli.getRange(fila, 2).setValue(datos.nombre);
-        sCli.getRange(fila, 3).setValue(datos.empresa);
-        sCli.getRange(fila, 4).setValue(datos.tipo);
-        sCli.getRange(fila, 5).setValue(datos.telefono);
-        sCli.getRange(fila, 6).setValue(datos.email);
-        return { success: true, id: datos.id };
+      sCli.getRange(fila, 2).setValue(datos.nombre);
+      sCli.getRange(fila, 3).setValue(datos.empresa);
+      sCli.getRange(fila, 4).setValue(datos.tipo);
+      sCli.getRange(fila, 5).setValue(datos.telefono);
+      sCli.getRange(fila, 6).setValue(datos.email);
+      return { success: true, id: datos.id };
     } else {
-        let nuevoId = "CLI-" + Math.floor(Date.now() / 1000);
-        sCli.appendRow([nuevoId, datos.nombre, datos.empresa, datos.tipo, datos.telefono, datos.email, "[]"]);
-        return { success: true, id: nuevoId };
+      let nuevoId = "CLI-" + Math.floor(Date.now() / 1000);
+      sCli.appendRow([
+        nuevoId,
+        datos.nombre,
+        datos.empresa,
+        datos.tipo,
+        datos.telefono,
+        datos.email,
+        "[]",
+      ]);
+      return { success: true, id: nuevoId };
     }
-  } catch(e) {
+  } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
@@ -2936,11 +3247,13 @@ function agregarDireccionCliente(idCliente, nuevaDireccion) {
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).trim() === String(idCliente).trim()) {
         let dirs = [];
-        try { dirs = JSON.parse(data[i][6] || "[]"); } catch(e) {}
-        
+        try {
+          dirs = JSON.parse(data[i][6] || "[]");
+        } catch (e) {}
+
         if (!dirs.includes(nuevaDireccion)) {
-            dirs.push(nuevaDireccion);
-            sCli.getRange(i + 1, 7).setValue(JSON.stringify(dirs)); 
+          dirs.push(nuevaDireccion);
+          sCli.getRange(i + 1, 7).setValue(JSON.stringify(dirs));
         }
         return { success: true, direcciones: dirs };
       }
@@ -2968,7 +3281,7 @@ function actualizarDireccionesCliente(idCliente, arrayDirecciones) {
       }
     }
     throw new Error("Cliente no encontrado.");
-  } catch(e) {
+  } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
@@ -2990,52 +3303,54 @@ function obtenerCatalogoMaestro() {
   try {
     lock.waitLock(10000);
     verificarAccesoServidor();
-    
+
     const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
     if (!sCat || sCat.getLastRow() < 2) return { success: true, data: [] };
-    
+
     const dataCat = sCat.getDataRange().getDisplayValues();
-    
+
     // Traemos los productos operativos para cruzar datos
     const sProd = obtenerHojaSegura("PRODUCTOS");
     const dataProd = sProd ? sProd.getDataRange().getValues() : [];
-    
+
     // Mapear productos que ya existen en el almacén físico
     let operativos = new Set();
-    for(let i = 1; i < dataProd.length; i++) {
-        operativos.add(String(dataProd[i][1]).trim().toUpperCase()); // Por nombre
+    for (let i = 1; i < dataProd.length; i++) {
+      operativos.add(String(dataProd[i][1]).trim().toUpperCase()); // Por nombre
     }
-    
+
     let catalogo = [];
-    
+
     for (let i = 1; i < dataCat.length; i++) {
-        if (!dataCat[i][0]) continue;
-        
-        let id = String(dataCat[i][0]).trim();
-        let nombre = String(dataCat[i][1]).trim();
-        let tipo = String(dataCat[i][2]).trim() || "Propio";
-        
-        // --- LA MAGIA DEL CRUCE DE DATOS ---
-        let estatus = "🧪 Desarrollo";
-        if (tipo !== "Contratipo" && operativos.has(nombre.toUpperCase())) {
-            estatus = "📦 De Línea";
-        } else if (tipo === "Contratipo") {
-            estatus = "🔀 Contratipo";
-        }
-        
-        catalogo.push({
-            id: id,
-            nombre: nombre,
-            tipo: tipo,
-            empresa: String(dataCat[i][3]).trim(),
-            idEquivalente: String(dataCat[i][4]).trim(),
-            datosBasicos: dataCat[i][5] ? JSON.parse(dataCat[i][5]) : {},
-            mediaLinks: dataCat[i][6] ? JSON.parse(dataCat[i][6]) : { foto: "", ft: "", hds: "", videos: [] },
-            matrizVs: dataCat[i][7] ? JSON.parse(dataCat[i][7]) : null,
-            estatusFisico: estatus
-        });
+      if (!dataCat[i][0]) continue;
+
+      let id = String(dataCat[i][0]).trim();
+      let nombre = String(dataCat[i][1]).trim();
+      let tipo = String(dataCat[i][2]).trim() || "Propio";
+
+      // --- LA MAGIA DEL CRUCE DE DATOS ---
+      let estatus = "🧪 Desarrollo";
+      if (tipo !== "Contratipo" && operativos.has(nombre.toUpperCase())) {
+        estatus = "📦 De Línea";
+      } else if (tipo === "Contratipo") {
+        estatus = "🔀 Contratipo";
+      }
+
+      catalogo.push({
+        id: id,
+        nombre: nombre,
+        tipo: tipo,
+        empresa: String(dataCat[i][3]).trim(),
+        idEquivalente: String(dataCat[i][4]).trim(),
+        datosBasicos: dataCat[i][5] ? JSON.parse(dataCat[i][5]) : {},
+        mediaLinks: dataCat[i][6]
+          ? JSON.parse(dataCat[i][6])
+          : { foto: "", ft: "", hds: "", videos: [] },
+        matrizVs: dataCat[i][7] ? JSON.parse(dataCat[i][7]) : null,
+        estatusFisico: estatus,
+      });
     }
-    
+
     return { success: true, data: catalogo };
   } catch (e) {
     return { success: false, error: e.message };
@@ -3052,41 +3367,52 @@ function guardarItemCatalogo(datos) {
   try {
     lock.waitLock(10000);
     verificarAccesoServidor();
-    
+
     const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
     const data = sCat.getDataRange().getValues();
-    
+
     let fila = -1;
-    let idItem = datos.id || ("CAT-" + Math.floor(Date.now() / 1000));
-    
+    let idItem = datos.id || "CAT-" + Math.floor(Date.now() / 1000);
+
     for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]).trim() === idItem) {
-            fila = i + 1;
-            break;
-        }
+      if (String(data[i][0]).trim() === idItem) {
+        fila = i + 1;
+        break;
+      }
     }
-    
+
     // Empaquetamos en JSON
     let jsonBasicos = JSON.stringify(datos.datosBasicos || {});
-    let jsonMedia = JSON.stringify(datos.mediaLinks || { foto: "", ft: "", hds: "", videos: [] });
+    let jsonMedia = JSON.stringify(
+      datos.mediaLinks || { foto: "", ft: "", hds: "", videos: [] },
+    );
     let jsonMatriz = datos.matrizVs ? JSON.stringify(datos.matrizVs) : "";
-    
+
     if (fila > 0) {
-        sCat.getRange(fila, 2).setValue(datos.nombre);
-        sCat.getRange(fila, 3).setValue(datos.tipo);
-        sCat.getRange(fila, 4).setValue(datos.empresa);
-        sCat.getRange(fila, 5).setValue(datos.idEquivalente);
-        sCat.getRange(fila, 6).setValue(jsonBasicos);
-        
-        // Solo sobreescribimos Media y Matriz si vienen en el envío (para no borrar las fotos subidas)
-        if (datos.mediaLinks) sCat.getRange(fila, 7).setValue(jsonMedia);
-        if (datos.matrizVs) sCat.getRange(fila, 8).setValue(jsonMatriz);
+      sCat.getRange(fila, 2).setValue(datos.nombre);
+      sCat.getRange(fila, 3).setValue(datos.tipo);
+      sCat.getRange(fila, 4).setValue(datos.empresa);
+      sCat.getRange(fila, 5).setValue(datos.idEquivalente);
+      sCat.getRange(fila, 6).setValue(jsonBasicos);
+
+      // Solo sobreescribimos Media y Matriz si vienen en el envío (para no borrar las fotos subidas)
+      if (datos.mediaLinks) sCat.getRange(fila, 7).setValue(jsonMedia);
+      if (datos.matrizVs) sCat.getRange(fila, 8).setValue(jsonMatriz);
     } else {
-        sCat.appendRow([idItem, datos.nombre, datos.tipo, datos.empresa, datos.idEquivalente, jsonBasicos, jsonMedia, jsonMatriz]);
+      sCat.appendRow([
+        idItem,
+        datos.nombre,
+        datos.tipo,
+        datos.empresa,
+        datos.idEquivalente,
+        jsonBasicos,
+        jsonMedia,
+        jsonMatriz,
+      ]);
     }
-    
+
     return { success: true, id: idItem };
-  } catch(e) {
+  } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
@@ -3096,65 +3422,87 @@ function guardarItemCatalogo(datos) {
 /**
  * 3. Motor de Drive: Crea carpeta por producto, sube el archivo y guarda el link.
  */
-function subirDocumentoCatalogo(idCatalogo, nombreProducto, tipoDoc, base64Data, mimeType, nombreArchivo) {
+function subirDocumentoCatalogo(
+  idCatalogo,
+  nombreProducto,
+  tipoDoc,
+  base64Data,
+  mimeType,
+  nombreArchivo,
+) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(15000);
     verificarAccesoServidor();
-    
-    if (typeof ID_CARPETA_MEDIA_CATALOGO === 'undefined') {
-        throw new Error("Falta definir la constante ID_CARPETA_MEDIA_CATALOGO en el código.");
+
+    if (typeof ID_CARPETA_MEDIA_CATALOGO === "undefined") {
+      throw new Error(
+        "Falta definir la constante ID_CARPETA_MEDIA_CATALOGO en el código.",
+      );
     }
 
     // 1. Obtener la carpeta maestra
     let carpetaMaestra;
     try {
-        carpetaMaestra = DriveApp.getFolderById(ID_CARPETA_MEDIA_CATALOGO);
-    } catch(e) {
-        throw new Error("No se encuentra la carpeta maestra en Drive. Revisa el ID.");
+      carpetaMaestra = DriveApp.getFolderById(ID_CARPETA_MEDIA_CATALOGO);
+    } catch (e) {
+      throw new Error(
+        "No se encuentra la carpeta maestra en Drive. Revisa el ID.",
+      );
     }
-    
+
     // 2. Buscar o crear la subcarpeta del producto (Ej: CAT-1234_MULTITASK)
     let nombreSubCarpeta = `${idCatalogo}_${nombreProducto.replace(/[^a-zA-Z0-9]/g, "_")}`;
     let subCarpeta;
-    let carpetas = carpetaMaestra.searchFolders(`title = '${nombreSubCarpeta}'`);
-    
+    let carpetas = carpetaMaestra.searchFolders(
+      `title = '${nombreSubCarpeta}'`,
+    );
+
     if (carpetas.hasNext()) {
-        subCarpeta = carpetas.next();
+      subCarpeta = carpetas.next();
     } else {
-        subCarpeta = carpetaMaestra.createFolder(nombreSubCarpeta);
-        subCarpeta.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      subCarpeta = carpetaMaestra.createFolder(nombreSubCarpeta);
+      subCarpeta.setSharing(
+        DriveApp.Access.ANYONE_WITH_LINK,
+        DriveApp.Permission.VIEW,
+      );
     }
-    
+
     // 3. Crear el archivo físico
-    const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, nombreArchivo);
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(base64Data),
+      mimeType,
+      nombreArchivo,
+    );
     const file = subCarpeta.createFile(blob);
     const urlArchivo = file.getUrl();
-    
+
     // 4. Actualizar el registro JSON en Sheets
     const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
     const data = sCat.getDataRange().getValues();
     let fila = -1;
     let mediaLinks = { foto: "", ft: "", hds: "", videos: [] };
-    
+
     for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]).trim() === String(idCatalogo)) {
-            fila = i + 1;
-            if (data[i][6]) {
-                try { mediaLinks = JSON.parse(data[i][6]); } catch(e) {}
-            }
-            break;
+      if (String(data[i][0]).trim() === String(idCatalogo)) {
+        fila = i + 1;
+        if (data[i][6]) {
+          try {
+            mediaLinks = JSON.parse(data[i][6]);
+          } catch (e) {}
         }
+        break;
+      }
     }
-    
+
     if (fila > 0) {
-        if (tipoDoc === "foto") mediaLinks.foto = urlArchivo;
-        else if (tipoDoc === "ft") mediaLinks.ft = urlArchivo;
-        else if (tipoDoc === "hds") mediaLinks.hds = urlArchivo;
-        
-        sCat.getRange(fila, 7).setValue(JSON.stringify(mediaLinks));
+      if (tipoDoc === "foto") mediaLinks.foto = urlArchivo;
+      else if (tipoDoc === "ft") mediaLinks.ft = urlArchivo;
+      else if (tipoDoc === "hds") mediaLinks.hds = urlArchivo;
+
+      sCat.getRange(fila, 7).setValue(JSON.stringify(mediaLinks));
     }
-    
+
     return { success: true, url: urlArchivo };
   } catch (e) {
     return { success: false, error: e.message };
@@ -3162,7 +3510,6 @@ function subirDocumentoCatalogo(idCatalogo, nombreProducto, tipoDoc, base64Data,
     lock.releaseLock();
   }
 }
-
 
 /**
  * Elimina un producto del catálogo.
@@ -3172,18 +3519,21 @@ function eliminarItemCatalogo(idCatalogo) {
   try {
     lock.waitLock(10000);
     verificarAccesoServidor();
-    
+
     const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
     const data = sCat.getDataRange().getValues();
-    
+
     for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]).trim() === String(idCatalogo)) {
-            sCat.deleteRow(i + 1);
-            return { success: true };
-        }
+      if (String(data[i][0]).trim() === String(idCatalogo)) {
+        sCat.deleteRow(i + 1);
+        return { success: true };
+      }
     }
-    return { success: false, error: "Producto no encontrado en la base de datos." };
-  } catch(e) {
+    return {
+      success: false,
+      error: "Producto no encontrado en la base de datos.",
+    };
+  } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
@@ -3198,45 +3548,49 @@ function analizarEquivalenciaConIA(idProductoRaro) {
   try {
     lock.waitLock(15000);
     verificarAccesoServidor();
-    
-if (!GEMINI_API_KEY || GEMINI_API_KEY === "") {
-        throw new Error("Falta configurar la API Key de Gemini en Controller.gs.");
+
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "") {
+      throw new Error(
+        "Falta configurar la API Key de Gemini en Controller.gs.",
+      );
     }
 
     const sCat = obtenerHojaSegura("CATALOGO_TECNICO");
     const dataCat = sCat.getDataRange().getDisplayValues();
-    
+
     let productoObjetivo = null;
     let nuestrosProductos = [];
 
     // 1. Recolectar datos del catálogo
     for (let i = 1; i < dataCat.length; i++) {
-        if (!dataCat[i][0]) continue;
-        
-        let id = String(dataCat[i][0]).trim();
-        let basicos = dataCat[i][5] ? JSON.parse(dataCat[i][5]) : {};
-        
-        let prodData = {
-            id: id,
-            nombre: String(dataCat[i][1]).trim(),
-            activos: basicos.activos_lista || [],
-            aplicaciones: basicos.aplicaciones || [],
-            dosis: basicos.dosis || ""
-        };
+      if (!dataCat[i][0]) continue;
 
-        if (id === idProductoRaro) {
-            productoObjetivo = prodData;
-            productoObjetivo.empresa = String(dataCat[i][3]).trim();
-        } else if (String(dataCat[i][2]).trim() !== "Contratipo") {
-            // Guardamos nuestros productos para que la IA los analice
-            nuestrosProductos.push(prodData);
-        }
+      let id = String(dataCat[i][0]).trim();
+      let basicos = dataCat[i][5] ? JSON.parse(dataCat[i][5]) : {};
+
+      let prodData = {
+        id: id,
+        nombre: String(dataCat[i][1]).trim(),
+        activos: basicos.activos_lista || [],
+        aplicaciones: basicos.aplicaciones || [],
+        dosis: basicos.dosis || "",
+      };
+
+      if (id === idProductoRaro) {
+        productoObjetivo = prodData;
+        productoObjetivo.empresa = String(dataCat[i][3]).trim();
+      } else if (String(dataCat[i][2]).trim() !== "Contratipo") {
+        // Guardamos nuestros productos para que la IA los analice
+        nuestrosProductos.push(prodData);
+      }
     }
 
-    if (!productoObjetivo) throw new Error("No se encontró el producto a analizar.");
-    if (nuestrosProductos.length === 0) throw new Error("No hay productos de línea registrados para comparar.");
+    if (!productoObjetivo)
+      throw new Error("No se encontró el producto a analizar.");
+    if (nuestrosProductos.length === 0)
+      throw new Error("No hay productos de línea registrados para comparar.");
 
-// 2. Construir el Prompt (La instrucción para la IA) Multi-Opciones
+    // 2. Construir el Prompt (La instrucción para la IA) Multi-Opciones
     let prompt = `Eres un ingeniero químico Senior experto en formulaciones de adyuvantes agrícolas y agroquímicos.
     Analiza este producto de la competencia:
     - Nombre: ${productoObjetivo.nombre} (Fabricante: ${productoObjetivo.empresa})
@@ -3266,15 +3620,15 @@ if (!GEMINI_API_KEY || GEMINI_API_KEY === "") {
     // 3. Llamada a la API de Gemini 1.5 Flash (Súper rápida)
     let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     let payload = {
-        "contents": [{ "parts": [{ "text": prompt }] }],
-        "generationConfig": { "response_mime_type": "application/json" } // Obligamos a que responda en JSON puro
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { response_mime_type: "application/json" }, // Obligamos a que responda en JSON puro
     };
 
     let options = {
-        "method": "post",
-        "contentType": "application/json",
-        "payload": JSON.stringify(payload),
-        "muteHttpExceptions": true
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true,
     };
 
     let response = UrlFetchApp.fetch(url, options);
@@ -3285,7 +3639,6 @@ if (!GEMINI_API_KEY || GEMINI_API_KEY === "") {
     // 4. Extraer respuesta y mandarla al frontend
     let respuestaIA = json.candidates[0].content.parts[0].text;
     return { success: true, analisis: JSON.parse(respuestaIA) };
-    
   } catch (e) {
     return { success: false, error: e.message };
   } finally {
@@ -3301,8 +3654,9 @@ function generarRecomendacionID(perfilBuscado) {
   try {
     lock.waitLock(15000);
     verificarAccesoServidor();
-    
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "") throw new Error("Falta configurar la API Key de Gemini.");
+
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "")
+      throw new Error("Falta configurar la API Key de Gemini.");
 
     // Construimos el Prompt para el Ingeniero de Desarrollo
     let prompt = `Eres un ingeniero químico Senior en Investigación y Desarrollo (I+D) de agroquímicos y adyuvantes.
@@ -3325,15 +3679,15 @@ function generarRecomendacionID(perfilBuscado) {
     // Llamamos a Gemini 2.5 Flash
     let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     let payload = {
-        "contents": [{ "parts": [{ "text": prompt }] }],
-        "generationConfig": { "response_mime_type": "application/json" }
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { response_mime_type: "application/json" },
     };
 
     let options = {
-        "method": "post",
-        "contentType": "application/json",
-        "payload": JSON.stringify(payload),
-        "muteHttpExceptions": true
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true,
     };
 
     let response = UrlFetchApp.fetch(url, options);
@@ -3343,7 +3697,6 @@ function generarRecomendacionID(perfilBuscado) {
 
     let respuestaIA = json.candidates[0].content.parts[0].text;
     return { success: true, sugerencia: JSON.parse(respuestaIA) };
-    
   } catch (e) {
     return { success: false, error: e.message };
   } finally {

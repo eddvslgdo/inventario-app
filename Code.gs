@@ -1,6 +1,13 @@
-function doGet() {
-  return HtmlService.createTemplateFromFile('frontend/index')
-      .evaluate()
+function doGet(e) {
+  const template = HtmlService.createTemplateFromFile('frontend/index');
+  
+  // Atrapamos si alguien entró escaneando un QR
+  template.qrUbicacionId = (e && e.parameter && e.parameter.ubicacion) ? e.parameter.ubicacion : null;
+  
+  // EXTRAEMOS LA URL OFICIAL DEL SISTEMA DESDE EL SERVIDOR
+  template.appUrl = ScriptApp.getService().getUrl(); 
+
+  return template.evaluate()
       .setTitle('Sistema de Inventario')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');

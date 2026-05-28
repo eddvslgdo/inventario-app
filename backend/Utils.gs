@@ -28,7 +28,7 @@ function esAdminEnPermisos(userEmail) {
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim().toLowerCase() === emailBuscado) {
-      return data[i][8] === true || String(data[i][8]).toUpperCase() === 'TRUE';
+      return data[i][8] === true || String(data[i][8]).toUpperCase() === "TRUE";
     }
   }
   return false;
@@ -61,16 +61,20 @@ function switchEnvironment(mode, userEmail) {
   const esAdmin = esAdminEnPermisos(userEmail);
 
   if (!esAdmin && mode === "TEST") {
-    throw new Error("No autorizado: solo administradores pueden habilitar entorno TEST.");
+    throw new Error(
+      "No autorizado: solo administradores pueden habilitar entorno TEST.",
+    );
   }
 
   const safeMode = esAdmin ? mode : "PROD";
-  
+
   // Guarda el entorno SOLO para la sesión actual del navegador
-  PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), safeMode);
+  PropertiesService.getScriptProperties().setProperty(
+    getEnvScopeKey_(),
+    safeMode,
+  );
   return safeMode;
 }
-
 
 // ==========================================
 // GESTIÓN DE SESIÓN POR CORREO Y PIN
@@ -78,48 +82,68 @@ function switchEnvironment(mode, userEmail) {
 function procesarLoginEmail(email, pin) {
   const db = SpreadsheetApp.openById(DB_PROD_ID);
   const sPermisos = db.getSheetByName("PERMISOS");
-  if (!sPermisos) throw new Error("Falta la pestaña PERMISOS en la base de datos.");
+  if (!sPermisos)
+    throw new Error("Falta la pestaña PERMISOS en la base de datos.");
   const data = sPermisos.getDataRange().getValues();
   const emailInput = String(email).trim().toLowerCase();
-  
+
   for (let i = 1; i < data.length; i++) {
     let emailDb = String(data[i][0]).trim().toLowerCase();
     if (emailDb === emailInput && emailDb !== "") {
-      let esAdmin = data[i][8] === true || String(data[i][8]).toUpperCase() === 'TRUE';
+      let esAdmin =
+        data[i][8] === true || String(data[i][8]).toUpperCase() === "TRUE";
       let pinDb = String(data[i][1]).trim();
-      
-      if (esAdmin && (!pin || String(pin).trim() === "")) return { requiresPin: true };
-      if (esAdmin && String(pin).trim() !== pinDb) return { success: false, error: "PIN incorrecto." };
-      
-      PropertiesService.getScriptProperties().setProperty(getEnvScopeKey_(), "PROD");
-      
+
+      if (esAdmin && (!pin || String(pin).trim() === ""))
+        return { requiresPin: true };
+      if (esAdmin && String(pin).trim() !== pinDb)
+        return { success: false, error: "PIN incorrecto." };
+
+      PropertiesService.getScriptProperties().setProperty(
+        getEnvScopeKey_(),
+        "PROD",
+      );
+
       const scriptProps = PropertiesService.getScriptProperties();
-      let rawSessions = scriptProps.getProperty('ACTIVE_SESSIONS');
+      let rawSessions = scriptProps.getProperty("ACTIVE_SESSIONS");
       let sessions = rawSessions ? JSON.parse(rawSessions) : {};
       let now = new Date().getTime();
-      
+
       for (let user in sessions) {
-         if (now - sessions[user].lastPing > 1800000) delete sessions[user];
+        if (now - sessions[user].lastPing > 1800000) delete sessions[user];
       }
 
-      sessions[emailDb] = { lastPing: now, rol: esAdmin ? "admin" : "user", env: "PROD" };
-      scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
+      sessions[emailDb] = {
+        lastPing: now,
+        rol: esAdmin ? "admin" : "user",
+        env: "PROD",
+      };
+      scriptProps.setProperty("ACTIVE_SESSIONS", JSON.stringify(sessions));
 
       return {
         success: true,
-        nombre: emailDb.split("@")[0], 
+        nombre: emailDb.split("@")[0],
         esAdmin: esAdmin,
         entorno: "PROD",
         permisos: {
-          entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === 'TRUE',
-          salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === 'TRUE',
-          ubicaciones: data[i][4] === true || String(data[i][4]).toUpperCase() === 'TRUE',
-          productos: data[i][5] === true || String(data[i][5]).toUpperCase() === 'TRUE',
-          envios: data[i][6] === true || String(data[i][6]).toUpperCase() === 'TRUE',
-          bajas: data[i][7] === true || String(data[i][7]).toUpperCase() === 'TRUE',
-          historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === 'TRUE',
-          verCostos: data[i][10] === true || String(data[i][10]).toUpperCase() === 'TRUE' // <--- NUEVO PERMISO (COL K)
-        }
+          entradas:
+            data[i][2] === true || String(data[i][2]).toUpperCase() === "TRUE",
+          salidas:
+            data[i][3] === true || String(data[i][3]).toUpperCase() === "TRUE",
+          ubicaciones:
+            data[i][4] === true || String(data[i][4]).toUpperCase() === "TRUE",
+          productos:
+            data[i][5] === true || String(data[i][5]).toUpperCase() === "TRUE",
+          envios:
+            data[i][6] === true || String(data[i][6]).toUpperCase() === "TRUE",
+          bajas:
+            data[i][7] === true || String(data[i][7]).toUpperCase() === "TRUE",
+          historialEntradas:
+            data[i][9] === true || String(data[i][9]).toUpperCase() === "TRUE",
+          verCostos:
+            data[i][10] === true ||
+            String(data[i][10]).toUpperCase() === "TRUE", // <--- NUEVO PERMISO (COL K)
+        },
       };
     }
   }
@@ -132,78 +156,78 @@ function pingSesion(email, rol, entornoActual, vistaActual) {
   // --- SEMÁFORO DE CONCURRENCIA ---
   const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(3000); 
+    lock.waitLock(3000);
   } catch (e) {
-    return { sigueActivo: true, ignorarPing: true }; 
+    return { sigueActivo: true, ignorarPing: true };
   }
 
   try {
-      const scriptProps = PropertiesService.getScriptProperties();
-      let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
-      if (!raw) return { sigueActivo: false }; 
+    const scriptProps = PropertiesService.getScriptProperties();
+    let raw = scriptProps.getProperty("ACTIVE_SESSIONS");
+    if (!raw) return { sigueActivo: false };
 
-      let sessions = JSON.parse(raw);
-      let now = new Date().getTime();
-      let correoNormalizado = String(email).trim().toLowerCase();
+    let sessions = JSON.parse(raw);
+    let now = new Date().getTime();
+    let correoNormalizado = String(email).trim().toLowerCase();
 
-      // MANTENER ANTIGÜEDAD INTACTA
-      let tiempoEntrada = (sessions[correoNormalizado] && sessions[correoNormalizado].loginTime) 
-                          ? sessions[correoNormalizado].loginTime 
-                          : now;
+    // MANTENER ANTIGÜEDAD INTACTA
+    let tiempoEntrada =
+      sessions[correoNormalizado] && sessions[correoNormalizado].loginTime
+        ? sessions[correoNormalizado].loginTime
+        : now;
 
-      sessions[correoNormalizado] = { 
-         loginTime: tiempoEntrada, 
-         lastPing: now, 
-         rol: rol || "user", 
-         env: entornoActual || "PROD", 
-         vista: vistaActual || "desconocida" 
-      };
+    sessions[correoNormalizado] = {
+      loginTime: tiempoEntrada,
+      lastPing: now,
+      rol: rol || "user",
+      env: entornoActual || "PROD",
+      vista: vistaActual || "desconocida",
+    };
 
-      let adminsEnProd = [];
-      let normalesEnProd = [];
-      let usuariosConectados = [];
+    let adminsEnProd = [];
+    let normalesEnProd = [];
+    let usuariosConectados = [];
 
-      for (let user in sessions) {
-         if (now - sessions[user].lastPing < 25000) { 
-            usuariosConectados.push({ email: user, ...sessions[user] });
-            if (sessions[user].env === "PROD") {
-               if (sessions[user].rol === "admin") adminsEnProd.push(user);
-               else normalesEnProd.push({ e: user, t: sessions[user].loginTime });
-            }
-         } else {
-            delete sessions[user]; 
-         }
-      }
-      
-      scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
-
-      // 1. ¿QUIÉN ES EL LÍDER ABSOLUTO EN PRODUCCIÓN?
-      let liderProd = "";
-      if (adminsEnProd.length > 0) {
-          liderProd = adminsEnProd[0]; 
-      } else if (normalesEnProd.length > 0) {
-          normalesEnProd.sort((a, b) => a.t - b.t);
-          liderProd = normalesEnProd[0].e;
-      }
-
-      // 2. ¿TIENE PERMISO EL USUARIO QUE ESTÁ PREGUNTANDO?
-      let tengoPermiso = false;
-      if (entornoActual === "TEST") {
-          tengoPermiso = true; // En pruebas siempre puedes escribir localmente
+    for (let user in sessions) {
+      if (now - sessions[user].lastPing < 25000) {
+        usuariosConectados.push({ email: user, ...sessions[user] });
+        if (sessions[user].env === "PROD") {
+          if (sessions[user].rol === "admin") adminsEnProd.push(user);
+          else normalesEnProd.push({ e: user, t: sessions[user].loginTime });
+        }
       } else {
-          tengoPermiso = (liderProd === correoNormalizado); // En PROD, solo si eres el líder
+        delete sessions[user];
       }
+    }
 
-      // Devolvemos SIEMPRE el liderProd para que la tabla del Admin sepa quién tiene el control real
-      return {
-         sigueActivo: true,
-         tengoPermiso: tengoPermiso,
-         escritorActual: liderProd ? liderProd.split('@')[0] : "", 
-         listaUsuarios: usuariosConectados
-      };
-      
+    scriptProps.setProperty("ACTIVE_SESSIONS", JSON.stringify(sessions));
+
+    // 1. ¿QUIÉN ES EL LÍDER ABSOLUTO EN PRODUCCIÓN?
+    let liderProd = "";
+    if (adminsEnProd.length > 0) {
+      liderProd = adminsEnProd[0];
+    } else if (normalesEnProd.length > 0) {
+      normalesEnProd.sort((a, b) => a.t - b.t);
+      liderProd = normalesEnProd[0].e;
+    }
+
+    // 2. ¿TIENE PERMISO EL USUARIO QUE ESTÁ PREGUNTANDO?
+    let tengoPermiso = false;
+    if (entornoActual === "TEST") {
+      tengoPermiso = true; // En pruebas siempre puedes escribir localmente
+    } else {
+      tengoPermiso = liderProd === correoNormalizado; // En PROD, solo si eres el líder
+    }
+
+    // Devolvemos SIEMPRE el liderProd para que la tabla del Admin sepa quién tiene el control real
+    return {
+      sigueActivo: true,
+      tengoPermiso: tengoPermiso,
+      escritorActual: liderProd ? liderProd.split("@")[0] : "",
+      listaUsuarios: usuariosConectados,
+    };
   } finally {
-      lock.releaseLock();
+    lock.releaseLock();
   }
 }
 
@@ -215,21 +239,32 @@ function registrarUsuarioPendiente(email) {
     const db = SpreadsheetApp.openById(DB_PROD_ID);
     const s = db.getSheetByName("PERMISOS");
     const data = s.getDataRange().getValues();
-    
+
     const emailBuscado = String(email).trim().toLowerCase();
-    
+
     // Verificamos por seguridad que no exista ya
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).trim().toLowerCase() === emailBuscado) {
         return { success: false, error: "El usuario ya existe." };
       }
     }
-    
+
     // Agregamos a la hoja: [CORREO, PIN(vacío), Entradas, Salidas, Ubic, Prod, Envios, Bajas, EsAdmin] (Todo en false)
-    s.appendRow([emailBuscado, "", false, false, false, false, false, false, false, false]); 
-    
+    s.appendRow([
+      emailBuscado,
+      "",
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+
     return { success: true };
-  } catch(e) {
+  } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
@@ -243,23 +278,32 @@ function obtenerListaUsuarios() {
   const db = SpreadsheetApp.openById(DB_PROD_ID);
   const s = db.getSheetByName("PERMISOS");
   if (!s) return [];
-  
+
   const data = s.getDataRange().getValues();
   let usuarios = [];
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0]) { 
+    if (data[i][0]) {
       usuarios.push({
         correo: String(data[i][0]).trim(),
         pin: data[i][1],
-        entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === 'TRUE',
-        salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === 'TRUE',
-        ubicaciones: data[i][4] === true || String(data[i][4]).toUpperCase() === 'TRUE',
-        productos: data[i][5] === true || String(data[i][5]).toUpperCase() === 'TRUE',
-        envios: data[i][6] === true || String(data[i][6]).toUpperCase() === 'TRUE',
-        bajas: data[i][7] === true || String(data[i][7]).toUpperCase() === 'TRUE',
-        esAdmin: data[i][8] === true || String(data[i][8]).toUpperCase() === 'TRUE',
-        historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === 'TRUE',
-        verCostos: data[i][10] === true || String(data[i][10]).toUpperCase() === 'TRUE' // <--- NUEVO PERMISO
+        entradas:
+          data[i][2] === true || String(data[i][2]).toUpperCase() === "TRUE",
+        salidas:
+          data[i][3] === true || String(data[i][3]).toUpperCase() === "TRUE",
+        ubicaciones:
+          data[i][4] === true || String(data[i][4]).toUpperCase() === "TRUE",
+        productos:
+          data[i][5] === true || String(data[i][5]).toUpperCase() === "TRUE",
+        envios:
+          data[i][6] === true || String(data[i][6]).toUpperCase() === "TRUE",
+        bajas:
+          data[i][7] === true || String(data[i][7]).toUpperCase() === "TRUE",
+        esAdmin:
+          data[i][8] === true || String(data[i][8]).toUpperCase() === "TRUE",
+        historialEntradas:
+          data[i][9] === true || String(data[i][9]).toUpperCase() === "TRUE",
+        verCostos:
+          data[i][10] === true || String(data[i][10]).toUpperCase() === "TRUE", // <--- NUEVO PERMISO
       });
     }
   }
@@ -273,7 +317,7 @@ function guardarUsuario(u) {
     const db = SpreadsheetApp.openById(DB_PROD_ID);
     const s = db.getSheetByName("PERMISOS");
     const data = s.getDataRange().getValues();
-    
+
     let fila = -1;
     const correoBusqueda = String(u.correo).trim().toLowerCase();
     for (let i = 1; i < data.length; i++) {
@@ -282,21 +326,29 @@ function guardarUsuario(u) {
         break;
       }
     }
-    
+
     // AHORA GUARDAMOS 11 COLUMNAS
     const rowData = [
-      u.correo, u.pin || "", 
-      u.entradas, u.salidas, u.ubicaciones, 
-      u.productos, u.envios, u.bajas, u.esAdmin, u.historialEntradas, u.verCostos
+      u.correo,
+      u.pin || "",
+      u.entradas,
+      u.salidas,
+      u.ubicaciones,
+      u.productos,
+      u.envios,
+      u.bajas,
+      u.esAdmin,
+      u.historialEntradas,
+      u.verCostos,
     ];
-    
+
     if (fila > 0) {
       s.getRange(fila, 1, 1, 11).setValues([rowData]);
     } else {
-      s.appendRow(rowData); 
+      s.appendRow(rowData);
     }
     return { success: true };
-  } catch(e) {
+  } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
@@ -307,22 +359,30 @@ function eliminarUsuario(correoAEliminar, correoActualAdmin) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
-    if (String(correoAEliminar).trim().toLowerCase() === String(correoActualAdmin).trim().toLowerCase()) {
-       throw new Error("Sistema de seguridad: No puedes eliminar tu propio usuario administrador.");
+    if (
+      String(correoAEliminar).trim().toLowerCase() ===
+      String(correoActualAdmin).trim().toLowerCase()
+    ) {
+      throw new Error(
+        "Sistema de seguridad: No puedes eliminar tu propio usuario administrador.",
+      );
     }
 
     const db = SpreadsheetApp.openById(DB_PROD_ID);
     const s = db.getSheetByName("PERMISOS");
     const data = s.getDataRange().getValues();
-    
+
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim().toLowerCase() === String(correoAEliminar).trim().toLowerCase()) {
+      if (
+        String(data[i][0]).trim().toLowerCase() ===
+        String(correoAEliminar).trim().toLowerCase()
+      ) {
         s.deleteRow(i + 1);
         return { success: true };
       }
     }
     throw new Error("Usuario no encontrado.");
-  } catch(e) {
+  } catch (e) {
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
@@ -337,44 +397,49 @@ function registrarEnBitacora(usuario, accion, detalle) {
     // Busca la base de datos activa (Prod o Test)
     const db = SpreadsheetApp.openById(getActiveDbId());
     let sBitacora = db.getSheetByName("BITACORA_ACTIVIDAD");
-    
+
     // MEJORA: Si la hoja NO existe en este Excel, ¡la crea automáticamente!
     if (!sBitacora) {
       sBitacora = db.insertSheet("BITACORA_ACTIVIDAD");
     }
-    
+
     // Si la hoja está vacía (recién creada), le pone encabezados automáticos
     if (sBitacora.getLastRow() === 0) {
       sBitacora.appendRow(["FECHA", "USUARIO", "ACCIÓN", "DETALLE"]);
-      sBitacora.getRange("A1:D1").setFontWeight("bold").setBackground("#f3f3f3");
+      sBitacora
+        .getRange("A1:D1")
+        .setFontWeight("bold")
+        .setBackground("#f3f3f3");
     }
-    
+
     // Escribimos el movimiento
     sBitacora.appendRow([new Date(), usuario, accion, detalle]);
     return true;
-  } catch(e) {
+  } catch (e) {
     console.error("Error en bitácora: " + e.message);
     return false;
   }
 }
 
 function registrarCierreSesion(email) {
-  if(!email) return;
+  if (!email) return;
   try {
     const scriptProps = PropertiesService.getScriptProperties();
-    let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
-    if(raw) {
-        let sessions = JSON.parse(raw);
-        delete sessions[email.toLowerCase()];
-        scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
+    let raw = scriptProps.getProperty("ACTIVE_SESSIONS");
+    if (raw) {
+      let sessions = JSON.parse(raw);
+      delete sessions[email.toLowerCase()];
+      scriptProps.setProperty("ACTIVE_SESSIONS", JSON.stringify(sessions));
     }
-  } catch(e) {}
+  } catch (e) {}
 }
 
 // --- BOTÓN DE PÁNICO: CORRER ESTA FUNCIÓN DESDE EL EDITOR PARA DESTRABAR EL SISTEMA ---
 function LIBERAR_SISTEMA() {
-   PropertiesService.getScriptProperties().deleteProperty('ACTIVE_SESSIONS');
-   console.log("✅ Sistema liberado exitosamente. Todos los usuarios fueron desconectados.");
+  PropertiesService.getScriptProperties().deleteProperty("ACTIVE_SESSIONS");
+  console.log(
+    "✅ Sistema liberado exitosamente. Todos los usuarios fueron desconectados.",
+  );
 }
 
 // --- NUEVO: HEARTBEAT (LATIDO) PARA MANTENER Y VERIFICAR LA SESIÓN ---
@@ -385,116 +450,122 @@ function pingSesion(email, rol, entornoActual, vistaActual) {
   // Evita que dos navegadores se borren mutuamente si hacen ping en el mismo milisegundo
   const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(3000); 
+    lock.waitLock(3000);
   } catch (e) {
     return { sigueActivo: true, ignorarPing: true }; // Si hay tráfico, espera al siguiente latido
   }
 
   try {
-      const scriptProps = PropertiesService.getScriptProperties();
-      let raw = scriptProps.getProperty('ACTIVE_SESSIONS');
-      if (!raw) return { sigueActivo: false }; 
+    const scriptProps = PropertiesService.getScriptProperties();
+    let raw = scriptProps.getProperty("ACTIVE_SESSIONS");
+    if (!raw) return { sigueActivo: false };
 
-      let sessions = JSON.parse(raw);
-      let now = new Date().getTime();
-      let correoNormalizado = String(email).trim().toLowerCase();
+    let sessions = JSON.parse(raw);
+    let now = new Date().getTime();
+    let correoNormalizado = String(email).trim().toLowerCase();
 
-      // MANTENER ANTIGÜEDAD INTACTA
-      let tiempoEntrada = (sessions[correoNormalizado] && sessions[correoNormalizado].loginTime) 
-                          ? sessions[correoNormalizado].loginTime 
-                          : now;
+    // MANTENER ANTIGÜEDAD INTACTA
+    let tiempoEntrada =
+      sessions[correoNormalizado] && sessions[correoNormalizado].loginTime
+        ? sessions[correoNormalizado].loginTime
+        : now;
 
-      sessions[correoNormalizado] = { 
-         loginTime: tiempoEntrada, 
-         lastPing: now, 
-         rol: rol || "user", 
-         env: entornoActual || "PROD", 
-         vista: vistaActual || "desconocida" 
-      };
+    sessions[correoNormalizado] = {
+      loginTime: tiempoEntrada,
+      lastPing: now,
+      rol: rol || "user",
+      env: entornoActual || "PROD",
+      vista: vistaActual || "desconocida",
+    };
 
-      let adminsEnProd = [];
-      let normalesEnProd = [];
-      let usuariosConectados = [];
+    let adminsEnProd = [];
+    let normalesEnProd = [];
+    let usuariosConectados = [];
 
-      // LIMPIAR INACTIVOS (Menos de 25 segundos para que suelte rápido el permiso al salir)
-      for (let user in sessions) {
-         if (now - sessions[user].lastPing < 25000) { 
-            usuariosConectados.push({ email: user, ...sessions[user] });
-            if (sessions[user].env === "PROD") {
-               if (sessions[user].rol === "admin") adminsEnProd.push(user);
-               else normalesEnProd.push({ e: user, t: sessions[user].loginTime });
-            }
-         } else {
-            delete sessions[user]; 
-         }
-      }
-      
-      scriptProps.setProperty('ACTIVE_SESSIONS', JSON.stringify(sessions));
-
-      // LÓGICA DE HERENCIA DE PERMISOS
-      let tengoPermiso = false;
-      let lider = "";
-
-      if (entornoActual === "TEST") {
-          tengoPermiso = true;
-          lider = correoNormalizado;
+    // LIMPIAR INACTIVOS (Menos de 25 segundos para que suelte rápido el permiso al salir)
+    for (let user in sessions) {
+      if (now - sessions[user].lastPing < 25000) {
+        usuariosConectados.push({ email: user, ...sessions[user] });
+        if (sessions[user].env === "PROD") {
+          if (sessions[user].rol === "admin") adminsEnProd.push(user);
+          else normalesEnProd.push({ e: user, t: sessions[user].loginTime });
+        }
       } else {
-          if (rol === "admin") {
-              tengoPermiso = true; // Admin en PROD SIEMPRE manda
-              lider = correoNormalizado; 
-          } else {
-              if (adminsEnProd.length > 0) {
-                  tengoPermiso = false;
-                  lider = adminsEnProd[0]; 
-              } else {
-                  // ORDENAMOS POR HORA DE LLEGADA (El más antiguo toma el control)
-                  normalesEnProd.sort((a, b) => a.t - b.t);
-                  if (normalesEnProd.length > 0) {
-                      lider = normalesEnProd[0].e;
-                      tengoPermiso = (lider === correoNormalizado);
-                  }
-              }
-          }
+        delete sessions[user];
       }
+    }
 
-      return {
-         sigueActivo: true,
-         tengoPermiso: tengoPermiso,
-         escritorActual: lider.split('@')[0], 
-         listaUsuarios: usuariosConectados
-      };
-      
+    scriptProps.setProperty("ACTIVE_SESSIONS", JSON.stringify(sessions));
+
+    // LÓGICA DE HERENCIA DE PERMISOS
+    let tengoPermiso = false;
+    let lider = "";
+
+    if (entornoActual === "TEST") {
+      tengoPermiso = true;
+      lider = correoNormalizado;
+    } else {
+      if (rol === "admin") {
+        tengoPermiso = true; // Admin en PROD SIEMPRE manda
+        lider = correoNormalizado;
+      } else {
+        if (adminsEnProd.length > 0) {
+          tengoPermiso = false;
+          lider = adminsEnProd[0];
+        } else {
+          // ORDENAMOS POR HORA DE LLEGADA (El más antiguo toma el control)
+          normalesEnProd.sort((a, b) => a.t - b.t);
+          if (normalesEnProd.length > 0) {
+            lider = normalesEnProd[0].e;
+            tengoPermiso = lider === correoNormalizado;
+          }
+        }
+      }
+    }
+
+    return {
+      sigueActivo: true,
+      tengoPermiso: tengoPermiso,
+      escritorActual: lider.split("@")[0],
+      listaUsuarios: usuariosConectados,
+    };
   } finally {
-      lock.releaseLock();
+    lock.releaseLock();
   }
 }
 
 // --- BARRERA DE SEGURIDAD BACKEND ---
 function verificarAccesoServidor() {
-  const raw = PropertiesService.getScriptProperties().getProperty('ACTIVE_SESSIONS');
-  
+  const raw =
+    PropertiesService.getScriptProperties().getProperty("ACTIVE_SESSIONS");
+
   // Si la memoria está vacía (alguien usó el botón de pánico)
   if (!raw) {
-     throw new Error("🔒 SEGURIDAD: El sistema fue liberado o tu sesión fue cerrada remotamente. Recarga la página.");
+    throw new Error(
+      "🔒 SEGURIDAD: El sistema fue liberado o tu sesión fue cerrada remotamente. Recarga la página.",
+    );
   }
-  
+
   let sessions = JSON.parse(raw);
   let now = new Date().getTime();
   let hayAlguienActivo = false;
-  
+
   // Verificamos si hay al menos una sesión viva que no haya expirado
   for (let user in sessions) {
-     // CORRECCIÓN: Leemos exactamente la propiedad lastPing del nuevo modelo de datos
-     let ultimoPing = sessions[user].lastPing || 0; 
-     
-     if (now - ultimoPing < 1800000) { // 30 minutos (1800000 ms)
-        hayAlguienActivo = true;
-        break;
-     }
+    // CORRECCIÓN: Leemos exactamente la propiedad lastPing del nuevo modelo de datos
+    let ultimoPing = sessions[user].lastPing || 0;
+
+    if (now - ultimoPing < 1800000) {
+      // 30 minutos (1800000 ms)
+      hayAlguienActivo = true;
+      break;
+    }
   }
-  
+
   // Si pasó el tiempo y caducó, bloqueamos la acción
   if (!hayAlguienActivo) {
-     throw new Error("🔒 SEGURIDAD: Tu tiempo de sesión ha expirado por inactividad. Recarga la página e inicia sesión.");
+    throw new Error(
+      "🔒 SEGURIDAD: Tu tiempo de sesión ha expirado por inactividad. Recarga la página e inicia sesión.",
+    );
   }
 }
