@@ -304,16 +304,17 @@ function configurarInterfazPorPermisos(info) {
   document.getElementById('nav-clientes').style.display = info.permisos.envios ? 'inline-block' : 'none';
   
   // Mostrar el botón de Dashboard si tiene algún permiso
-  const hasAnyPerm = canViewEntradas || info.permisos.salidas || info.permisos.ubicaciones || info.permisos.productos || info.permisos.envios || info.permisos.bajas;
-  document.getElementById('nav-dashboard').style.display = hasAnyPerm ? 'inline-block' : 'none';
+document.getElementById('nav-dashboard').style.display = info.validado ? 'inline-block' : 'none';
+  const btnCat = document.getElementById('nav-catalogo');
+  if (btnCat) btnCat.style.display = info.validado ? 'inline-block' : 'none';
 
-  if (hasAnyPerm) {
-      cambiarVista('vista-dashboard'); // <- EL DASHBOARD AHORA ES LA PÁGINA PRINCIPAL
+  if (info.validado) {
+      cambiarVista('vista-dashboard'); // <- Si está validado, entra al Dashboard directo
   } else {
       document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
       let vistaRevision = document.getElementById('vista-sin-permisos');
       if (vistaRevision) vistaRevision.style.display = 'flex';
-      Swal.fire("En espera de autorización", "Un Administrador debe otorgarte permisos para operar el sistema.", "info");
+      Swal.fire("En espera de autorización", "Un Administrador debe validar tu cuenta para poder ingresar.", "info");
   }
   
   window.APP_STATE.env = info.entorno;

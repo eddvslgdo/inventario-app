@@ -120,16 +120,18 @@ function procesarLoginEmail(email, pin) {
       };
       scriptProps.setProperty("ACTIVE_SESSIONS", JSON.stringify(sessions));
 
+      let tienePermisos = data[i][2] || data[i][3] || data[i][4] || data[i][5] || data[i][6] || data[i][7];
+      let validadoFisico = data[i][11] === true || String(data[i][11]).toUpperCase() === "TRUE";
+
       return {
         success: true,
         nombre: emailDb.split("@")[0],
         esAdmin: esAdmin,
         entorno: "PROD",
+        validado: validadoFisico || esAdmin || tienePermisos, // <--- EL NUEVO DATO
         permisos: {
-          entradas:
-            data[i][2] === true || String(data[i][2]).toUpperCase() === "TRUE",
-          salidas:
-            data[i][3] === true || String(data[i][3]).toUpperCase() === "TRUE",
+          entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === "TRUE",
+          salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === "TRUE",
           ubicaciones:
             data[i][4] === true || String(data[i][4]).toUpperCase() === "TRUE",
           productos:
@@ -239,30 +241,16 @@ function registrarUsuarioPendiente(email) {
     const db = SpreadsheetApp.openById(DB_PROD_ID);
     const s = db.getSheetByName("PERMISOS");
     const data = s.getDataRange().getValues();
-
     const emailBuscado = String(email).trim().toLowerCase();
 
-    // Verificamos por seguridad que no exista ya
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).trim().toLowerCase() === emailBuscado) {
         return { success: false, error: "El usuario ya existe." };
       }
     }
 
-    // Agregamos a la hoja: [CORREO, PIN(vacío), Entradas, Salidas, Ubic, Prod, Envios, Bajas, EsAdmin] (Todo en false)
-    s.appendRow([
-      emailBuscado,
-      "",
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-    ]);
-
+    // AHORA SON 12 COLUMNAS (La última es 'Validado' y nace en false)
+    s.appendRow([emailBuscado, "", false, false, false, false, false, false, false, false, false, false]);
     return { success: true };
   } catch (e) {
     return { success: false, error: e.message };
@@ -283,32 +271,31 @@ function obtenerListaUsuarios() {
   let usuarios = [];
   for (let i = 1; i < data.length; i++) {
     if (data[i][0]) {
+      let esAdmin = data[i][8] === true || String(data[i][8]).toUpperCase() === "TRUE";
+      let tienePermisos = data[i][2] || data[i][3] || data[i][4] || data[i][5] || data[i][6] || data[i][7];
+      let validadoFisico = data[i][11] === true || String(data[i][11]).toUpperCase() === "TRUE";
+
       usuarios.push({
         correo: String(data[i][0]).trim(),
         pin: data[i][1],
-        entradas:
-          data[i][2] === true || String(data[i][2]).toUpperCase() === "TRUE",
-        salidas:
-          data[i][3] === true || String(data[i][3]).toUpperCase() === "TRUE",
-        ubicaciones:
-          data[i][4] === true || String(data[i][4]).toUpperCase() === "TRUE",
-        productos:
-          data[i][5] === true || String(data[i][5]).toUpperCase() === "TRUE",
-        envios:
-          data[i][6] === true || String(data[i][6]).toUpperCase() === "TRUE",
-        bajas:
-          data[i][7] === true || String(data[i][7]).toUpperCase() === "TRUE",
-        esAdmin:
-          data[i][8] === true || String(data[i][8]).toUpperCase() === "TRUE",
-        historialEntradas:
-          data[i][9] === true || String(data[i][9]).toUpperCase() === "TRUE",
-        verCostos:
-          data[i][10] === true || String(data[i][10]).toUpperCase() === "TRUE", // <--- NUEVO PERMISO
+        entradas: data[i][2] === true || String(data[i][2]).toUpperCase() === "TRUE",
+        salidas: data[i][3] === true || String(data[i][3]).toUpperCase() === "TRUE",
+        ubicaciones: data[i][4] === true || String(data[i][4]).toUpperCase() === "TRUE",
+        productos: data[i][5] === true || String(data[i][5]).toUpperCase() === "TRUE",
+        envios: data[i][6] === true || String(data[i][6]).toUpperCase() === "TRUE",
+        bajas: data[i][7] === true || String(data[i][7]).toUpperCase() === "TRUE",
+        esAdmin: esAdmin,
+        historialEntradas: data[i][9] === true || String(data[i][9]).toUpperCase() === "TRUE",
+        verCostos: data[i][10] === true || String(data[i][10]).toUpperCase() === "TRUE",
+        
+        // MAGIA DE RETROCOMPATIBILIDAD
+        validado: validadoFisico || esAdmin || tienePermisos 
       });
     }
   }
   return usuarios;
 }
+
 
 function guardarUsuario(u) {
   const lock = LockService.getScriptLock();
@@ -327,23 +314,14 @@ function guardarUsuario(u) {
       }
     }
 
-    // AHORA GUARDAMOS 11 COLUMNAS
+    // AHORA GUARDAMOS 12 COLUMNAS (Incluyendo 'validado')
     const rowData = [
-      u.correo,
-      u.pin || "",
-      u.entradas,
-      u.salidas,
-      u.ubicaciones,
-      u.productos,
-      u.envios,
-      u.bajas,
-      u.esAdmin,
-      u.historialEntradas,
-      u.verCostos,
+      u.correo, u.pin || "", u.entradas, u.salidas, u.ubicaciones,
+      u.productos, u.envios, u.bajas, u.esAdmin, u.historialEntradas, u.verCostos, u.validado
     ];
-
+    
     if (fila > 0) {
-      s.getRange(fila, 1, 1, 11).setValues([rowData]);
+      s.getRange(fila, 1, 1, 12).setValues([rowData]);
     } else {
       s.appendRow(rowData);
     }
@@ -354,6 +332,7 @@ function guardarUsuario(u) {
     lock.releaseLock();
   }
 }
+
 
 function eliminarUsuario(correoAEliminar, correoActualAdmin) {
   const lock = LockService.getScriptLock();

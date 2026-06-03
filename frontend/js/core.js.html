@@ -435,9 +435,10 @@ function renderTablaUsuarios() {
         if(tags.length === 0) badgesHtml = `<span style="color:#94a3b8; font-style:italic; font-size:0.8rem;">Sin accesos operativos</span>`;
 
         let adminBadge = u.esAdmin ? `<span style="background:#fef2f2; color:#dc2626; padding:4px 8px; border-radius:6px; font-weight:bold; font-size:0.75rem;">⭐ Admin</span>` : `<span style="color:#94a3b8;">No</span>`;
+        let validadoBadge = u.validado ? `<span style="color:#10b981; font-weight:bold; font-size:0.8rem;">✅ Validado</span>` : `<span style="color:#f59e0b; font-weight:bold; font-size:0.8rem;">⏳ En Revisión</span>`;
 
         tr.innerHTML = `
-            <td style="font-weight:bold; color:#1e293b;">${u.correo}</td>
+            <td style="font-weight:bold; color:#1e293b;">${u.correo}<br>${validadoBadge}</td>
             <td style="text-align:center;">${adminBadge}</td>
             <td><div style="display:flex; flex-wrap:wrap; gap:4px;">${badgesHtml}</div></td>
             <td style="text-align:right;">
@@ -451,7 +452,9 @@ function renderTablaUsuarios() {
 
 function abrirModalUsuario(index = -1) {
     const u = index >= 0 ? CACHE_USUARIOS[index] : null;
-    
+
+    // Si es un usuario nuevo (u es null), por defecto nace Validado. Si ya existe, lee su estatus.
+    document.getElementById("chk_validado").checked = u ? u.validado : true;
     document.getElementById("adm_correo").value = u ? u.correo : "";
     document.getElementById("adm_correo").disabled = (u != null); // No se puede cambiar el correo una vez creado
     document.getElementById("adm_pin").value = u ? u.pin : "";
@@ -483,6 +486,7 @@ function guardarUsuarioAdmin() {
         correo: correo,
         pin: pin,
         esAdmin: esAdmin,
+        validado: document.getElementById("chk_validado").checked,
         entradas: document.getElementById("chk_entradas").checked,
         salidas: document.getElementById("chk_salidas").checked,
         ubicaciones: document.getElementById("chk_ubicaciones").checked,
