@@ -2321,7 +2321,7 @@ function ejecutarReorganizacionBackend() {
 }
 
 // ==========================================
-// MÓDULO: HISTORIAL DE ENTRADAS (MEJORADO)
+// MÓDULO: HISTORIAL DE ENTRADAS (MINI-KARDEX DE AUDITORÍA)
 // ==========================================
 function obtenerHistorialEntradas() {
   const lock = LockService.getScriptLock();
@@ -2329,73 +2329,105 @@ function obtenerHistorialEntradas() {
     lock.waitLock(10000);
     verificarAccesoServidor();
 
-    const sheet = obtenerHojaSegura("REGISTROS_ENTRADA");
-    if (!sheet) return { headers: [], rows: [] };
+    const sEntradas = obtenerHojaSegura("REGISTROS_ENTRADA");
+    const sInv = obtenerHojaSegura("INVENTARIO");
+    const sP = obtenerHojaSegura("PRODUCTOS");
+    const sPr = obtenerHojaSegura("PRESENTACIONES");
+    const sU = obtenerHojaSegura("UBICACIONES");
 
-    const data = sheet.getDataRange().getDisplayValues();
-    if (data.length <= 1) return { headers: data[0] || [], rows: [] };
+    if (!sEntradas) return { success: true, data: [] };
 
-    // --- MAGIA: Diccionarios blindados con toUpperCase() ---
-    const mapProd = {},
-      mapPres = {},
-      mapUbic = {};
-    try {
-      obtenerHojaSegura("PRODUCTOS")
-        .getDataRange()
-        .getValues()
-        .forEach((r) => (mapProd[String(r[0]).trim().toUpperCase()] = r[1]));
-      obtenerHojaSegura("PRESENTACIONES")
-        .getDataRange()
-        .getValues()
-        .forEach((r) => (mapPres[String(r[0]).trim().toUpperCase()] = r[1]));
-      obtenerHojaSegura("UBICACIONES")
-        .getDataRange()
-        .getValues()
-        .forEach((r) => (mapUbic[String(r[0]).trim().toUpperCase()] = r[1]));
-    } catch (e) {}
+    const mapProd = {}, mapPres = {}, mapUbic = {};
+    
+    // 1. Mapear Catálogos y Unidades
+    if (sP && sP.getLastRow() > 1) {
+      sP.getDataRange().getValues().slice(1).forEach((r) => {
+        let rawName = String(r[1]).trim();
+        let baseName = rawName;
+        let match = rawName.match(/(.*)\(([^)]+)\)$/);
+        if (match) baseName = match[2].trim();
+        
+        let uniRaw = String(r[3]).trim().toLowerCase();
+        let uni = "L";
+        if (uniRaw.includes("pza") || uniRaw.includes("pieza") || uniRaw.includes("unid")) uni = "Pza";
+        if (uniRaw.includes("kg") || uniRaw.includes("kilo")) uni = "Kg";
 
-    let headers = [
-      "FECHA",
-      "PRODUCTO",
-      "PRESENTACIÓN",
-      "DESTINO",
-      "CANTIDAD",
-      "LOTE",
-      "PROVEEDOR",
-    ];
-    let rows = [];
+        mapProd[String(r[0]).trim().toUpperCase()] = { 
+           nombreBase: baseName, 
+           unidad: uni
+        };
+      });
+    }
+    if (sPr && sPr.getLastRow() > 1) sPr.getDataRange().getValues().slice(1).forEach((r) => mapPres[String(r[0]).trim().toUpperCase()] = r[1]);
+    if (sU && sU.getLastRow() > 1) sU.getDataRange().getValues().slice(1).forEach((r) => mapUbic[String(r[0]).trim().toUpperCase()] = r[1]);
 
-    let limite = Math.max(1, data.length - 100);
-    for (let i = data.length - 1; i >= limite; i--) {
-      let r = data[i];
-
-      let fecha = r[0];
-      let prod = mapProd[String(r[1]).trim().toUpperCase()] || r[1];
-      let pres = mapPres[String(r[2]).trim().toUpperCase()] || r[2];
-
-      // Lógica inteligente para Ubicaciones Eliminadas
-      let idUbicRaw = String(r[3]).trim();
-      let ubic = mapUbic[idUbicRaw.toUpperCase()];
-
-      if (!ubic) {
-        // Si no existe y parece un ID (es muy largo), le ponemos una etiqueta limpia
-        if (idUbicRaw.length > 20 && idUbicRaw.includes("-")) {
-          ubic = "Ubic. Eliminada";
-        } else {
-          ubic = idUbicRaw;
+    // 2. Calcular Stock Físico VIGENTE actual
+    let stockVigente = {};
+    if (sInv && sInv.getLastRow() > 1) {
+        const dInv = sInv.getDataRange().getValues();
+        for (let i = 1; i < dInv.length; i++) {
+            let pId = String(dInv[i][0]).trim().toUpperCase();
+            let stock = Number(dInv[i][3]) || 0;
+            if (stock > 0.001) {
+                let baseName = mapProd[pId] ? mapProd[pId].nombreBase : pId;
+                if (!stockVigente[baseName]) stockVigente[baseName] = 0;
+                stockVigente[baseName] += stock;
+            }
         }
-      }
-
-      let cant = r[4];
-      let lote = r[5];
-      let prov = r[6] || "---";
-
-      rows.push([fecha, prod, pres, ubic, cant, lote, prov]);
     }
 
-    return { headers: headers, rows: rows };
+    // 3. Leer TODO el historial de Entradas y agruparlo
+    const dataEnt = sEntradas.getDataRange().getDisplayValues();
+    let agrupado = {};
+
+    for (let i = 1; i < dataEnt.length; i++) {
+      let r = dataEnt[i];
+      if (String(r[7]).trim() !== "Entrada") continue;
+
+      let pId = String(r[1]).trim().toUpperCase();
+      let infoProd = mapProd[pId] || { nombreBase: pId, unidad: "L" };
+      let baseName = infoProd.nombreBase;
+      
+      let pres = mapPres[String(r[2]).trim().toUpperCase()] || r[2];
+      let idUbicRaw = String(r[3]).trim();
+      let ubic = mapUbic[idUbicRaw.toUpperCase()];
+      if (!ubic) ubic = (idUbicRaw.length > 20 && idUbicRaw.includes("-")) ? "Ubic. Eliminada" : idUbicRaw;
+      
+      let cant = Number(r[4]) || 0;
+      let lote = String(r[5]).trim();
+      let fecha = r[0]; 
+      
+      if (!agrupado[baseName]) {
+         agrupado[baseName] = {
+             nombre: baseName,
+             unidad: infoProd.unidad,
+             total_ingresado: 0,
+             stock_vigente: stockVigente[baseName] || 0,
+             historial: []
+         };
+      }
+      
+      agrupado[baseName].total_ingresado += cant;
+      agrupado[baseName].historial.push({
+         fecha: fecha,
+         presentacion: pres,
+         ubicacion: ubic,
+         cantidad: cant,
+         lote: lote
+      });
+    }
+
+    // 4. Invertir historial (lo más nuevo arriba) y ordenar alfabéticamente
+    let resultado = Object.values(agrupado).map(p => {
+        p.historial.reverse(); 
+        return p;
+    }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    // Usamos JSON.parse(stringify) para asegurar compatibilidad total al mandar al Frontend
+    return { success: true, data: JSON.parse(JSON.stringify(resultado)) };
+
   } catch (e) {
-    throw new Error("Error al leer el historial: " + e.message);
+    return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
   }
