@@ -1815,19 +1815,23 @@ window.cargarVistaQR = function(idUbicacion) {
       : "";
 
     var filtrados = LISTA_PEDIDOS_CACHE.filter(function (p) {
-      // 1. Estado
+      // 1. Estado (CORREGIDO)
       var cumpleEstado = true;
-      if (FILTRO_ACTUAL_PEDIDOS === "Pendiente")
-        cumpleEstado = p.estatus === "Pendiente" || !p.estatus;
-      else if (FILTRO_ACTUAL_PEDIDOS === "Enviado")
-        cumpleEstado =
-          p.estatus.indexOf("Enviado") !== -1 ||
-          p.estatus.indexOf("Camino") !== -1 ||
-          p.estatus.indexOf("Entregado") !== -1 ||
-          p.estatus.indexOf("Proceso") !== -1;
+      var estatusStr = (p.estatus || "Pendiente").toLowerCase();
 
-      // 2. Texto (BÚSQUEDA MEJORADA)
-      // Agrupamos todos los campos posibles en un solo arreglo, evitando valores nulos, y los unimos en un texto gigante.
+      if (FILTRO_ACTUAL_PEDIDOS === "Pendiente") {
+        // Pestaña Pendientes: Muestra los Pendientes puros y los que están En Camino/Proceso
+        cumpleEstado = estatusStr.includes("pendiente") || 
+                       estatusStr.includes("proceso") || 
+                       estatusStr.includes("camino");
+      } 
+      else if (FILTRO_ACTUAL_PEDIDOS === "Enviado") {
+        // Pestaña Enviados: Muestra ÚNICAMENTE los finalizados (Enviados o Entregados)
+        cumpleEstado = estatusStr.includes("enviado") || 
+                       estatusStr.includes("entregado");
+      }
+
+      // 2. Texto (BÚSQUEDA)
       var todo = [
         p.id || "",
         p.cliente || "",
@@ -1843,7 +1847,7 @@ window.cargarVistaQR = function(idUbicacion) {
       // 3. Fechas
       var cumpleFecha = true;
       if (fDesdeInput || fHastaInput) {
-        var fechaPedStr = parseDateYMD(p.fecha);
+        var fechaPedStr = typeof parseDateYMD === 'function' ? parseDateYMD(p.fecha) : null;
         if (fechaPedStr) {
           if (fDesdeInput && fechaPedStr < fDesdeInput) cumpleFecha = false;
           if (fHastaInput && fechaPedStr > fHastaInput) cumpleFecha = false;
@@ -1853,6 +1857,28 @@ window.cargarVistaQR = function(idUbicacion) {
     });
 
     renderizarTablaPedidos(filtrados);
+
+    // --- NUEVA FUNCIÓN: LIMPIAR FILTROS ---
+  window.limpiarFiltrosPedidos = function() {
+    // 1. Vaciamos los campos de texto y fecha
+    var inputBusqueda = document.getElementById("buscadorPedidos");
+    var fDesde = document.getElementById("filtroFechaDesde");
+    var fHasta = document.getElementById("filtroFechaHasta");
+
+    if (inputBusqueda) inputBusqueda.value = "";
+    if (fDesde) fDesde.value = "";
+    if (fHasta) fHasta.value = "";
+
+    // 2. Simulamos un "clic" en la pestaña de "Todos" para resetear los estados
+    var btnTodos = document.querySelector("#vista-pedidos .filter-tabs .filter-tab"); 
+    if (btnTodos) {
+      filtrarEstado('Todos', btnTodos); // Esto autoejecuta la búsqueda limpia
+    } else {
+      FILTRO_ACTUAL_PEDIDOS = 'Todos';
+      aplicarFiltrosCombinados();
+    }
+  };
+  
   }
 
   // 4. DETALLE DEL PEDIDO (MODAL V40 FINAL)

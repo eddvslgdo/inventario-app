@@ -1586,7 +1586,7 @@
               />
             </div>
 
-            <div class="date-group-styled">
+            <div class="date-group-styled" style="align-items: center;">
               <div class="date-item">
                 <span class="lbl-date">DESDE</span>
                 <input
@@ -1608,6 +1608,12 @@
                   onchange="filtrarTablaPedidos()"
                 />
               </div>
+              
+              <div class="date-separator"></div>
+              
+              <button onclick="limpiarFiltrosPedidos()" class="btn-reset" style="display: flex; align-items: center; justify-content: center; height: 32px; padding: 0 12px; margin: 0; align-self: center; font-size: 0.85rem; gap: 4px;" title="Limpiar todos los filtros">
+                 ✖ Limpiar
+              </button>
             </div>
 
             <div
