@@ -1541,6 +1541,7 @@ window.cargarVistaQR = function(idUbicacion) {
   var EMPRESA_SELECCIONADA_CACHE = ""; // Variable para guardar la empresa temporalmente
 
   // --- ESTILOS INYECTADOS (MODAL PERFECTO & RESPONSIVO) ---
+
   var ESTILOS_MODAL_PREMIUM = `
 <style>
   /* 1. FORZAR BORRADO DE ESTILOS VIEJOS */
@@ -1578,23 +1579,22 @@ window.cargarVistaQR = function(idUbicacion) {
   .clean-body {
       padding: 25px;
       overflow-y: auto;
-      max-height: 65vh; /* Scroll si es muy largo */
+      max-height: 65vh; 
   }
 
-  /* LAYOUT RESPONSIVO (FLEXBOX) */
+  /* LAYOUT RESPONSIVO VERTICAL (CORREGIDO) */
   .clean-grid {
       display: flex;
+      flex-direction: column; /* Apilamos verticalmente siempre */
       gap: 20px;
       margin-bottom: 20px;
   }
   .clean-col {
-      flex: 1; /* Ocupan espacio igual */
-      min-width: 280px; /* Si es muy chico, baja */
+      width: 100%; /* Asegura que tomen todo el ancho posible */
   }
   
-  /* En móviles se apilan */
+  /* En móviles */
   @media (max-width: 700px) {
-      .clean-grid { flex-direction: column; }
       .clean-header { align-items: flex-start; }
       .clean-footer { flex-direction: column-reverse; }
       .btn-action-modal { width: 100%; }
