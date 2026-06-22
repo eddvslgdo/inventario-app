@@ -308,7 +308,9 @@ function renderizarTablaDisponibilidad(lista) {
   table.style.cssText = "width:100%; font-size:0.85rem; border-collapse:collapse; border:1px solid #eee; background:white; border-radius:8px;";
   
   var thead = document.createElement("tr"); thead.style.background = "#f1f3f5";
-  ["Lote / Variante", "Caducidad", "Ubic", "Stock Disp."].forEach(function(t) {
+  
+  // CAMBIO: Actualizamos el título de la columna
+  ["Lote / Presentación", "Caducidad", "Ubic", "Stock Disp."].forEach(function(t) {
       var th = document.createElement("th"); th.innerText = t; th.style.padding = "8px"; th.style.textAlign = "left"; thead.appendChild(th);
   });
   table.appendChild(thead);
@@ -345,14 +347,11 @@ function renderizarTablaDisponibilidad(lista) {
                      fCad.setHours(0,0,0,0);
                      diasDiferencia = (fCad.getTime() - hoy.getTime()) / (1000 * 3600 * 24);
                      
-                     // --- TRUCO ANTI-ESCAPE DE SÍMBOLOS ---
-                     // Math.sign devuelve -1 si el número es negativo
                      if (Math.sign(diasDiferencia) === -1) {
                          estaVencido = true;
                      } else if (diasDiferencia === 90 || Math.sign(diasDiferencia - 90) === -1) {
                          proximoVencer = true;
                      }
-                     // -------------------------------------
                  }
              }
 
@@ -400,11 +399,17 @@ function renderizarTablaDisponibilidad(lista) {
              var valBuscador = document.getElementById('sal_producto_search').value.trim();
              // Si el nombre de la variante es diferente al maestro que se buscó, mostramos el "apellido"
              if (l.nombre_real_producto && l.nombre_real_producto.toUpperCase() !== valBuscador.toUpperCase()) {
-                 nombreVarianteHtml = `<br><span style="font-size:0.7rem; color:#64748b; background:#e2e8f0; padding:2px 4px; border-radius:4px; display:inline-block; margin-top:3px;">Var: ${l.nombre_real_producto}</span>`;
+                 nombreVarianteHtml = `<span style="font-size:0.7rem; color:#64748b; background:#e2e8f0; padding:2px 4px; border-radius:4px; display:inline-block; margin-top:3px; margin-right:5px;">Var: ${l.nombre_real_producto}</span>`;
              }
 
+             // --- NUEVO: ETIQUETA VISUAL DE LA PRESENTACIÓN ---
+             var presentacionHtml = `<span style="font-size:0.7rem; color:#007aff; background:#e3f2fd; padding:2px 4px; border-radius:4px; display:inline-block; margin-top:3px; border: 1px solid #b3d7ff;">📦 ${l.nombre_presentacion || "Sin Pres."}</span>`;
+
              tr.innerHTML = `
-                <td style="padding:8px; font-weight:bold; vertical-align:middle;">${l.lote} ${nombreVarianteHtml}</td>
+                <td style="padding:8px; vertical-align:middle;">
+                    <div style="font-weight:bold; color:#1e293b;">${l.lote}</div>
+                    <div>${nombreVarianteHtml}${presentacionHtml}</div>
+                </td>
                 <td style="padding:8px; vertical-align:middle;">${caducidadHtml}</td>
                 <td style="padding:8px; vertical-align:middle;">${l.nombre_ubicacion||l.ubicacion_id}</td>
                 <td style="padding:8px; text-align:right; color:#27ae60; font-weight:bold; vertical-align:middle;">${stockDisplay} ${unidad}</td>
