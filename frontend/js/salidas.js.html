@@ -210,35 +210,7 @@ function alSeleccionarCliente() {
   }
 }
 
-function construirItemSalida() {
-  var calculo = calcularTotalSalida();
-  if (calculo.total == 0) { mostrarToast("Cantidad incorrecta", "error"); return null; }
-  
-  var elLote = document.getElementById("sal_lote");
-  var lote = elLote ? elLote.value.trim() : "";
-  if (!lote) { mostrarToast("Selecciona un Lote primero", "warning"); return null; }
 
-  var inputCant = document.getElementById("sal_cantidad");
-  var maxPzas = parseFloat(inputCant.getAttribute("data-max-pzas")) || 999999;
-  var pzas = parseFloat(inputCant.value);
-  
-  if (pzas - maxPzas > 0) { mostrarToast("⚠️ Stock insuficiente", "error"); return null; }
-
-  return {
-    producto_id: document.getElementById("sal_producto").value,
-    // AHORA LEE EL NOMBRE DEL NUEVO BUSCADOR
-    nombre_producto: document.getElementById("sal_producto_search").value, 
-    presentacion_id: document.getElementById("sal_presentacion").value,
-    nombre_presentacion: getTextoSelect("sal_presentacion"),
-    ubicacion_id: document.getElementById("sal_ubicacion").value,
-    nombre_ubicacion: getTextoSelect("sal_ubicacion"),
-    volumen_L: calculo.total,
-    unidad_medida: calculo.unidad,
-    piezas: pzas,
-    lote: lote,
-    caducidad: inputCant.getAttribute("data-caducidad") || "---"
-  };
-}
 
 function calcularTotalSalida() {
   if (typeof calcTotalGenerico === 'function') {
@@ -269,27 +241,6 @@ function calcularTotalSalida() {
   return { total: 0, unidad: "L" };
 }
 
-function limpiarCamposSalidaParcial() {
-  var inputCant = document.getElementById("sal_cantidad");
-  if(inputCant) { inputCant.value = ""; inputCant.placeholder = "Cantidad"; inputCant.removeAttribute("data-max-pzas"); }
-  
-  // MAGIA: En vez de forzar un "0 L", llamamos a la calculadora para que respete la unidad actual
-  if(typeof calcularTotalSalida === 'function') {
-      calcularTotalSalida();
-  } else {
-      var elTotal = document.getElementById("sal_infoTotal");
-      if(elTotal) elTotal.innerText = "0";
-  }
-  
-  var elLote = document.getElementById("sal_lote"); 
-  if(elLote) { elLote.value = ""; elLote.readOnly = false; elLote.style.backgroundColor = "white"; }
-  
-  var elPres = document.getElementById("sal_presentacion"); 
-  if(elPres) { elPres.value = ""; elPres.disabled = false; }
-  
-  var elUbic = document.getElementById("sal_ubicacion"); 
-  if(elUbic) { elUbic.value = ""; elUbic.disabled = false; }
-}
 
 function limpiarFormularioSalidaTotal() {
   var ids = ["log_nombre", "log_empresa", "log_direccion", "log_telefono", "log_email", "log_paqueteria", "log_costo", "log_guia"];
@@ -342,7 +293,6 @@ function renderizarTablaDisponibilidad(lista) {
   div.innerHTML = ""; 
   div.style.display = "block";
 
-  // 1. Detectar unidad del producto seleccionado para la tabla
   var unidad = "L";
   var selProd = document.getElementById("sal_producto");
   if(window.CACHE_CATALOGOS && selProd && selProd.value) {
@@ -358,12 +308,14 @@ function renderizarTablaDisponibilidad(lista) {
   table.style.cssText = "width:100%; font-size:0.85rem; border-collapse:collapse; border:1px solid #eee; background:white; border-radius:8px;";
   
   var thead = document.createElement("tr"); thead.style.background = "#f1f3f5";
-  ["Lote", "Caducidad", "Ubic", "Stock Disp."].forEach(function(t) {
+  ["Lote / Variante", "Caducidad", "Ubic", "Stock Disp."].forEach(function(t) {
       var th = document.createElement("th"); th.innerText = t; th.style.padding = "8px"; th.style.textAlign = "left"; thead.appendChild(th);
   });
   table.appendChild(thead);
   
   var filasAgregadas = 0;
+  var hoy = new Date();
+  hoy.setHours(0,0,0,0);
 
   if (lista && lista.length) { 
       lista.forEach(function(l, idx) {
@@ -371,17 +323,92 @@ function renderizarTablaDisponibilidad(lista) {
           
           if (stockNum > 0.001) {
              var tr = document.createElement("tr");
-             tr.id = "fila-lote-" + idx; tr.style.cursor = "pointer"; tr.style.borderBottom = "1px solid #eee";
-             tr.style.opacity = "1";
-             tr.style.pointerEvents = "auto";
+             tr.id = "fila-lote-" + idx; 
 
-             var fechaCad = l.caducidad || "---";
-             tr.onclick = function() { seleccionarLote(l.lote, l.presentacion_id, l.ubicacion_id, l.stock, idx, fechaCad); };
+             // LÓGICA DE FECHAS Y ALERTAS (90 Días)
+             var fechaCadStr = l.caducidad || "---";
+             var estaVencido = false;
+             var proximoVencer = false;
+             var diasDiferencia = 999;
              
-             // 2. Formatear la cantidad a mostrar (sin decimales si es Pza)
-             var stockDisplay = (unidad === 'Pza') ? Math.round(stockNum) : stockNum.toFixed(2);
+             if (fechaCadStr !== "---" && fechaCadStr !== "SIN-FECHA") {
+                 var fCad = null;
+                 var partes = fechaCadStr.split("/");
+                 if(partes.length === 3) {
+                     fCad = new Date(partes[2], partes[1]-1, partes[0]);
+                 } else if (fechaCadStr.includes("-")) {
+                     var p = fechaCadStr.split("T")[0].split("-");
+                     if (p.length === 3) fCad = new Date(p[0], p[1]-1, p[2]);
+                 }
 
-             tr.innerHTML = `<td style="padding:8px; font-weight:bold;">${l.lote}</td><td style="padding:8px; color:#d35400;">${fechaCad}</td><td style="padding:8px;">${l.nombre_ubicacion||l.ubicacion_id}</td><td style="padding:8px; text-align:right; color:#27ae60; font-weight:bold;">${stockDisplay} ${unidad}</td>`;
+                 if (fCad) {
+                     fCad.setHours(0,0,0,0);
+                     diasDiferencia = (fCad.getTime() - hoy.getTime()) / (1000 * 3600 * 24);
+                     
+                     // --- TRUCO ANTI-ESCAPE DE SÍMBOLOS ---
+                     // Math.sign devuelve -1 si el número es negativo
+                     if (Math.sign(diasDiferencia) === -1) {
+                         estaVencido = true;
+                     } else if (diasDiferencia === 90 || Math.sign(diasDiferencia - 90) === -1) {
+                         proximoVencer = true;
+                     }
+                     // -------------------------------------
+                 }
+             }
+
+             var trStyle = "cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;";
+             var caducidadHtml = `<span style="color:#27ae60;">${fechaCadStr}</span>`;
+
+             // Diseño del muro de contención
+             if (estaVencido) {
+                 trStyle += " opacity: 0.5; background-color: #f1f5f9; pointer-events: none;";
+                 caducidadHtml = `<span style="color:#dc2626; font-weight:bold;">${fechaCadStr} <br><span style="font-size:0.65rem; background:#fee2e2; padding:2px 4px; border-radius:4px;">[VENCIDO]</span></span>`;
+             } else if (proximoVencer) {
+                 trStyle += " background-color: #fffbeb;";
+                 caducidadHtml = `<span style="color:#d97706; font-weight:bold;">${fechaCadStr} <br><span style="font-size:0.65rem; background:#fef3c7; padding:2px 4px; border-radius:4px;">[PRÓXIMO]</span></span>`;
+             }
+             
+             tr.style.cssText = trStyle;
+
+             // Acción al hacer clic
+             tr.onclick = function() {
+                 if (estaVencido) return; // Capa de seguridad extra
+                 
+                 if (proximoVencer) {
+                     Swal.fire({
+                         icon: 'warning',
+                         title: 'Atención: Próximo a caducar',
+                         text: 'Este lote caduca en ' + Math.ceil(diasDiferencia) + ' días (' + fechaCadStr + '). ¿Deseas usarlo para el envío?',
+                         showCancelButton: true,
+                         confirmButtonColor: '#f59e0b',
+                         cancelButtonColor: '#94a3b8',
+                         confirmButtonText: 'Sí, seleccionarlo',
+                         cancelButtonText: 'No, cancelar'
+                     }).then((result) => {
+                         if (result.isConfirmed) {
+                             seleccionarLote(l.lote, l.presentacion_id, l.ubicacion_id, l.stock, idx, fechaCadStr, l.producto_id, l.nombre_real_producto);
+                         }
+                     });
+                 } else {
+                     seleccionarLote(l.lote, l.presentacion_id, l.ubicacion_id, l.stock, idx, fechaCadStr, l.producto_id, l.nombre_real_producto);
+                 }
+             };
+             
+             var stockDisplay = (unidad === 'Pza') ? Math.round(stockNum) : stockNum.toFixed(2);
+             
+             var nombreVarianteHtml = "";
+             var valBuscador = document.getElementById('sal_producto_search').value.trim();
+             // Si el nombre de la variante es diferente al maestro que se buscó, mostramos el "apellido"
+             if (l.nombre_real_producto && l.nombre_real_producto.toUpperCase() !== valBuscador.toUpperCase()) {
+                 nombreVarianteHtml = `<br><span style="font-size:0.7rem; color:#64748b; background:#e2e8f0; padding:2px 4px; border-radius:4px; display:inline-block; margin-top:3px;">Var: ${l.nombre_real_producto}</span>`;
+             }
+
+             tr.innerHTML = `
+                <td style="padding:8px; font-weight:bold; vertical-align:middle;">${l.lote} ${nombreVarianteHtml}</td>
+                <td style="padding:8px; vertical-align:middle;">${caducidadHtml}</td>
+                <td style="padding:8px; vertical-align:middle;">${l.nombre_ubicacion||l.ubicacion_id}</td>
+                <td style="padding:8px; text-align:right; color:#27ae60; font-weight:bold; vertical-align:middle;">${stockDisplay} ${unidad}</td>
+             `;
              table.appendChild(tr);
              filasAgregadas++;
           }
@@ -394,23 +421,43 @@ function renderizarTablaDisponibilidad(lista) {
   div.appendChild(table);
 }
 
-function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) {
+function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad, prodIdExacto, prodNombreExacto) {
   var elLote = document.getElementById("sal_lote");
-  if(elLote) { elLote.value = lote; elLote.readOnly = true; elLote.style.backgroundColor = "#fff5f5"; }
+  if(elLote) { 
+      elLote.value = lote; 
+      elLote.readOnly = true; 
+      elLote.style.backgroundColor = "#fff5f5"; 
+      
+      // Guardamos la identidad secreta de la variante para el carrito
+      elLote.setAttribute("data-prod-id", prodIdExacto || "");
+      elLote.setAttribute("data-prod-nombre", prodNombreExacto || "");
+  }
   
   var elPres = document.getElementById("sal_presentacion");
   var volUnitario = 0;
   if(elPres) {
-      elPres.value = presId; elPres.disabled = true; // Se bloquea visualmente
+      elPres.value = presId; 
+      
+      // FIX 1: Evitamos el símbolo "menor que" usando validaciones exactas
+      if (elPres.selectedIndex === 0 || elPres.selectedIndex === -1) {
+          let totalOpciones = elPres.options.length;
+          // Bucle seguro usando "distinto de" en lugar de "menor que"
+          for (let i = 0; i !== totalOpciones; i++) {
+              if (elPres.options[i].text.trim().toUpperCase() === String(presId).trim().toUpperCase()) {
+                  elPres.selectedIndex = i;
+                  break;
+              }
+          }
+      }
+      
+      elPres.disabled = true; // Se bloquea visualmente
       var opt = elPres.options[elPres.selectedIndex];
       
-      // 👇 AQUÍ FALTABA ABRIR LA LLAVE {
-      if(opt) { 
+      if(opt && elPres.selectedIndex !== 0 && elPres.selectedIndex !== -1) { 
           volUnitario = (typeof parseDecimalFlexible === "function")
               ? parseDecimalFlexible(opt.getAttribute("data-volumen"))
               : (parseFloat(opt.getAttribute("data-volumen")) || 0);
              
-             // FALLBACK ANTI-ERRORES
              if (isNaN(volUnitario) || volUnitario === 0) {
                  if (opt.text) {
                      var match = opt.text.match(/[\d\.]+/);
@@ -420,20 +467,43 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
                      }
                  }
              }
-             if (isNaN(volUnitario) || volUnitario === 0) volUnitario = 1;
-      } // 👇 ESTA LLAVE AHORA SÍ CIERRA EL IF(opt)
-  } // CIERRA EL IF(elPres)
+      } else {
+          // ULTIMO RECURSO: Extraer los litros directo de la base de datos si todo falla
+          var matchExt = String(presId).match(/[\d\.]+/);
+          if (matchExt) {
+              volUnitario = parseFloat(matchExt[0]);
+              if (String(presId).toLowerCase().includes("ml")) volUnitario /= 1000;
+          }
+      }
+
+      if (isNaN(volUnitario) || volUnitario === 0) volUnitario = 1;
+  } 
   
   var elUbic = document.getElementById("sal_ubicacion");
-  if(elUbic) { elUbic.value = ubicId; elUbic.disabled = true; }
+  if(elUbic) { 
+      elUbic.value = ubicId; 
+      
+      // FIX 2: Lo mismo para la validación de ubicación
+      if (elUbic.selectedIndex === 0 || elUbic.selectedIndex === -1) {
+          let totalOpcionesUbic = elUbic.options.length;
+          for (let i = 0; i !== totalOpcionesUbic; i++) {
+              if (elUbic.options[i].text.trim().toUpperCase() === String(ubicId).trim().toUpperCase()) {
+                  elUbic.selectedIndex = i;
+                  break;
+              }
+          }
+      }
+      elUbic.disabled = true; 
+  }
 
   var inputCant = document.getElementById("sal_cantidad");
   if (inputCant) {
       inputCant.value = "";
       
       var maxPiezas = 999999;
-      if (volUnitario > 0) {
-          maxPiezas = Math.floor(stockMax / volUnitario);
+      if (volUnitario !== 0) {
+          // Sumamos 0.001 al stock para evitar que 0.249999 arroje 0 piezas.
+          maxPiezas = Math.floor((parseFloat(stockMax) + 0.001) / volUnitario);
       }
       
       inputCant.placeholder = "Máx: " + maxPiezas + " pzas";
@@ -447,8 +517,67 @@ function seleccionarLote(lote, presId, ubicId, stockMax, indiceFila, caducidad) 
   var activa = document.getElementById("fila-lote-" + indiceFila);
   if (activa) activa.style.backgroundColor = "#e8f0fe"; 
   
-  // Refrescar cálculo a cero
   if (typeof calcularTotalSalida === 'function') calcularTotalSalida();
+}
+
+function construirItemSalida() {
+  var calculo = calcularTotalSalida();
+  if (calculo.total == 0) { mostrarToast("Cantidad incorrecta", "error"); return null; }
+  
+  var elLote = document.getElementById("sal_lote");
+  var lote = elLote ? elLote.value.trim() : "";
+  if (!lote) { mostrarToast("Selecciona un Lote primero", "warning"); return null; }
+
+  var inputCant = document.getElementById("sal_cantidad");
+  var maxPzas = parseFloat(inputCant.getAttribute("data-max-pzas")) || 999999;
+  var pzas = parseFloat(inputCant.value);
+  
+  if (pzas > maxPzas) { mostrarToast("⚠️ Stock insuficiente", "error"); return null; }
+
+  // Extraer datos exactos de la variante si es que es variante
+  var pIdExacto = elLote.getAttribute("data-prod-id") || document.getElementById("sal_producto").value;
+  var pNameExacto = elLote.getAttribute("data-prod-nombre") || document.getElementById("sal_producto_search").value;
+
+  return {
+    producto_id: pIdExacto,
+    nombre_producto: pNameExacto,
+    presentacion_id: document.getElementById("sal_presentacion").value,
+    nombre_presentacion: getTextoSelect("sal_presentacion"),
+    ubicacion_id: document.getElementById("sal_ubicacion").value,
+    nombre_ubicacion: getTextoSelect("sal_ubicacion"),
+    volumen_L: calculo.total,
+    unidad_medida: calculo.unidad,
+    piezas: pzas,
+    lote: lote,
+    caducidad: inputCant.getAttribute("data-caducidad") || "---"
+  };
+}
+
+function limpiarCamposSalidaParcial() {
+  var inputCant = document.getElementById("sal_cantidad");
+  if(inputCant) { inputCant.value = ""; inputCant.placeholder = "Cantidad"; inputCant.removeAttribute("data-max-pzas"); }
+  
+  if(typeof calcularTotalSalida === 'function') {
+      calcularTotalSalida();
+  } else {
+      var elTotal = document.getElementById("sal_infoTotal");
+      if(elTotal) elTotal.innerText = "0";
+  }
+  
+  var elLote = document.getElementById("sal_lote"); 
+  if(elLote) { 
+      elLote.value = ""; 
+      elLote.readOnly = false; 
+      elLote.style.backgroundColor = "white"; 
+      elLote.removeAttribute("data-prod-id");
+      elLote.removeAttribute("data-prod-nombre");
+  }
+  
+  var elPres = document.getElementById("sal_presentacion"); 
+  if(elPres) { elPres.value = ""; elPres.disabled = false; }
+  
+  var elUbic = document.getElementById("sal_ubicacion"); 
+  if(elUbic) { elUbic.value = ""; elUbic.disabled = false; }
 }
 
 function confirmarEnvioExterno() {

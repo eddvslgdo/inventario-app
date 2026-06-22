@@ -1013,46 +1013,72 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
       return JSON.stringify({ success: false, error: "Sin stock" });
     const data = sheetInv.getDataRange().getValues();
 
-    // 1. Obtener Nombres
-    const mapUbic = {},
-      mapPres = {};
-    const sU = obtenerHojaSegura("UBICACIONES"),
-      sP = obtenerHojaSegura("PRESENTACIONES");
+    const sU = obtenerHojaSegura("UBICACIONES");
+    const sP = obtenerHojaSegura("PRODUCTOS");
+    const sPr = obtenerHojaSegura("PRESENTACIONES");
 
-    if (sU)
-      sU.getDataRange()
-        .getValues()
-        .slice(1)
-        .forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
-    if (sP)
-      sP.getDataRange()
-        .getValues()
-        .slice(1)
-        .forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
+    const mapUbic = {}, mapPres = {}, mapProdNames = {};
+    if (sU) sU.getDataRange().getValues().slice(1).forEach((r) => (mapUbic[String(r[0]).trim()] = r[1]));
+    if (sPr) sPr.getDataRange().getValues().slice(1).forEach((r) => (mapPres[String(r[0]).trim()] = r[1]));
+
+    // LÓGICA DE FAMILIAS: Extrae el nombre base quitando los paréntesis
+    const obtenerNombrePadre = (rawName) => {
+        let match = String(rawName).match(/(.*)\(([^)]+)\)$/);
+        return match ? match[2].trim().toUpperCase() : String(rawName).trim().toUpperCase();
+    };
+
+    let idsValidos = new Set();
+    idsValidos.add(prodIdBuscado); // Siempre incluye el seleccionado
+    let nombreBuscado = "";
+
+    // Mapear todas las variantes que pertenezcan a la misma familia
+    if (sP) {
+        const dataProd = sP.getDataRange().getValues();
+        // 1. Descubrir cuál es el nombre "padre" del producto que buscamos
+        for (let i = 1; i < dataProd.length; i++) {
+            if (String(dataProd[i][0]).trim() === prodIdBuscado) {
+                nombreBuscado = obtenerNombrePadre(dataProd[i][1]);
+                break;
+            }
+        }
+        // 2. Meter a la "bolsa" todos los IDs que compartan ese nombre padre
+        if (nombreBuscado !== "") {
+            for (let i = 1; i < dataProd.length; i++) {
+                if (obtenerNombrePadre(dataProd[i][1]) === nombreBuscado) {
+                    idsValidos.add(String(dataProd[i][0]).trim());
+                }
+                // Guardar el nombre exacto de cada variante
+                mapProdNames[String(dataProd[i][0]).trim()] = String(dataProd[i][1]).trim();
+            }
+        }
+    }
 
     let lotes = [];
 
-    // 2. Leer y Agrupar
+    // Leer y Agrupar usando la bolsa de IDs válidos
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim() === prodIdBuscado) {
+      const pIdFila = String(data[i][0]).trim();
+      if (idsValidos.has(pIdFila)) {
         const uId = String(data[i][2]).trim();
         const presId = String(data[i][1]).trim();
         const lote = String(data[i][6]).trim();
         const caducidadStr = _fmtFechaDisplay(data[i][4]);
         const stock = Number(data[i][3]);
 
-        let existente = lotes.find(
-          (l) =>
+        let existente = lotes.find((l) =>
+            l.producto_id === pIdFila && // OJO: Exigimos que sea el ID exacto de la variante
             l.presentacion_id === presId &&
             l.ubicacion_id === uId &&
             l.lote === lote &&
-            _fmtFechaDisplay(l.caducidad) === caducidadStr,
+            _fmtFechaDisplay(l.caducidad) === caducidadStr
         );
+
         if (existente) {
           existente.stock_real += stock;
         } else {
           lotes.push({
-            producto_id: prodIdBuscado, // <--- GUARDAMOS EL ID DEL PRODUCTO
+            producto_id: pIdFila,
+            nombre_real_producto: mapProdNames[pIdFila] || pIdFila, // Inyecta el nombre de la variante
             presentacion_id: presId,
             ubicacion_id: uId,
             stock_real: stock,
@@ -1067,30 +1093,23 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
       }
     }
 
-    // 3. Descontar Carrito (LA MAGIA DE LA CORRECCIÓN)
+    // Descontar Carrito actual (para no permitir envíos fantasma)
     if (carrito && Array.isArray(carrito)) {
       carrito.forEach((item) => {
-        const l = lotes.find(
-          (x) =>
-            x.producto_id === String(item.producto_id).trim() && // <--- FIX: EXIGIMOS QUE SEA EL MISMO PRODUCTO
+        const l = lotes.find((x) =>
+            x.producto_id === String(item.producto_id).trim() && 
             x.lote === String(item.lote).trim() &&
-            x.ubicacion_id === String(item.ubicacion_id).trim(),
+            x.ubicacion_id === String(item.ubicacion_id).trim()
         );
-
         if (l) l.stock_real -= Number(item.volumen_L);
       });
     }
 
     const validos = lotes.filter((l) => l.stock_real > 0.001);
-    if (validos.length === 0)
-      return JSON.stringify({ success: false, error: "Sin stock disponible" });
+    if (validos.length === 0) return JSON.stringify({ success: false, error: "Sin stock disponible" });
 
     const getMs = (d) => (d instanceof Date ? d.getTime() : 0);
-    validos.sort(
-      (a, b) =>
-        getMs(a.elaboracion || a.fecha_entrada) -
-        getMs(b.elaboracion || b.fecha_entrada),
-    );
+    validos.sort((a, b) => getMs(a.elaboracion || a.fecha_entrada) - getMs(b.elaboracion || b.fecha_entrada));
     const mejor = validos[0];
 
     return JSON.stringify({
@@ -1102,6 +1121,8 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
         stock_real: mejor.stock_real,
       },
       lista_completa: validos.map((l) => ({
+        producto_id: l.producto_id,
+        nombre_real_producto: l.nombre_real_producto,
         presentacion_id: l.presentacion_id,
         ubicacion_id: l.ubicacion_id,
         lote: l.lote,
@@ -1109,8 +1130,7 @@ function obtenerSugerenciaFIFO(productoId, carrito) {
         caducidad: _fmtFechaDisplay(l.caducidad),
         nombre_ubicacion: l.nombre_ubicacion,
         nombre_presentacion: l.nombre_presentacion,
-        es_sugerido:
-          l.lote === mejor.lote && l.ubicacion_id === mejor.ubicacion_id,
+        es_sugerido: l.lote === mejor.lote && l.ubicacion_id === mejor.ubicacion_id,
       })),
     });
   } catch (e) {
