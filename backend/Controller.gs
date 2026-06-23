@@ -895,6 +895,8 @@ function procesarPedidoCompleto(datosPedido, itemsCarrito, guardarCliente) {
       ]);
     });
 
+    generarDocumentosInternacionales(idPedido, datosPedido, itemsProcesar);
+
     return { success: true, idPedido: idPedido };
   } catch (e) {
     return { success: false, error: e.message };
@@ -3754,4 +3756,156 @@ function generarRecomendacionID(perfilBuscado) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ==========================================
+// 10. GENERACIÓN DE DOCUMENTOS (ADUANA / INTERNACIONAL)
+// ==========================================
+
+function generarDocumentosInternacionales(idPedido, datosPedido, items) {
+  try {
+    // Obligamos a que se guarde el pedido en la base de datos para poder leerlo
+    SpreadsheetApp.flush();
+
+    // Si no marcó ninguna casilla, no hacemos nada y el sistema fluye rápido
+    if (!datosPedido.generarPL && !datosPedido.generarProforma && !datosPedido.generarCI) return;
+
+    // Obtenemos la carpeta de Drive de este envío
+    const folder = obtenerOCrearCarpetaPedido(idPedido);
+
+    // 1. Generar Packing List
+    if (datosPedido.generarPL) {
+       generarPackingListPDF(idPedido, datosPedido, items, folder);
+    }
+
+    // 2. Generar Proforma (Para el siguiente paso)
+    if (datosPedido.generarProforma) {
+       // generarProformaPDF(idPedido, datosPedido, items, folder);
+    }
+
+    // 3. Generar Commercial Invoice (Para el siguiente paso)
+    if (datosPedido.generarCI) {
+       // generarCommercialInvoicePDF(idPedido, datosPedido, items, folder);
+    }
+
+  } catch (e) {
+    // ESTO ES CLAVE: Lanzamos el error hacia la pantalla para saber exactamente qué falló
+    throw new Error("Fallo en Documentos Aduaneros: " + e.message);
+  }
+}
+
+function generarPackingListPDF(idPedido, datosPedido, items, folder) {
+  const sTemplate = obtenerHojaSegura("TEMPLATE_PL_PQ");
+  if (!sTemplate) throw new Error("No existe la plantilla TEMPLATE_PL_PQ en la base de datos.");
+
+  // --- 1. AGRUPAR ITEMS POR PRESENTACIÓN ---
+  let grupos = {};
+  let totalPiezas = 0;
+  let totalVolumen = 0;
+
+  items.forEach(function(item) {
+      let volUnitario = 1;
+      let match = String(item.nombre_presentacion).match(/[\d\.]+/);
+      if (match) volUnitario = parseFloat(match[0]);
+
+      let uni = String(item.unidad_medida).toUpperCase();
+      let key = volUnitario + "_" + uni;
+
+      if (!grupos[key]) {
+          grupos[key] = { volumenUnitario: volUnitario, unidad: uni, piezas: 0 };
+      }
+      let pzas = Number(item.piezas) || 0;
+      grupos[key].piezas += pzas;
+      totalPiezas += pzas;
+      totalVolumen += (Number(item.volumen_L) || 0);
+  });
+
+  let pesoTotalKg = totalVolumen + 0.5;
+
+  // --- 2. NOMBRES LIMPIOS Y CREACIÓN TEMPORAL ---
+  let nombreEmpresaReal = String(datosPedido.empresa || "").toUpperCase().trim();
+  let nombreClienteReal = String(datosPedido.nombreCliente || "").toUpperCase().trim();
+  
+  let clnEmpresa = nombreEmpresaReal.replace(/[^A-Z0-9]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+  let clnPersona = nombreClienteReal.replace(/[^A-Z0-9]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+
+  let docName = "";
+  if (clnEmpresa && clnEmpresa !== clnPersona) docName = "PL_" + clnEmpresa + "_" + clnPersona;
+  else docName = "PL_" + clnPersona;
+
+  let tempSS = SpreadsheetApp.create(docName);
+  let newSheet = sTemplate.copyTo(tempSS);
+  newSheet.setName("PackingList");
+  newSheet.showSheet(); 
+  tempSS.deleteSheet(tempSS.getSheets()[0]); 
+  
+  let sheet = tempSS.getSheetByName("PackingList");
+
+  // --- 3. LLENAR CABECERAS Y BUSCAR CONTENT ---
+  let data = sheet.getDataRange().getValues();
+  let startRow = -1;
+
+  for (let i = 0; i < data.length; i++) {
+      let rowText = String(data[i][0]).trim().toUpperCase();
+      let filaActual = Number(i) + 1; 
+
+      if (rowText.includes("SHIPPING DATE")) sheet.getRange(filaActual, 2).setValue(new Date());
+      else if (rowText.includes("GUIDE NUMBER")) sheet.getRange(filaActual, 2).setValue(datosPedido.guia || "PENDING");
+      else if (rowText.includes("NAME")) sheet.getRange(filaActual, 2).setValue(nombreEmpresaReal || nombreClienteReal);
+      else if (rowText.includes("ADDRESS")) sheet.getRange(filaActual, 2).setValue(String(datosPedido.direccion).toUpperCase());
+      else if (rowText.includes("TEL")) sheet.getRange(filaActual, 2).setValue(datosPedido.telefono || "N/A");
+      else if (rowText.includes("CONTENT")) {
+          startRow = filaActual + 1;
+      }
+  }
+
+  if (startRow === -1) startRow = Number(sheet.getLastRow()) + 2;
+
+  // --- 4. LLENAR CONTENIDO ---
+  let r = Number(startRow); 
+
+  for (let key in grupos) {
+      let g = grupos[key];
+      sheet.getRange(r, 1).setValue("Product: Experimental Samples With No Commercial Value").setFontWeight("bold");
+      r++;
+
+      let linea2 = "Packing: ON " + g.piezas + " HDPE CONTAINERS WITH " + g.volumenUnitario + " NET " + g.unidad + " EACH ONE.";
+      let richText = SpreadsheetApp.newRichTextValue()
+          .setText(linea2)
+          .setTextStyle(0, 8, SpreadsheetApp.newTextStyle().setBold(true).build()) 
+          .build();
+
+      sheet.getRange(r, 1).setRichTextValue(richText);
+      r += 2; 
+  }
+
+  // --- ESCRIBIR Y FORMATEAR EL TOTAL ---
+  sheet.getRange(r, 1).setValue("TOTAL: " + totalPiezas + " HDPE CONTAINERS").setFontWeight("bold");
+  
+  // MAGIA: Clonamos el formato exacto (color y bordes) de la celda de CONTENT a la fila de TOTAL
+  let cellContent = sheet.getRange(Number(startRow) - 1, 1);
+  cellContent.copyFormatToRange(sheet, 1, 2, r, r); // Lo pega en la Columna 1 y 2 de la fila 'r'
+  
+  r += 2;
+  sheet.getRange(r, 1).setValue("TOTAL WEIGHT: " + pesoTotalKg.toFixed(2) + " KG").setFontWeight("bold");
+
+  SpreadsheetApp.flush();
+  Utilities.sleep(2000); 
+
+  // --- 5. GUARDAR PDF Y OCULTAR SHEET EDITABLE ---
+  let pdfBlob = tempSS.getAs(MimeType.PDF).setName(docName + ".pdf");
+  folder.createFile(pdfBlob); // El PDF va a la carpeta principal para que se vea en el sistema
+
+  // Buscamos o creamos la subcarpeta "Editables" dentro de la carpeta del pedido
+  let subfolders = folder.getFoldersByName("Editables");
+  let editablesFolder;
+  if (subfolders.hasNext()) {
+      editablesFolder = subfolders.next();
+  } else {
+      editablesFolder = folder.createFolder("Editables");
+  }
+
+  // Movemos el Excel a la subcarpeta oculta
+  let sheetFile = DriveApp.getFileById(tempSS.getId());
+  sheetFile.moveTo(editablesFolder);
 }

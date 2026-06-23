@@ -88,6 +88,13 @@ function confirmarPedidoCompleto() {
   btn.disabled = true;
   btn.innerText = "Procesando...";
 
+  // --- MODIFICADO: Evaluar si la paquetería es "OTRA" ---
+  var paqueteriaSeleccionada = document.getElementById("log_paqueteria").value;
+  if (paqueteriaSeleccionada === "OTRA") {
+      var otraInput = document.getElementById("log_paqueteria_otra");
+      paqueteriaSeleccionada = otraInput && otraInput.value.trim() !== "" ? otraInput.value.trim() : "OTRA";
+  }
+
   var datosLogistica = {
     idCliente: document.getElementById("log_cliente_select").value || "nuevo",
     nombreCliente: nombre,
@@ -96,9 +103,14 @@ function confirmarPedidoCompleto() {
     telefono: document.getElementById("log_telefono").value,
     email: document.getElementById("log_email").value,
     tipoEnvio: document.getElementById("log_tipo_envio").value,
-    paqueteria: document.getElementById("log_paqueteria").value,
+    paqueteria: paqueteriaSeleccionada, // Usamos la variable evaluada arriba
     guia: document.getElementById("log_guia").value,
     costoEnvio: document.getElementById("log_costo").value || 0,
+
+    // --- NUEVOS CAMPOS: Leer el estado de las casillas de documentos ---
+    generarProforma: document.getElementById("chk_gen_proforma") ? document.getElementById("chk_gen_proforma").checked : false,
+    generarPL: document.getElementById("chk_gen_pl") ? document.getElementById("chk_gen_pl").checked : false,
+    generarCI: document.getElementById("chk_gen_ci") ? document.getElementById("chk_gen_ci").checked : false
   };
   
   var chkGuardar = document.getElementById("log_guardar_cliente");
@@ -106,7 +118,7 @@ function confirmarPedidoCompleto() {
 
   if(typeof mostrarCargando === 'function') mostrarCargando("Guardando pedido...");
 
-google.script.run
+    google.script.run
     .withSuccessHandler(function(res) {
       if(typeof ocultarCargando === 'function') ocultarCargando();
       
@@ -243,10 +255,19 @@ function calcularTotalSalida() {
 
 
 function limpiarFormularioSalidaTotal() {
-  var ids = ["log_nombre", "log_empresa", "log_direccion", "log_telefono", "log_email", "log_paqueteria", "log_costo", "log_guia"];
+  var ids = ["log_nombre", "log_empresa", "log_direccion", "log_telefono", "log_email", "log_paqueteria", "log_paqueteria_otra", "log_costo", "log_guia"];
   ids.forEach(function(id) { var el = document.getElementById(id); if(el) el.value = ""; });
+  
   var selCli = document.getElementById("log_cliente_select"); if(selCli) selCli.value = "";
   var chk = document.getElementById("log_guardar_cliente"); if(chk) chk.checked = false;
+  
+  // Limpiar checkboxes
+  if(document.getElementById("chk_gen_proforma")) document.getElementById("chk_gen_proforma").checked = false;
+  if(document.getElementById("chk_gen_pl")) document.getElementById("chk_gen_pl").checked = false;
+  if(document.getElementById("chk_gen_ci")) document.getElementById("chk_gen_ci").checked = false;
+  
+  if(typeof evaluarOpcionesDocumentacion === 'function') evaluarOpcionesDocumentacion();
+  
   limpiarCamposSalidaParcial();
 }
 
@@ -684,6 +705,37 @@ window.agregarNuevaDireccionCheckout = function() {
         }
     });
 }
+
+// --- LÓGICA DE DOCUMENTACIÓN INTERNACIONAL ---
+window.evaluarOpcionesDocumentacion = function() {
+    let paq = document.getElementById("log_paqueteria").value;
+    let tipo = document.getElementById("log_tipo_envio").value;
+    
+    // 1. Mostrar input manual si elige "OTRA"
+    let inputOtra = document.getElementById("log_paqueteria_otra");
+    if(inputOtra) inputOtra.style.display = (paq === "OTRA") ? "block" : "none";
+
+    // 2. Si es internacional, sugerimos marcar las casillas
+    let chkProf = document.getElementById("chk_gen_proforma");
+    let chkPL = document.getElementById("chk_gen_pl");
+    if(tipo === "Internacional") {
+        if(chkProf && !chkProf.checked) chkProf.checked = true;
+        if(chkPL && !chkPL.checked) chkPL.checked = true;
+    }
+
+    // 3. Mostrar CI solo si es FEDEX
+    let lblCI = document.getElementById("lbl_chk_ci");
+    let chkCI = document.getElementById("chk_gen_ci");
+    if(lblCI) {
+        if (paq === "FEDEX") {
+            lblCI.style.display = "flex";
+            if(tipo === "Internacional" && chkCI) chkCI.checked = true; // Auto-check si es internacional y fedex
+        } else {
+            lblCI.style.display = "none";
+            if(chkCI) chkCI.checked = false;
+        }
+    }
+};
 
 // INICIALIZAR AL CARGAR
 // Esto asegura que la pantalla se limpie si vienes de otra pestaña
