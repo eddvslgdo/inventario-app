@@ -3778,9 +3778,9 @@ function generarDocumentosInternacionales(idPedido, datosPedido, items) {
        generarPackingListPDF(idPedido, datosPedido, items, folder);
     }
 
-    // 2. Generar Proforma (Para el siguiente paso)
+    // 2. Generar Proforma (Ahora genera ambas: Aduana y Cliente)
     if (datosPedido.generarProforma) {
-       // generarProformaPDF(idPedido, datosPedido, items, folder);
+       generarAmbasProformas(idPedido, datosPedido, items, folder);
     }
 
     // 3. Generar Commercial Invoice (Para el siguiente paso)
@@ -3908,4 +3908,218 @@ function generarPackingListPDF(idPedido, datosPedido, items, folder) {
   // Movemos el Excel a la subcarpeta oculta
   let sheetFile = DriveApp.getFileById(tempSS.getId());
   sheetFile.moveTo(editablesFolder);
+}
+
+// ==========================================
+// 11. MOTOR DE PROFORMA (VALOR 1 USD)
+// ==========================================
+
+function obtenerSiguienteFacturaProforma(nombreEmpresa) {
+    let sHistorial = obtenerHojaOCrear("HISTORIAL_FACTURAS", ["NO_FACTURA", "FECHA", "EMPRESA"]);
+    let data = sHistorial.getDataRange().getValues();
+    
+    let year = new Date().getFullYear();
+    let nextNum = 1;
+    
+    // Si hay datos, leemos el último
+    if (data.length > 1) {
+        let lastFactura = String(data[data.length - 1][0]).trim(); // Ej: PQ-08-2026
+        let parts = lastFactura.split("-");
+        
+        // Si la última factura es del año actual, incrementamos. Si es año nuevo, se reinicia a 1.
+        if (parts.length === 3 && parts[2] == year) {
+            nextNum = parseInt(parts[1], 10) + 1;
+        }
+    }
+    
+    // Formateamos para que siempre tenga 2 dígitos (01, 02... 10)
+    let nextFacturaStr = `PQ-${nextNum.toString().padStart(2, '0')}-${year}`;
+    
+    // Registramos en el historial
+    sHistorial.appendRow([nextFacturaStr, new Date(), nombreEmpresa]);
+    
+    return nextFacturaStr;
+}
+
+// ==========================================
+// 11. MOTOR DUAL DE PROFORMAS (ADUANA Y CLIENTE)
+// ==========================================
+
+function generarAmbasProformas(idPedido, datosPedido, items, folder) {
+    let empresa = String(datosPedido.empresa || "").toUpperCase().trim();
+    let contacto = String(datosPedido.nombreCliente || "").toUpperCase().trim();
+    let nombreCompany = empresa ? empresa : contacto;
+    
+    // Generamos un solo número de factura para ambas versiones
+    let numeroFactura = obtenerSiguienteFacturaProforma(nombreCompany);
+
+    // Disparamos la generación de los dos documentos
+    crearDocumentoProforma(idPedido, datosPedido, items, folder, "ADUANA", numeroFactura, nombreCompany, contacto);
+    crearDocumentoProforma(idPedido, datosPedido, items, folder, "CLIENTE", numeroFactura, nombreCompany, contacto);
+}
+
+
+// Función para cortar direcciones largas de forma inteligente
+function dividirTextoInteligente(texto, limite) {
+    if (!texto) return ["", ""];
+    let txt = String(texto).trim();
+    if (txt.length <= limite) return [txt, ""];
+
+    // Buscamos el siguiente espacio o coma hacia adelante
+    let nextIdx = txt.substring(limite).search(/[\s,]/);
+    let distForward = nextIdx === -1 ? Infinity : nextIdx;
+
+    // Buscamos el último espacio o coma hacia atrás
+    let prevStr = txt.substring(0, limite);
+    let prevIdx = Math.max(prevStr.lastIndexOf(" "), prevStr.lastIndexOf(","));
+    let distBackward = prevIdx === -1 ? Infinity : (limite - prevIdx);
+
+    let cutPos = limite;
+    
+    // Evaluamos la regla de pesos que diseñaste
+    if (distForward === Infinity && distBackward === Infinity) {
+        cutPos = limite; // Corte bruto si es una sola palabra gigante
+    } else if (distForward <= distBackward) {
+        cutPos = limite + distForward; // Cortamos después de la palabra
+    } else {
+        cutPos = prevIdx; // Cortamos antes de la palabra
+    }
+
+    let linea1 = txt.substring(0, cutPos).trim();
+    let linea2 = txt.substring(cutPos).replace(/^[, ]+/, '').trim(); // Limpiamos comas o espacios al inicio
+
+    return [linea1, linea2];
+}
+
+function crearDocumentoProforma(idPedido, datosPedido, items, folder, tipoProforma, numeroFactura, nombreCompany, contacto) {
+    const sTemplate = obtenerHojaSegura("TEMPLATE_PROFORMA_PQ");
+    if (!sTemplate) throw new Error("No existe la plantilla TEMPLATE_PROFORMA_PQ en la base de datos.");
+    
+    // --- 1. AGRUPACIÓN (Aduanas vs Cliente) ---
+    let grupos = {};
+    let totalPiezasGlobal = 0;
+    let pesoTotalNeto = 0;
+
+    items.forEach(function(item) {
+        let volUnitario = 1;
+        let match = String(item.nombre_presentacion).match(/[\d\.]+/);
+        if (match) volUnitario = parseFloat(match[0]);
+        let uni = String(item.unidad_medida).toUpperCase();
+
+        let key = "";
+        let descripcionFinal = "";
+
+        if (tipoProforma === "ADUANA") {
+            key = volUnitario + "_" + uni;
+            descripcionFinal = "Experimental samples with no commercial value";
+        } else {
+            // PROFORMA CLIENTE: Limpiamos nombre e inyectamos el LOTE
+            let rawName = String(item.nombre_producto).toUpperCase();
+            let cleanName = rawName.replace(/\s*\([^)]*\)/g, '').trim(); 
+            let lote = String(item.lote || "S/N").toUpperCase();
+            
+            // Agrupamos por producto y por lote para que no se mezclen lotes distintos
+            key = cleanName + "_" + lote + "_" + volUnitario + "_" + uni;
+            descripcionFinal = cleanName + " | LOTE: " + lote;
+        }
+
+        if (!grupos[key]) {
+            grupos[key] = { desc: descripcionFinal, volumenUnitario: volUnitario, unidad: uni, piezas: 0 };
+        }
+        
+        let pzas = Number(item.piezas) || 0;
+        grupos[key].piezas += pzas;
+        totalPiezasGlobal += pzas;
+        pesoTotalNeto += (pzas * volUnitario);
+    });
+
+    let valorUnitarioUSD = 1 / totalPiezasGlobal;
+
+    // --- 2. NOMBRES DE ARCHIVO ---
+    let sendToNombre = (nombreCompany !== contacto) ? (nombreCompany + " (ATTN: " + contacto + ")") : contacto;
+    let clnDest = nombreCompany.replace(/[^A-Z0-9]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+    
+    let docName = `PROF_${tipoProforma}_${clnDest}_${numeroFactura.replace(/-/g, "")}`;
+    
+    let tempSS = SpreadsheetApp.create(docName);
+    let newSheet = sTemplate.copyTo(tempSS);
+    newSheet.setName("Proforma_" + tipoProforma);
+    newSheet.showSheet(); 
+    tempSS.deleteSheet(tempSS.getSheets()[0]); 
+    let sheet = tempSS.getSheetByName("Proforma_" + tipoProforma);
+
+    // --- 3. RASTREO Y LLENADO DE CABECERAS ---
+    let data = sheet.getDataRange().getValues();
+    let startRow = -1;
+    let rowTotales = -1;
+
+    for (let r = 0; r < data.length; r++) {
+        for (let c = 0; c < data[r].length; c++) {
+            let txt = String(data[r][c]).toUpperCase().trim();
+            if (!txt) continue;
+
+            if (txt === "ARTICLE") startRow = r + 2; 
+            if (txt.includes("TOTAL NET QUANTITY") || txt.includes("TOTAL NET WEIGHT")) rowTotales = r + 2; 
+
+            if (txt === "DATE:") sheet.getRange(r + 1, 3).setValue(new Date()); 
+            else if (txt.includes("INVOICE LETTER")) sheet.getRange(r + 1, 6).setValue(numeroFactura).setFontWeight("bold"); 
+            else if (txt.includes("GUIDE NUMBER")) sheet.getRange(r + 1, 10).setValue(datosPedido.guia || "PENDIENTE"); 
+            else if (txt === "SEND TO:") sheet.getRange(r + 1, 4).setValue(sendToNombre); 
+            else if (txt === "EMAIL:") sheet.getRange(r + 1, 4).setValue(datosPedido.email || ""); 
+            else if (txt === "TEL:") sheet.getRange(r + 1, 4).setValue(datosPedido.telefono || "N/A"); 
+            else if (txt.includes("DESTINATION COUNTRY")) sheet.getRange(r + 1, 4).setValue(String(datosPedido.pais || "NO ESPECIFICADO").toUpperCase());
+            
+            // LÓGICA DE DIRECCIÓN INTELIGENTE (Se escribe en 2 filas)
+            else if (txt === "ADRESS:" || txt === "ADDRESS:") {
+                let dirFull = String(datosPedido.direccion).toUpperCase();
+                let lineas = dividirTextoInteligente(dirFull, 70); // 70 caracteres de límite
+                
+                sheet.getRange(r + 1, 4).setValue(lineas[0]); // Fila de ADDRESS
+                if (lineas[1] !== "") {
+                    sheet.getRange(r + 2, 4).setValue(lineas[1]); // Fila vacía de abajo
+                }
+            }
+        }
+    }
+
+    if (startRow === -1) startRow = 24; 
+
+    // --- 4. LLENAR LA TABLA (EXACTAMENTE 10 COLUMNAS) ---
+    let rowActual = startRow;
+    let index = 1;
+    
+    for (let key in grupos) {
+        let g = grupos[key];
+        let subtotalFila = g.piezas * valorUnitarioUSD;
+        let pesoTotalFila = g.piezas * g.volumenUnitario;
+        
+        sheet.getRange(rowActual, 1).setValue(index).setHorizontalAlignment("center");
+        sheet.getRange(rowActual, 2).setValue(g.desc).setHorizontalAlignment("left"); 
+        sheet.getRange(rowActual, 6).setValue(g.piezas).setHorizontalAlignment("center"); 
+        sheet.getRange(rowActual, 7).setValue(g.volumenUnitario.toFixed(3)).setHorizontalAlignment("center"); 
+        sheet.getRange(rowActual, 8).setValue(pesoTotalFila.toFixed(3)).setHorizontalAlignment("center"); 
+        sheet.getRange(rowActual, 9).setValue(valorUnitarioUSD.toFixed(3)).setHorizontalAlignment("center"); 
+        sheet.getRange(rowActual, 10).setValue(subtotalFila.toFixed(3)).setHorizontalAlignment("center"); 
+        
+        rowActual++;
+        index++;
+    }
+
+    // --- 5. LLENAR TOTALES ---
+    if (rowTotales > -1) {
+        sheet.getRange(rowTotales, 6).setValue(totalPiezasGlobal).setFontWeight("bold").setHorizontalAlignment("center");
+        sheet.getRange(rowTotales, 8).setValue(pesoTotalNeto.toFixed(3)).setFontWeight("bold").setHorizontalAlignment("center");
+        sheet.getRange(rowTotales, 10).setValue(1.00).setFontWeight("bold").setHorizontalAlignment("center");
+    }
+
+    SpreadsheetApp.flush();
+    Utilities.sleep(3000); 
+
+    // --- 6. GUARDAR PDF (MÉTODO NATIVO) ---
+    let pdfBlob = tempSS.getAs(MimeType.PDF).setName(docName + ".pdf");
+    folder.createFile(pdfBlob);
+
+    let subfolders = folder.getFoldersByName("Editables");
+    let editablesFolder = subfolders.hasNext() ? subfolders.next() : folder.createFolder("Editables");
+    DriveApp.getFileById(tempSS.getId()).moveTo(editablesFolder);
 }

@@ -3265,7 +3265,7 @@
                 </div>
               </div>
 
-<div class="form-group" style="margin-top: 10px">
+              <div class="form-group" style="margin-top: 10px">
                 <label style="display: flex; justify-content: space-between; align-items: center;">
                   <span>Dirección de Envío / Sucursal *</span>
                   <button id="btn_nueva_dir" type="button" onclick="agregarNuevaDireccionCheckout()" style="display:none; background: #e0e7ff; color: #4f46e5; border: none; padding: 2px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">
@@ -3275,6 +3275,11 @@
                 <input type="text" id="log_direccion" list="dl_direcciones_cliente" class="input-modern input-compact" placeholder="Calle, Número, Colonia, Ciudad..." autocomplete="off" />
                 <datalist id="dl_direcciones_cliente"></datalist>
               </div>
+
+              <div class="form-group" style="margin-top: 10px;">
+                <label>País Destino</label>
+                <input type="text" id="log_pais" class="input-modern input-compact" placeholder="Ej. COSTA RICA, MÉXICO, USA..." style="text-transform: uppercase;" />
+              </div>              
 
               <div
                 style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"

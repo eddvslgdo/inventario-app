@@ -100,6 +100,7 @@ function confirmarPedidoCompleto() {
     nombreCliente: nombre,
     empresa: document.getElementById("log_empresa").value,
     direccion: document.getElementById("log_direccion").value,
+    pais: document.getElementById("log_pais") ? document.getElementById("log_pais").value : "", // <--- NUEVO
     telefono: document.getElementById("log_telefono").value,
     email: document.getElementById("log_email").value,
     tipoEnvio: document.getElementById("log_tipo_envio").value,
@@ -265,6 +266,7 @@ function limpiarFormularioSalidaTotal() {
   if(document.getElementById("chk_gen_proforma")) document.getElementById("chk_gen_proforma").checked = false;
   if(document.getElementById("chk_gen_pl")) document.getElementById("chk_gen_pl").checked = false;
   if(document.getElementById("chk_gen_ci")) document.getElementById("chk_gen_ci").checked = false;
+  if(document.getElementById("log_pais")) document.getElementById("log_pais").value = "";
   
   if(typeof evaluarOpcionesDocumentacion === 'function') evaluarOpcionesDocumentacion();
   
