@@ -3274,6 +3274,10 @@
                 </label>
                 <input type="text" id="log_direccion" list="dl_direcciones_cliente" class="input-modern input-compact" placeholder="Calle, Número, Colonia, Ciudad..." autocomplete="off" />
                 <datalist id="dl_direcciones_cliente"></datalist>
+                
+                <small style="color: #64748b; font-size: 0.75rem; margin-top: 4px; display: block; line-height: 1.3;">
+                  💡 <b>Tip:</b> Si requieres incluir datos fiscales (IVA, RFC), agrégalos al final de la dirección precedidos por la palabra <b>NOTA</b> (Ej: ...Ciudad de México NOTA IVA: 12345).
+                </small>
               </div>
 
               <div class="form-group" style="margin-top: 10px;">
@@ -3352,6 +3356,11 @@
                   <input type="number" id="log_costo" class="input-modern input-compact" style="margin: 0;" placeholder="0.00" />
                 </div>
 
+                <div style="display: flex; flex-direction: column;">
+                  <label style="margin: 0 0 5px 0; font-size: 0.85rem; color: #666; font-weight: 600;">No. Paquetes</label>
+                  <input type="number" id="log_bultos" class="input-modern input-compact" style="margin: 0;" placeholder="1" min="1" value="1" />
+                </div>
+
               </div>
 
               <div class="form-group" style="background: #fff5f5; padding: 15px; border-radius: 8px; border: 1px dashed #d63031; margin-bottom: 0;">
@@ -3383,13 +3392,14 @@
 
             </div>
           </div>
-          <div class="modal-footer-checkout">
+          <div class="modal-footer-checkout" style="display: flex; gap: 15px; justify-content: flex-end; flex-wrap: wrap;">
             <button
               onclick="confirmarPedidoCompleto()"
               class="btn-field btn-finish-order"
             >
               ✅ CONFIRMAR Y FINALIZAR ORDEN
             </button>
+          </div>
           </div>
         </div>
       </div>

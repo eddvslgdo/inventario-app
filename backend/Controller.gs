@@ -3785,7 +3785,7 @@ function generarDocumentosInternacionales(idPedido, datosPedido, items) {
 
     // 3. Generar Commercial Invoice (Para el siguiente paso)
     if (datosPedido.generarCI) {
-       // generarCommercialInvoicePDF(idPedido, datosPedido, items, folder);
+       generarCommercialInvoicePDF(idPedido, datosPedido, items, folder);
     }
 
   } catch (e) {
@@ -3842,6 +3842,7 @@ function generarPackingListPDF(idPedido, datosPedido, items, folder) {
   let sheet = tempSS.getSheetByName("PackingList");
 
   // --- 3. LLENAR CABECERAS Y BUSCAR CONTENT ---
+// --- 3. LLENAR CABECERAS Y BUSCAR CONTENT ---
   let data = sheet.getDataRange().getValues();
   let startRow = -1;
 
@@ -3849,13 +3850,26 @@ function generarPackingListPDF(idPedido, datosPedido, items, folder) {
       let rowText = String(data[i][0]).trim().toUpperCase();
       let filaActual = Number(i) + 1; 
 
-      if (rowText.includes("SHIPPING DATE")) sheet.getRange(filaActual, 2).setValue(new Date());
-      else if (rowText.includes("GUIDE NUMBER")) sheet.getRange(filaActual, 2).setValue(datosPedido.guia || "PENDING");
-      else if (rowText.includes("NAME")) sheet.getRange(filaActual, 2).setValue(nombreEmpresaReal || nombreClienteReal);
-      else if (rowText.includes("ADDRESS")) sheet.getRange(filaActual, 2).setValue(String(datosPedido.direccion).toUpperCase());
-      else if (rowText.includes("TEL")) sheet.getRange(filaActual, 2).setValue(datosPedido.telefono || "N/A");
+      // Forzamos la alineación a la izquierda en todas las celdas
+      if (rowText.includes("SHIPPING DATE")) sheet.getRange(filaActual, 2).setValue(new Date()).setHorizontalAlignment("left");
+      else if (rowText.includes("GUIDE NUMBER")) sheet.getRange(filaActual, 2).setValue(datosPedido.guia || "PENDING").setHorizontalAlignment("left");
+      else if (rowText.includes("NAME")) sheet.getRange(filaActual, 2).setValue(nombreEmpresaReal || nombreClienteReal).setHorizontalAlignment("left");
+      else if (rowText.includes("TEL")) sheet.getRange(filaActual, 2).setValue(datosPedido.telefono || "N/A").setHorizontalAlignment("left");
       else if (rowText.includes("CONTENT")) {
           startRow = filaActual + 1;
+      }
+      
+      // 🔥 LÓGICA DE DIRECCIÓN INTELIGENTE PARA LA PL (Límite 55 caracteres) 🔥
+      else if (rowText.includes("ADDRESS")) {
+          let dirFull = String(datosPedido.direccion).toUpperCase();
+          
+          // Usamos la misma función maestra, pero le pasamos 55 como límite
+          let lineas = dividirTextoInteligente(dirFull, 55); 
+          
+          sheet.getRange(filaActual, 2).setValue(lineas[0]).setHorizontalAlignment("left"); 
+          if (lineas[1] !== "") {
+              sheet.getRange(filaActual + 1, 2).setValue(lineas[1]).setHorizontalAlignment("left"); 
+          }
       }
   }
 
@@ -4048,7 +4062,7 @@ function crearDocumentoProforma(idPedido, datosPedido, items, folder, tipoProfor
     tempSS.deleteSheet(tempSS.getSheets()[0]); 
     let sheet = tempSS.getSheetByName("Proforma_" + tipoProforma);
 
-    // --- 3. RASTREO Y LLENADO DE CABECERAS ---
+    // --- 3. RASTREO Y LLENADO DE CABECERAS (COORDENADAS EXACTAS) ---
     let data = sheet.getDataRange().getValues();
     let startRow = -1;
     let rowTotales = -1;
@@ -4061,22 +4075,23 @@ function crearDocumentoProforma(idPedido, datosPedido, items, folder, tipoProfor
             if (txt === "ARTICLE") startRow = r + 2; 
             if (txt.includes("TOTAL NET QUANTITY") || txt.includes("TOTAL NET WEIGHT")) rowTotales = r + 2; 
 
-            if (txt === "DATE:") sheet.getRange(r + 1, 3).setValue(new Date()); 
-            else if (txt.includes("INVOICE LETTER")) sheet.getRange(r + 1, 6).setValue(numeroFactura).setFontWeight("bold"); 
-            else if (txt.includes("GUIDE NUMBER")) sheet.getRange(r + 1, 10).setValue(datosPedido.guia || "PENDIENTE"); 
-            else if (txt === "SEND TO:") sheet.getRange(r + 1, 4).setValue(sendToNombre); 
-            else if (txt === "EMAIL:") sheet.getRange(r + 1, 4).setValue(datosPedido.email || ""); 
-            else if (txt === "TEL:") sheet.getRange(r + 1, 4).setValue(datosPedido.telefono || "N/A"); 
-            else if (txt.includes("DESTINATION COUNTRY")) sheet.getRange(r + 1, 4).setValue(String(datosPedido.pais || "NO ESPECIFICADO").toUpperCase());
+            // INYECCIÓN DE FRANCOTIRADOR (Columna 2 = B)
+            if (txt === "DATE:") sheet.getRange(r + 1, 2).setValue(new Date()); 
+            else if (txt.includes("INVOICE LETTER")) sheet.getRange(r + 1, 6).setValue(numeroFactura).setFontWeight("bold"); // F3
+            else if (txt.includes("GUIDE NUMBER")) sheet.getRange(r + 1, 10).setValue(datosPedido.guia || "PENDIENTE"); // J3
+            else if (txt === "SEND TO:") sheet.getRange(r + 1, 2).setValue(sendToNombre); // B
+            else if (txt === "EMAIL:") sheet.getRange(r + 1, 2).setValue(datosPedido.email || ""); // B
+            else if (txt === "TEL:") sheet.getRange(r + 1, 2).setValue(datosPedido.telefono || "N/A"); // B
+            else if (txt.includes("DESTINATION COUNTRY")) sheet.getRange(r + 1, 4).setValue(String(datosPedido.pais || "NO ESPECIFICADO").toUpperCase()); // D
             
-            // LÓGICA DE DIRECCIÓN INTELIGENTE (Se escribe en 2 filas)
+            // LÓGICA DE DIRECCIÓN INTELIGENTE (Límite 85 caracteres)
             else if (txt === "ADRESS:" || txt === "ADDRESS:") {
                 let dirFull = String(datosPedido.direccion).toUpperCase();
-                let lineas = dividirTextoInteligente(dirFull, 70); // 70 caracteres de límite
+                let lineas = dividirTextoInteligente(dirFull, 85); 
                 
-                sheet.getRange(r + 1, 4).setValue(lineas[0]); // Fila de ADDRESS
+                sheet.getRange(r + 1, 2).setValue(lineas[0]); // Fila de ADDRESS (B)
                 if (lineas[1] !== "") {
-                    sheet.getRange(r + 2, 4).setValue(lineas[1]); // Fila vacía de abajo
+                    sheet.getRange(r + 2, 2).setValue(lineas[1]); // Fila vacía de abajo (B)
                 }
             }
         }
@@ -4122,4 +4137,235 @@ function crearDocumentoProforma(idPedido, datosPedido, items, folder, tipoProfor
     let subfolders = folder.getFoldersByName("Editables");
     let editablesFolder = subfolders.hasNext() ? subfolders.next() : folder.createFolder("Editables");
     DriveApp.getFileById(tempSS.getId()).moveTo(editablesFolder);
+}
+
+// ==========================================
+// ELIMINACIÓN PERMANENTE DE PEDIDOS (ADMIN)
+// ==========================================
+function eliminarPedidoDefinitivo(idPedido) {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(10000);
+        verificarAccesoServidor();
+
+        // 1. Doble validación de seguridad (Solo Admin)
+        const emailUsuario = Session.getActiveUser().getEmail().toLowerCase();
+        const rawSessions = PropertiesService.getScriptProperties().getProperty("ACTIVE_SESSIONS");
+        if (rawSessions) {
+            let sessions = JSON.parse(rawSessions);
+            if (sessions[emailUsuario] && sessions[emailUsuario].rol !== "admin") {
+                throw new Error("🔒 SEGURIDAD: Solo un Administrador puede eliminar pedidos permanentemente.");
+            }
+        }
+
+        // 2. Borrar de PEDIDOS y capturar enlace de Drive
+        const sPed = obtenerHojaSegura("PEDIDOS");
+        const dataPed = sPed.getDataRange().getValues();
+        let linkCarpeta = "";
+        for (let i = dataPed.length - 1; i >= 1; i--) { // Recorremos de abajo hacia arriba para borrar
+            if (String(dataPed[i][0]).trim() === String(idPedido).trim()) {
+                linkCarpeta = dataPed[i][13]; // Columna N tiene el enlace de Drive
+                sPed.deleteRow(i + 1);
+                break;
+            }
+        }
+
+        // 3. Borrar de DETALLE_PEDIDOS
+        const sDet = obtenerHojaSegura("DETALLE_PEDIDOS");
+        const dataDet = sDet.getDataRange().getValues();
+        for (let i = dataDet.length - 1; i >= 1; i--) {
+            if (String(dataDet[i][0]).trim() === String(idPedido).trim()) {
+                sDet.deleteRow(i + 1);
+            }
+        }
+
+        // 4. Mover la carpeta de Drive a la papelera (Limpieza profunda)
+        if (linkCarpeta && String(linkCarpeta).includes("drive.google.com")) {
+            try {
+                let folderId = String(linkCarpeta).split("/").pop().split("?")[0];
+                DriveApp.getFolderById(folderId).setTrashed(true);
+            } catch(e) {
+                console.log("No se pudo mandar a papelera la carpeta: " + e.message);
+            }
+        }
+
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+// ==========================================
+// MODO FANTASMA: VISTA PREVIA FEDEX
+// ==========================================
+function generarVistaPreviaFedex(datosPedido, items) {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(15000);
+        // Creamos la factura indicando que ES UNA VISTA PREVIA (isPreview = true)
+        let pdfBase64 = generarCommercialInvoicePDF("PREVIEW-001", datosPedido, items, null, true);
+        return pdfBase64;
+    } catch (e) {
+        throw new Error(e.message);
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+// ==========================================
+// MOTOR COMMERCIAL INVOICE (FEDEX)
+// ==========================================
+function generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, isPreview = false) {
+    // 🏛️ PUENTE DE CONEXIÓN SEGURO: Plantilla desde PRODUCCIÓN
+    const idProdDB = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E";
+    let ssProd;
+    try {
+        ssProd = SpreadsheetApp.openById(idProdDB);
+    } catch(err) {
+        throw new Error("No se pudo conectar a la base de datos de Producción.");
+    }
+    
+    const sTemplate = ssProd.getSheetByName("TEMPLATE_CIF_PQ");
+    if (!sTemplate) throw new Error("No existe la plantilla TEMPLATE_CIF_PQ en Producción.");
+
+    // --- 1. AGRUPACIÓN Y MATEMÁTICAS ---
+    let grupos = {};
+    let totalPiezasGlobal = 0;
+    let pesoTotalNeto = 0;
+
+    items.forEach(function(item) {
+        let volUnitario = 1;
+        let match = String(item.nombre_presentacion).match(/[\d\.]+/);
+        if (match) volUnitario = parseFloat(match[0]);
+        
+        let pzas = Number(item.piezas) || 0;
+        let key = "EXP_SAMPLE_" + volUnitario;
+
+        if (!grupos[key]) {
+            grupos[key] = { 
+                desc: "Experimental samples", // 🔥 Cambio: Descripción mucho más limpia y corta
+                volumenUnitario: volUnitario, 
+                piezas: 0 
+            };
+        }
+        
+        grupos[key].piezas += pzas;
+        totalPiezasGlobal += pzas;
+        pesoTotalNeto += (pzas * volUnitario);
+    });
+
+    let valorUnitarioUSD = 1 / totalPiezasGlobal;
+
+    // --- 2. INTELIGENCIA DE DIRECCIÓN (CASCADA A 3 LÍNEAS) ---
+    let dirCompleta = String(datosPedido.direccion || "").toUpperCase().trim();
+    
+    // Filtro para eliminar la palabra "NOTA" y todo lo que le sigue
+    let indiceNota = dirCompleta.indexOf("NOTA");
+    if (indiceNota !== -1) {
+        dirCompleta = dirCompleta.substring(0, indiceNota).trim();
+        // Limpiamos si quedó una coma, punto o guión suelto justo antes de la palabra NOTA
+        dirCompleta = dirCompleta.replace(/[,.-]+$/, "").trim(); 
+    }
+    
+    // 1er Corte: Sacamos la Línea 1 y guardamos el resto
+    let primerCorte = dividirTextoInteligente(dirCompleta, 40);
+    let linea1 = primerCorte[0];
+    
+    // 2do Corte: Tomamos el resto del 1er corte, y lo volvemos a dividir
+    let segundoCorte = dividirTextoInteligente(primerCorte[1], 40);
+    let linea2 = segundoCorte[0];
+    let linea3 = segundoCorte[1]; // Lo que sobra definitivo cae aquí
+
+    // --- 3. NOMBRES Y ARCHIVO TEMPORAL ---
+    let empresa = String(datosPedido.empresa || "").toUpperCase().trim();
+    let contacto = String(datosPedido.nombreCliente || "").toUpperCase().trim();
+    let nombreCompany = empresa ? empresa : contacto;
+    
+    let numeroFactura = isPreview ? "PREVIEW-2026" : obtenerSiguienteFacturaProforma(nombreCompany);
+    let docName = `CIFEDEX_${nombreCompany.replace(/[^A-Z0-9]/g, "_")}_${numeroFactura}`;
+    
+    let tempSS = SpreadsheetApp.create(docName);
+    let newSheet = sTemplate.copyTo(tempSS);
+    newSheet.setName("CommercialInvoice");
+    newSheet.showSheet(); 
+    tempSS.deleteSheet(tempSS.getSheets()[0]); 
+    let sheet = tempSS.getSheetByName("CommercialInvoice");
+
+    // --- 4. LLENADO DE CABECERAS (COORDENADAS ABSOLUTAS) ---
+    // Factura y Guía (Top Right)
+    sheet.getRange("H5").setValue(numeroFactura).setFontWeight("bold");
+    sheet.getRange("H9").setValue(datosPedido.guia || "PENDIENTE");
+
+    // 🎯 RECEIVER DETAILS (Las 3 líneas de dirección)
+    sheet.getRange("B24").setValue(nombreCompany);
+    sheet.getRange("B26").setValue(linea1);
+    sheet.getRange("B28").setValue(linea2);
+    sheet.getRange("B30").setValue(linea3); 
+    
+    // País, Contacto, Tel, Email
+    sheet.getRange("B32").setValue(String(datosPedido.pais || "MEXICO").toUpperCase());
+    sheet.getRange("B34").setValue(contacto);
+    sheet.getRange("B36").setValue(datosPedido.telefono || "N/A");
+    sheet.getRange("B38").setValue(datosPedido.email || "N/A");
+
+    // --- 5. LLENAR TABLA DE ARTÍCULOS ---
+    let startRow = 42; 
+    let rowActual = startRow;
+    
+    for (let key in grupos) {
+        let g = grupos[key];
+        let subtotalFila = g.piezas * valorUnitarioUSD;
+        let pesoTotalFila = g.piezas * g.volumenUnitario;
+        
+        // 🔥 Alineaciones perfectas inyectadas aquí
+        sheet.getRange(rowActual, 1).setValue(g.desc).setHorizontalAlignment("left"); // Columna A
+        sheet.getRange(rowActual, 2).setValue(g.piezas).setHorizontalAlignment("center"); // Columna B (Quantity)
+        sheet.getRange(rowActual, 3).setValue(g.volumenUnitario.toFixed(3)).setHorizontalAlignment("center"); // Columna C (Unit weight)
+        sheet.getRange(rowActual, 4).setValue(valorUnitarioUSD.toFixed(3)).setHorizontalAlignment("center"); // Columna D (Unit value)
+        sheet.getRange(rowActual, 7).setValue("").setHorizontalAlignment("center"); // Columna G (HS Code)
+        sheet.getRange(rowActual, 8).setValue("MEXICO").setHorizontalAlignment("center"); // Columna H (Origin)
+        sheet.getRange(rowActual, 9).setValue(pesoTotalFila.toFixed(3)).setHorizontalAlignment("center"); // Columna I (Total weight)
+        sheet.getRange(rowActual, 10).setValue(subtotalFila.toFixed(3)).setHorizontalAlignment("center"); // Columna J (Total value)
+        
+        rowActual++;
+    }
+
+// --- 6. TOTALES INFERIORES ---
+    let dataPost = sheet.getDataRange().getValues();
+    for (let r = startRow; r < dataPost.length; r++) {
+        let rowStr = dataPost[r].join(" ").toUpperCase();
+        
+        if (rowStr.includes("NUMBER OF PACKAGES IN SHIPMENT")) {
+            // 🔥 CORRECCIÓN: El texto está en la fila 48, el cuadro en la 50.
+            // Por lo tanto, el salto es de +3 (r + 1 es la actual, r + 3 es la 50)
+            let bultosManuales = Number(datosPedido.bultos) || 1;
+            sheet.getRange(r + 3, 2).setValue(bultosManuales).setHorizontalAlignment("center").setFontWeight("bold");
+        }
+        if (rowStr.includes("TOTAL SHIPMENT VALUE:")) {
+            sheet.getRange(r + 1, 10).setValue(1.00).setFontWeight("bold"); 
+        }
+        if (rowStr.includes("TOTAL DECLARED VALUE:")) {
+            sheet.getRange(r + 1, 10).setValue(1.00).setFontWeight("bold"); 
+        }
+    }
+
+    SpreadsheetApp.flush();
+    Utilities.sleep(isPreview ? 1000 : 3000); 
+
+    // --- 7. MODO FANTASMA (PREVIEW) O GUARDADO REAL ---
+    let pdfBlob = tempSS.getAs(MimeType.PDF).setName(docName + ".pdf");
+    
+    if (isPreview) {
+        let base64 = Utilities.base64Encode(pdfBlob.getBytes());
+        DriveApp.getFileById(tempSS.getId()).setTrashed(true);
+        return base64;
+    } else {
+        folder.createFile(pdfBlob);
+        let subfolders = folder.getFoldersByName("Editables");
+        let editablesFolder = subfolders.hasNext() ? subfolders.next() : folder.createFolder("Editables");
+        DriveApp.getFileById(tempSS.getId()).moveTo(editablesFolder);
+        return true;
+    }
 }

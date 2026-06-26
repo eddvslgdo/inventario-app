@@ -107,6 +107,7 @@ function confirmarPedidoCompleto() {
     paqueteria: paqueteriaSeleccionada, // Usamos la variable evaluada arriba
     guia: document.getElementById("log_guia").value,
     costoEnvio: document.getElementById("log_costo").value || 0,
+    bultos: document.getElementById("log_bultos") ? document.getElementById("log_bultos").value : 1, // <-- NUEVO
 
     // --- NUEVOS CAMPOS: Leer el estado de las casillas de documentos ---
     generarProforma: document.getElementById("chk_gen_proforma") ? document.getElementById("chk_gen_proforma").checked : false,
@@ -267,6 +268,7 @@ function limpiarFormularioSalidaTotal() {
   if(document.getElementById("chk_gen_pl")) document.getElementById("chk_gen_pl").checked = false;
   if(document.getElementById("chk_gen_ci")) document.getElementById("chk_gen_ci").checked = false;
   if(document.getElementById("log_pais")) document.getElementById("log_pais").value = "";
+  if(document.getElementById("log_bultos")) document.getElementById("log_bultos").value = "1";
   
   if(typeof evaluarOpcionesDocumentacion === 'function') evaluarOpcionesDocumentacion();
   
@@ -676,8 +678,8 @@ window.agregarNuevaDireccionCheckout = function() {
 
     Swal.fire({
         title: '📍 Agregar Sucursal / Dirección',
+        html: '<p style="font-size:0.9rem; color:#64748b; margin-top:0;">Ej: Planta Querétaro - Calle 123, Bodega 4...<br><br>💡 <b>Tip:</b> Si incluyes datos fiscales, ponlos al final con la palabra <b>NOTA</b> (Ej: ...Centro NOTA IVA: 12).</p>',
         input: 'textarea',
-        inputPlaceholder: 'Ej: Planta Querétaro - Calle 123, Bodega 4...',
         showCancelButton: true,
         confirmButtonColor: '#2ecc71',
         confirmButtonText: 'Guardar Dirección',
@@ -739,6 +741,69 @@ window.evaluarOpcionesDocumentacion = function() {
     }
 };
 
-// INICIALIZAR AL CARGAR
-// Esto asegura que la pantalla se limpie si vienes de otra pestaña
-iniciarVistaSalidas();
+// ==========================================
+// VISTA PREVIA DE FACTURA (MODO FANTASMA)
+// ==========================================
+window.previsualizarFacturaFedex = function() {
+    var nombreEl = document.getElementById("log_nombre");
+    var nombre = nombreEl ? nombreEl.value.trim() : "";
+    if (!nombre) return mostrarToast("Falta nombre del contacto", "warning");
+    if (COLA_SALIDAS.length === 0) return mostrarToast("El pedido está vacío.", "warning");
+
+    var datosLogistica = {
+        nombreCliente: nombre,
+        empresa: document.getElementById("log_empresa").value,
+        direccion: document.getElementById("log_direccion").value,
+        pais: document.getElementById("log_pais") ? document.getElementById("log_pais").value : "",
+        telefono: document.getElementById("log_telefono").value,
+        email: document.getElementById("log_email").value,
+        guia: document.getElementById("log_guia").value || "VISTA-PREVIA",
+        bultos: document.getElementById("log_bultos") ? document.getElementById("log_bultos").value : 1, // <-- NUEVO
+    };
+
+    Swal.fire({
+        title: 'Generando Vista Previa...',
+        html: 'Creando PDF en modo fantasma sin afectar el inventario 👻',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    google.script.run
+        .withSuccessHandler(function(base64PDF) {
+            if(!base64PDF) return Swal.fire("Error", "No se pudo generar el documento.", "error");
+            
+            // 1. TRUCO ANTI-BLOQUEO: Convertir Base64 a Archivo Binario (Blob)
+            // 1. TRUCO ANTI-BLOQUEO (VERSIÓN MODERNA SIN SÍMBOLOS PROBLEMÁTICOS)
+            var bytes = Uint8Array.from(window.atob(base64PDF), c => c.charCodeAt(0));
+            var blob = new Blob([bytes], { type: 'application/pdf' });
+            
+            // 2. Crear una URL local y segura para el navegador
+            var urlSegura = URL.createObjectURL(blob);
+
+            var blob = new Blob([bytes], { type: 'application/pdf' });
+            
+            // 2. Crear una URL local y segura para el navegador
+            var urlSegura = URL.createObjectURL(blob);
+
+            // 3. Mostrar el SweetAlert Híbrido
+            Swal.fire({
+                title: '📄 Vista Previa FedEx',
+                html: `
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #cbd5e1;">
+                        <p style="font-size: 0.85rem; color: #475569; margin: 0 0 10px 0;">Debido a la alta seguridad de Chrome, si la vista inferior no carga, haz clic en este botón:</p>
+                        <a href="${urlSegura}" target="_blank" style="display: inline-block; background: #10b981; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+                            👁️ Abrir PDF en Nueva Pestaña
+                        </a>
+                    </div>
+                    <iframe src="${urlSegura}" width="100%" height="400px" style="border: 1px solid #cbd5e1; border-radius: 8px; background: white;"></iframe>
+                `,
+                width: '800px',
+                showCloseButton: true,
+                showConfirmButton: false
+            });
+        })
+        .withFailureHandler(function(err) {
+            Swal.fire("Error", err.message, "error");
+        })
+        .generarVistaPreviaFedex(datosLogistica, COLA_SALIDAS);
+};

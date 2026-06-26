@@ -2028,6 +2028,10 @@ window.cargarVistaQR = function(idUbicacion) {
       }
   }
 
+  // --- VARIABLES DE SEGURIDAD (Agrégalo antes de inyectar el HTML del footer) ---
+    var esAdmin = localStorage.getItem("inventario_rol") === "admin";
+    var esCancelado = (cab.estatus === "Cancelado");
+
     modalPadre.innerHTML = `
     ${ESTILOS_MODAL_PREMIUM}
     <div class="clean-header">
@@ -2113,24 +2117,61 @@ window.cargarVistaQR = function(idUbicacion) {
            Cerrar
        </button>
        
-       ${
-         !esFinalizado
-           ? `
+       ${ (esCancelado && esAdmin) ? `
+       <button onclick="borrarPedidoPermanente('${cab.id}')" class="btn-action-modal" style="flex: 1; min-width: 140px; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;" title="Eliminar para siempre de la base de datos">
+           🗑️ Borrar Permanente
+       </button>
+       ` : ''}
+
+       ${ !esFinalizado ? `
        <button onclick="iniciarCancelacionPedido('${cab.id}')" class="btn-action-modal" style="flex: 1; min-width: 140px; background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;">
            🚨 Cancelar
        </button>
        <button onclick="guardarCambiosPedido()" class="btn-action-modal btn-save" style="flex: 2; min-width: 200px; display:flex; align-items:center; justify-content:center;">
            Guardar Cambios
        </button>
-       `
-           : ""
-       }
+       ` : '' }
     </div>
   `;
 
     // Cargar los archivos justo después de renderizar el modal
     cargarArchivosPedidoUI(cab.id);
   }
+
+  // --- ELIMINACIÓN PERMANENTE (SOLO ADMIN) ---
+window.borrarPedidoPermanente = function(idPedido) {
+    Swal.fire({
+        title: '¿Borrar Definitivamente?',
+        html: "Esta acción <b>eliminará el pedido</b> de la base de datos y enviará su carpeta de documentos en Google Drive a la papelera.<br><br><i>No se puede deshacer.</i>",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, borrar para siempre',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            if(typeof mostrarCargando === 'function') mostrarCargando("Borrando pedido y limpiando Drive...");
+            
+            google.script.run
+                .withSuccessHandler(function(res) {
+                    if(typeof ocultarCargando === 'function') ocultarCargando();
+                    if(res.success) {
+                        Swal.fire("Eliminado", "El pedido ha sido borrado por completo del sistema.", "success");
+                        cerrarModalGenerico('modalDetallePedido');
+                        cargarDashboardPedidos(); // Refrescar la tabla para que desaparezca
+                    } else {
+                        Swal.fire("Error", res.error, "error");
+                    }
+                })
+                .withFailureHandler(function(err) {
+                    if(typeof ocultarCargando === 'function') ocultarCargando();
+                    Swal.fire("Error de Conexión", err.message, "error");
+                })
+                .eliminarPedidoDefinitivo(idPedido);
+        }
+    });
+};
 
   // --- ACTUALIZAR GUARDADO PARA INCLUIR COMENTARIOS ---
   function guardarCambiosPedido() {
