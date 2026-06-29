@@ -166,6 +166,20 @@ guardarClienteCRM(datos, success, failure) {
       .withSuccessHandler(success)
       .withFailureHandler(failure || mostrarError)
       .generarRecomendacionID(perfil);
+  },
+
+  generarDocumentosLibres(datos, items, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .generarDocumentosLibres(datos, items);
+  },
+
+  obtenerHistorialFacturas(success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .obtenerHistorialFacturas();
   }
 
 };

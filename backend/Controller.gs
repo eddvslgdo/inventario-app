@@ -3764,32 +3764,26 @@ function generarRecomendacionID(perfilBuscado) {
 
 function generarDocumentosInternacionales(idPedido, datosPedido, items) {
   try {
-    // Obligamos a que se guarde el pedido en la base de datos para poder leerlo
     SpreadsheetApp.flush();
-
-    // Si no marcó ninguna casilla, no hacemos nada y el sistema fluye rápido
     if (!datosPedido.generarPL && !datosPedido.generarProforma && !datosPedido.generarCI) return;
-
-    // Obtenemos la carpeta de Drive de este envío
+    
     const folder = obtenerOCrearCarpetaPedido(idPedido);
+    const folderUrl = folder.getUrl(); // 🔥 Sacamos el link
 
-    // 1. Generar Packing List
-    if (datosPedido.generarPL) {
-       generarPackingListPDF(idPedido, datosPedido, items, folder);
+    let empresa = String(datosPedido.empresa || "").toUpperCase().trim();
+    let contacto = String(datosPedido.nombreCliente || "").toUpperCase().trim();
+    let nombreCompany = empresa ? empresa : contacto;
+    
+    let folioUnico = null;
+    if (datosPedido.generarProforma || datosPedido.generarCI) {
+        folioUnico = obtenerSiguienteFacturaProforma(nombreCompany, folderUrl); // 🔥 Lo guardamos
     }
 
-    // 2. Generar Proforma (Ahora genera ambas: Aduana y Cliente)
-    if (datosPedido.generarProforma) {
-       generarAmbasProformas(idPedido, datosPedido, items, folder);
-    }
-
-    // 3. Generar Commercial Invoice (Para el siguiente paso)
-    if (datosPedido.generarCI) {
-       generarCommercialInvoicePDF(idPedido, datosPedido, items, folder);
-    }
-
+    if (datosPedido.generarPL) generarPackingListPDF(idPedido, datosPedido, items, folder);
+    if (datosPedido.generarProforma) generarAmbasProformas(idPedido, datosPedido, items, folder, folioUnico);
+    if (datosPedido.generarCI) generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, false, folioUnico);
+    
   } catch (e) {
-    // ESTO ES CLAVE: Lanzamos el error hacia la pantalla para saber exactamente qué falló
     throw new Error("Fallo en Documentos Aduaneros: " + e.message);
   }
 }
@@ -3841,34 +3835,34 @@ function generarPackingListPDF(idPedido, datosPedido, items, folder) {
   
   let sheet = tempSS.getSheetByName("PackingList");
 
-  // --- 3. LLENAR CABECERAS Y BUSCAR CONTENT ---
 // --- 3. LLENAR CABECERAS Y BUSCAR CONTENT ---
   let data = sheet.getDataRange().getValues();
   let startRow = -1;
+
+  // 🔥 LA MAGIA DE LA INVERSIÓN (PACKING LIST) 🔥
+  let esRecepcion = (datosPedido.rol === "Recibimos");
+  let finalName = esRecepcion ? "POLAQUIMIA S.A. DE C.V." : (nombreEmpresaReal || nombreClienteReal);
+  let finalTel = esRecepcion ? "5579784490" : (datosPedido.telefono || "N/A");
+  
+  let pDirFull = "AZAHARES 26 COL. SANTA MARIA INSURGENTES, CUAUHTEMOC C.P. 06430 CIUDAD DE MEXICO, MEXICO";
+  let dirToProcess = esRecepcion ? pDirFull : String(datosPedido.direccion).toUpperCase();
+  let lineas = dividirTextoInteligente(dirToProcess, 55); 
 
   for (let i = 0; i < data.length; i++) {
       let rowText = String(data[i][0]).trim().toUpperCase();
       let filaActual = Number(i) + 1; 
 
-      // Forzamos la alineación a la izquierda en todas las celdas
       if (rowText.includes("SHIPPING DATE")) sheet.getRange(filaActual, 2).setValue(new Date()).setHorizontalAlignment("left");
-      else if (rowText.includes("GUIDE NUMBER")) sheet.getRange(filaActual, 2).setValue(datosPedido.guia || "PENDING").setHorizontalAlignment("left");
-      else if (rowText.includes("NAME")) sheet.getRange(filaActual, 2).setValue(nombreEmpresaReal || nombreClienteReal).setHorizontalAlignment("left");
-      else if (rowText.includes("TEL")) sheet.getRange(filaActual, 2).setValue(datosPedido.telefono || "N/A").setHorizontalAlignment("left");
+      else if (rowText.includes("GUIDE NUMBER")) sheet.getRange(filaActual, 2).setValue(datosPedido.guia || "PENDIENTE").setHorizontalAlignment("left");
+      else if (rowText.includes("NAME")) sheet.getRange(filaActual, 2).setValue(finalName).setHorizontalAlignment("left");
+      else if (rowText.includes("TEL")) sheet.getRange(filaActual, 2).setValue(finalTel).setHorizontalAlignment("left");
       else if (rowText.includes("CONTENT")) {
           startRow = filaActual + 1;
       }
-      
-      // 🔥 LÓGICA DE DIRECCIÓN INTELIGENTE PARA LA PL (Límite 55 caracteres) 🔥
       else if (rowText.includes("ADDRESS")) {
-          let dirFull = String(datosPedido.direccion).toUpperCase();
-          
-          // Usamos la misma función maestra, pero le pasamos 55 como límite
-          let lineas = dividirTextoInteligente(dirFull, 55); 
-          
           sheet.getRange(filaActual, 2).setValue(lineas[0]).setHorizontalAlignment("left"); 
           if (lineas[1] !== "") {
-              sheet.getRange(filaActual + 1, 2).setValue(lineas[1]).setHorizontalAlignment("left"); 
+              sheet.getRange(filaActual + 1, 2).setValue(lineas[1]).setHorizontalAlignment("left");
           }
       }
   }
@@ -3924,12 +3918,13 @@ function generarPackingListPDF(idPedido, datosPedido, items, folder) {
   sheetFile.moveTo(editablesFolder);
 }
 
+
 // ==========================================
 // 11. MOTOR DE PROFORMA (VALOR 1 USD)
 // ==========================================
 
-function obtenerSiguienteFacturaProforma(nombreEmpresa) {
-    let sHistorial = obtenerHojaOCrear("HISTORIAL_FACTURAS", ["NO_FACTURA", "FECHA", "EMPRESA"]);
+function obtenerSiguienteFacturaProforma(nombreEmpresa, linkCarpeta = "") {
+    let sHistorial = obtenerHojaOCrear("HISTORIAL_FACTURAS", ["NO_FACTURA", "FECHA", "EMPRESA", "LINK_CARPETA"]);
     let data = sHistorial.getDataRange().getValues();
     
     let year = new Date().getFullYear();
@@ -3937,20 +3932,17 @@ function obtenerSiguienteFacturaProforma(nombreEmpresa) {
     
     // Si hay datos, leemos el último
     if (data.length > 1) {
-        let lastFactura = String(data[data.length - 1][0]).trim(); // Ej: PQ-08-2026
+        let lastFactura = String(data[data.length - 1][0]).trim();
         let parts = lastFactura.split("-");
-        
-        // Si la última factura es del año actual, incrementamos. Si es año nuevo, se reinicia a 1.
         if (parts.length === 3 && parts[2] == year) {
             nextNum = parseInt(parts[1], 10) + 1;
         }
     }
     
-    // Formateamos para que siempre tenga 2 dígitos (01, 02... 10)
     let nextFacturaStr = `PQ-${nextNum.toString().padStart(2, '0')}-${year}`;
     
-    // Registramos en el historial
-    sHistorial.appendRow([nextFacturaStr, new Date(), nombreEmpresa]);
+    // Registramos en el historial junto con el enlace a Drive
+    sHistorial.appendRow([nextFacturaStr, new Date(), nombreEmpresa, linkCarpeta]);
     
     return nextFacturaStr;
 }
@@ -3959,15 +3951,14 @@ function obtenerSiguienteFacturaProforma(nombreEmpresa) {
 // 11. MOTOR DUAL DE PROFORMAS (ADUANA Y CLIENTE)
 // ==========================================
 
-function generarAmbasProformas(idPedido, datosPedido, items, folder) {
+function generarAmbasProformas(idPedido, datosPedido, items, folder, folioAsignado = null) {
     let empresa = String(datosPedido.empresa || "").toUpperCase().trim();
     let contacto = String(datosPedido.nombreCliente || "").toUpperCase().trim();
     let nombreCompany = empresa ? empresa : contacto;
     
-    // Generamos un solo número de factura para ambas versiones
-    let numeroFactura = obtenerSiguienteFacturaProforma(nombreCompany);
-
-    // Disparamos la generación de los dos documentos
+    // Si viene inyectado lo usamos, si no, sacamos uno nuevo
+    let numeroFactura = folioAsignado ? folioAsignado : obtenerSiguienteFacturaProforma(nombreCompany);
+    
     crearDocumentoProforma(idPedido, datosPedido, items, folder, "ADUANA", numeroFactura, nombreCompany, contacto);
     crearDocumentoProforma(idPedido, datosPedido, items, folder, "CLIENTE", numeroFactura, nombreCompany, contacto);
 }
@@ -4049,20 +4040,29 @@ function crearDocumentoProforma(idPedido, datosPedido, items, folder, tipoProfor
 
     let valorUnitarioUSD = 1 / totalPiezasGlobal;
 
-    // --- 2. NOMBRES DE ARCHIVO ---
-    let sendToNombre = (nombreCompany !== contacto) ? (nombreCompany + " (ATTN: " + contacto + ")") : contacto;
+// --- 2. NOMBRES DE ARCHIVO E INVERSIÓN DE ROLES ---
     let clnDest = nombreCompany.replace(/[^A-Z0-9]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
-    
     let docName = `PROF_${tipoProforma}_${clnDest}_${numeroFactura.replace(/-/g, "")}`;
     
     let tempSS = SpreadsheetApp.create(docName);
     let newSheet = sTemplate.copyTo(tempSS);
     newSheet.setName("Proforma_" + tipoProforma);
     newSheet.showSheet(); 
-    tempSS.deleteSheet(tempSS.getSheets()[0]); 
+    tempSS.deleteSheet(tempSS.getSheets()[0]);
     let sheet = tempSS.getSheetByName("Proforma_" + tipoProforma);
 
-    // --- 3. RASTREO Y LLENADO DE CABECERAS (COORDENADAS EXACTAS) ---
+    // 🔥 LA MAGIA DE LA INVERSIÓN (PROFORMA) 🔥
+    let esRecepcion = (datosPedido.rol === "Recibimos");
+    let finalSendTo = esRecepcion ? "POLAQUIMIA S.A. DE C.V. (ATTN: YAIR JUAREZ)" : ((nombreCompany !== contacto) ? (nombreCompany + " (ATTN: " + contacto + ")") : contacto);
+    let finalTel = esRecepcion ? "5579784490" : (datosPedido.telefono || "N/A");
+    let finalEmail = esRecepcion ? "yair.juarez@polakgrupo.com" : (datosPedido.email || "N/A");
+    let finalPais = esRecepcion ? "MEXICO" : String(datosPedido.pais || "NO ESPECIFICADO").toUpperCase();
+    
+    let pDirFull = "AZAHARES 26 COL. SANTA MARIA INSURGENTES, CUAUHTEMOC C.P. 06430 CIUDAD DE MEXICO, MEXICO";
+    let dirToProcess = esRecepcion ? pDirFull : String(datosPedido.direccion).toUpperCase();
+    let lineas = dividirTextoInteligente(dirToProcess, 85); 
+
+    // --- 3. RASTREO Y LLENADO DE CABECERAS ---
     let data = sheet.getDataRange().getValues();
     let startRow = -1;
     let rowTotales = -1;
@@ -4072,27 +4072,19 @@ function crearDocumentoProforma(idPedido, datosPedido, items, folder, tipoProfor
             let txt = String(data[r][c]).toUpperCase().trim();
             if (!txt) continue;
 
-            if (txt === "ARTICLE") startRow = r + 2; 
-            if (txt.includes("TOTAL NET QUANTITY") || txt.includes("TOTAL NET WEIGHT")) rowTotales = r + 2; 
+            if (txt === "ARTICLE") startRow = r + 2;
+            if (txt.includes("TOTAL NET QUANTITY") || txt.includes("TOTAL NET WEIGHT")) rowTotales = r + 2;
 
-            // INYECCIÓN DE FRANCOTIRADOR (Columna 2 = B)
-            if (txt === "DATE:") sheet.getRange(r + 1, 2).setValue(new Date()); 
-            else if (txt.includes("INVOICE LETTER")) sheet.getRange(r + 1, 6).setValue(numeroFactura).setFontWeight("bold"); // F3
-            else if (txt.includes("GUIDE NUMBER")) sheet.getRange(r + 1, 10).setValue(datosPedido.guia || "PENDIENTE"); // J3
-            else if (txt === "SEND TO:") sheet.getRange(r + 1, 2).setValue(sendToNombre); // B
-            else if (txt === "EMAIL:") sheet.getRange(r + 1, 2).setValue(datosPedido.email || ""); // B
-            else if (txt === "TEL:") sheet.getRange(r + 1, 2).setValue(datosPedido.telefono || "N/A"); // B
-            else if (txt.includes("DESTINATION COUNTRY")) sheet.getRange(r + 1, 4).setValue(String(datosPedido.pais || "NO ESPECIFICADO").toUpperCase()); // D
-            
-            // LÓGICA DE DIRECCIÓN INTELIGENTE (Límite 85 caracteres)
+            if (txt === "DATE:") sheet.getRange(r + 1, 2).setValue(new Date());
+            else if (txt.includes("INVOICE LETTER")) sheet.getRange(r + 1, 6).setValue(numeroFactura).setFontWeight("bold");
+            else if (txt.includes("GUIDE NUMBER")) sheet.getRange(r + 1, 10).setValue(datosPedido.guia || "PENDIENTE");
+            else if (txt === "SEND TO:") sheet.getRange(r + 1, 2).setValue(finalSendTo);
+            else if (txt === "EMAIL:") sheet.getRange(r + 1, 2).setValue(finalEmail);
+            else if (txt === "TEL:") sheet.getRange(r + 1, 2).setValue(finalTel);
+            else if (txt.includes("DESTINATION COUNTRY")) sheet.getRange(r + 1, 4).setValue(finalPais);
             else if (txt === "ADRESS:" || txt === "ADDRESS:") {
-                let dirFull = String(datosPedido.direccion).toUpperCase();
-                let lineas = dividirTextoInteligente(dirFull, 85); 
-                
-                sheet.getRange(r + 1, 2).setValue(lineas[0]); // Fila de ADDRESS (B)
-                if (lineas[1] !== "") {
-                    sheet.getRange(r + 2, 2).setValue(lineas[1]); // Fila vacía de abajo (B)
-                }
+                sheet.getRange(r + 1, 2).setValue(lineas[0]);
+                if (lineas[1] !== "") sheet.getRange(r + 2, 2).setValue(lineas[1]);
             }
         }
     }
@@ -4217,15 +4209,11 @@ function generarVistaPreviaFedex(datosPedido, items) {
 // ==========================================
 // MOTOR COMMERCIAL INVOICE (FEDEX)
 // ==========================================
-function generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, isPreview = false) {
-    // 🏛️ PUENTE DE CONEXIÓN SEGURO: Plantilla desde PRODUCCIÓN
+function generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, isPreview = false, folioAsignado = null) {
     const idProdDB = "1zCxn5Cvuvfs29Hbpp58W6VCvV6AczGMG1o7CkhS8d2E";
     let ssProd;
-    try {
-        ssProd = SpreadsheetApp.openById(idProdDB);
-    } catch(err) {
-        throw new Error("No se pudo conectar a la base de datos de Producción.");
-    }
+    try { ssProd = SpreadsheetApp.openById(idProdDB); } 
+    catch(err) { throw new Error("No se pudo conectar a la base de datos de Producción."); }
     
     const sTemplate = ssProd.getSheetByName("TEMPLATE_CIF_PQ");
     if (!sTemplate) throw new Error("No existe la plantilla TEMPLATE_CIF_PQ en Producción.");
@@ -4244,13 +4232,8 @@ function generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, isPre
         let key = "EXP_SAMPLE_" + volUnitario;
 
         if (!grupos[key]) {
-            grupos[key] = { 
-                desc: "Experimental samples", // 🔥 Cambio: Descripción mucho más limpia y corta
-                volumenUnitario: volUnitario, 
-                piezas: 0 
-            };
+            grupos[key] = { desc: "Experimental samples", volumenUnitario: volUnitario, piezas: 0 };
         }
-        
         grupos[key].piezas += pzas;
         totalPiezasGlobal += pzas;
         pesoTotalNeto += (pzas * volUnitario);
@@ -4258,32 +4241,40 @@ function generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, isPre
 
     let valorUnitarioUSD = 1 / totalPiezasGlobal;
 
-    // --- 2. INTELIGENCIA DE DIRECCIÓN (CASCADA A 3 LÍNEAS) ---
+    // --- 2. INTELIGENCIA DE DIRECCIÓN (CLIENTE) ---
     let dirCompleta = String(datosPedido.direccion || "").toUpperCase().trim();
-    
-    // Filtro para eliminar la palabra "NOTA" y todo lo que le sigue
     let indiceNota = dirCompleta.indexOf("NOTA");
     if (indiceNota !== -1) {
-        dirCompleta = dirCompleta.substring(0, indiceNota).trim();
-        // Limpiamos si quedó una coma, punto o guión suelto justo antes de la palabra NOTA
-        dirCompleta = dirCompleta.replace(/[,.-]+$/, "").trim(); 
+        dirCompleta = dirCompleta.substring(0, indiceNota).trim().replace(/[,.-]+$/, "").trim(); 
     }
     
-    // 1er Corte: Sacamos la Línea 1 y guardamos el resto
     let primerCorte = dividirTextoInteligente(dirCompleta, 40);
-    let linea1 = primerCorte[0];
-    
-    // 2do Corte: Tomamos el resto del 1er corte, y lo volvemos a dividir
+    let fAd1 = primerCorte[0];
     let segundoCorte = dividirTextoInteligente(primerCorte[1], 40);
-    let linea2 = segundoCorte[0];
-    let linea3 = segundoCorte[1]; // Lo que sobra definitivo cae aquí
+    let fAd2 = segundoCorte[0];
+    let fAd3 = segundoCorte[1]; 
 
-    // --- 3. NOMBRES Y ARCHIVO TEMPORAL ---
-    let empresa = String(datosPedido.empresa || "").toUpperCase().trim();
-    let contacto = String(datosPedido.nombreCliente || "").toUpperCase().trim();
-    let nombreCompany = empresa ? empresa : contacto;
-    
-    let numeroFactura = isPreview ? "PREVIEW-2026" : obtenerSiguienteFacturaProforma(nombreCompany);
+    let fCia = String(datosPedido.empresa || "").toUpperCase().trim();
+    let fNom = String(datosPedido.nombreCliente || "").toUpperCase().trim();
+    let nombreCompany = fCia ? fCia : fNom;
+    fCia = nombreCompany;
+    let fLoc = String(datosPedido.pais || "NO ESPECIFICADO").toUpperCase();
+    let fTel = datosPedido.telefono || "N/A";
+    let fEma = datosPedido.email || "N/A";
+
+    // --- DATOS FIJOS POLAQUIMIA ---
+    const POLAK = {
+        cia: "Dr. Jose Polak S.A. de C.V.",
+        ad1: "Azahares 26",
+        ad2: "Col. Santa Maria Insurgentes",
+        ad3: "Cuauhtemoc C.P. 06430",
+        loc: "Ciudad de Mexico, Mexico",
+        nom: "Yair Juarez Gonzalez",
+        tel: "5579784490",
+        ema: "yair.juarez@polakgrupo.com"
+    };
+
+    let numeroFactura = isPreview ? "PREVIEW-2026" : (folioAsignado ? folioAsignado : obtenerSiguienteFacturaProforma(nombreCompany));
     let docName = `CIFEDEX_${nombreCompany.replace(/[^A-Z0-9]/g, "_")}_${numeroFactura}`;
     
     let tempSS = SpreadsheetApp.create(docName);
@@ -4293,24 +4284,56 @@ function generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, isPre
     tempSS.deleteSheet(tempSS.getSheets()[0]); 
     let sheet = tempSS.getSheetByName("CommercialInvoice");
 
-    // --- 4. LLENADO DE CABECERAS (COORDENADAS ABSOLUTAS) ---
-    // Factura y Guía (Top Right)
+    // --- 3. LLENADO DE CABECERAS ---
     sheet.getRange("H5").setValue(numeroFactura).setFontWeight("bold");
     sheet.getRange("H9").setValue(datosPedido.guia || "PENDIENTE");
 
-    // 🎯 RECEIVER DETAILS (Las 3 líneas de dirección)
-    sheet.getRange("B24").setValue(nombreCompany);
-    sheet.getRange("B26").setValue(linea1);
-    sheet.getRange("B28").setValue(linea2);
-    sheet.getRange("B30").setValue(linea3); 
-    
-    // País, Contacto, Tel, Email
-    sheet.getRange("B32").setValue(String(datosPedido.pais || "MEXICO").toUpperCase());
-    sheet.getRange("B34").setValue(contacto);
-    sheet.getRange("B36").setValue(datosPedido.telefono || "N/A");
-    sheet.getRange("B38").setValue(datosPedido.email || "N/A");
+    // 🔥 LA MAGIA DE LA INVERSIÓN 🔥
+    let esRecepcion = (datosPedido.rol === "Recibimos");
 
-    // --- 5. LLENAR TABLA DE ARTÍCULOS ---
+    if (esRecepcion) {
+        // Ellos Envían (Sender Arriba)
+        sheet.getRange("B5").setValue(fCia);
+        sheet.getRange("B7").setValue(fAd1);
+        sheet.getRange("B9").setValue(fAd2);
+        sheet.getRange("B11").setValue(fAd3);
+        sheet.getRange("B13").setValue(fLoc);
+        sheet.getRange("B15").setValue(fNom);
+        sheet.getRange("B17").setValue(fTel);
+        sheet.getRange("B19").setValue(fEma);
+
+        // Nosotros Recibimos (Receiver Abajo)
+        sheet.getRange("B24").setValue(POLAK.cia);
+        sheet.getRange("B26").setValue(POLAK.ad1);
+        sheet.getRange("B28").setValue(POLAK.ad2);
+        sheet.getRange("B30").setValue(POLAK.ad3);
+        sheet.getRange("B32").setValue(POLAK.loc);
+        sheet.getRange("B34").setValue(POLAK.nom);
+        sheet.getRange("B36").setValue(POLAK.tel);
+        sheet.getRange("B38").setValue(POLAK.ema);
+    } else {
+        // Nosotros Enviamos (Sender Arriba - Restaura por si acaso)
+        sheet.getRange("B5").setValue(POLAK.cia);
+        sheet.getRange("B7").setValue(POLAK.ad1);
+        sheet.getRange("B9").setValue(POLAK.ad2);
+        sheet.getRange("B11").setValue(POLAK.ad3);
+        sheet.getRange("B13").setValue(POLAK.loc);
+        sheet.getRange("B15").setValue(POLAK.nom);
+        sheet.getRange("B17").setValue(POLAK.tel);
+        sheet.getRange("B19").setValue(POLAK.ema);
+
+        // Ellos Reciben (Receiver Abajo)
+        sheet.getRange("B24").setValue(fCia);
+        sheet.getRange("B26").setValue(fAd1);
+        sheet.getRange("B28").setValue(fAd2);
+        sheet.getRange("B30").setValue(fAd3); 
+        sheet.getRange("B32").setValue(fLoc);
+        sheet.getRange("B34").setValue(fNom);
+        sheet.getRange("B36").setValue(fTel);
+        sheet.getRange("B38").setValue(fEma);
+    }
+
+    // --- 4. LLENAR TABLA DE ARTÍCULOS ---
     let startRow = 42; 
     let rowActual = startRow;
     
@@ -4319,44 +4342,34 @@ function generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, isPre
         let subtotalFila = g.piezas * valorUnitarioUSD;
         let pesoTotalFila = g.piezas * g.volumenUnitario;
         
-        // 🔥 Alineaciones perfectas inyectadas aquí
-        sheet.getRange(rowActual, 1).setValue(g.desc).setHorizontalAlignment("left"); // Columna A
-        sheet.getRange(rowActual, 2).setValue(g.piezas).setHorizontalAlignment("center"); // Columna B (Quantity)
-        sheet.getRange(rowActual, 3).setValue(g.volumenUnitario.toFixed(3)).setHorizontalAlignment("center"); // Columna C (Unit weight)
-        sheet.getRange(rowActual, 4).setValue(valorUnitarioUSD.toFixed(3)).setHorizontalAlignment("center"); // Columna D (Unit value)
-        sheet.getRange(rowActual, 7).setValue("").setHorizontalAlignment("center"); // Columna G (HS Code)
-        sheet.getRange(rowActual, 8).setValue("MEXICO").setHorizontalAlignment("center"); // Columna H (Origin)
-        sheet.getRange(rowActual, 9).setValue(pesoTotalFila.toFixed(3)).setHorizontalAlignment("center"); // Columna I (Total weight)
-        sheet.getRange(rowActual, 10).setValue(subtotalFila.toFixed(3)).setHorizontalAlignment("center"); // Columna J (Total value)
+        sheet.getRange(rowActual, 1).setValue(g.desc).setHorizontalAlignment("left");
+        sheet.getRange(rowActual, 2).setValue(g.piezas).setHorizontalAlignment("center");
+        sheet.getRange(rowActual, 3).setValue(g.volumenUnitario.toFixed(3)).setHorizontalAlignment("center");
+        sheet.getRange(rowActual, 4).setValue(valorUnitarioUSD.toFixed(3)).setHorizontalAlignment("center");
+        sheet.getRange(rowActual, 7).setValue("").setHorizontalAlignment("center");
+        sheet.getRange(rowActual, 8).setValue("MEXICO").setHorizontalAlignment("center");
+        sheet.getRange(rowActual, 9).setValue(pesoTotalFila.toFixed(3)).setHorizontalAlignment("center");
+        sheet.getRange(rowActual, 10).setValue(subtotalFila.toFixed(3)).setHorizontalAlignment("center");
         
         rowActual++;
     }
 
-// --- 6. TOTALES INFERIORES ---
+    // --- 5. TOTALES INFERIORES ---
     let dataPost = sheet.getDataRange().getValues();
     for (let r = startRow; r < dataPost.length; r++) {
         let rowStr = dataPost[r].join(" ").toUpperCase();
-        
         if (rowStr.includes("NUMBER OF PACKAGES IN SHIPMENT")) {
-            // 🔥 CORRECCIÓN: El texto está en la fila 48, el cuadro en la 50.
-            // Por lo tanto, el salto es de +3 (r + 1 es la actual, r + 3 es la 50)
             let bultosManuales = Number(datosPedido.bultos) || 1;
             sheet.getRange(r + 3, 2).setValue(bultosManuales).setHorizontalAlignment("center").setFontWeight("bold");
         }
-        if (rowStr.includes("TOTAL SHIPMENT VALUE:")) {
-            sheet.getRange(r + 1, 10).setValue(1.00).setFontWeight("bold"); 
-        }
-        if (rowStr.includes("TOTAL DECLARED VALUE:")) {
-            sheet.getRange(r + 1, 10).setValue(1.00).setFontWeight("bold"); 
-        }
+        if (rowStr.includes("TOTAL SHIPMENT VALUE:")) sheet.getRange(r + 1, 10).setValue(1.00).setFontWeight("bold");
+        if (rowStr.includes("TOTAL DECLARED VALUE:")) sheet.getRange(r + 1, 10).setValue(1.00).setFontWeight("bold");
     }
 
     SpreadsheetApp.flush();
     Utilities.sleep(isPreview ? 1000 : 3000); 
 
-    // --- 7. MODO FANTASMA (PREVIEW) O GUARDADO REAL ---
     let pdfBlob = tempSS.getAs(MimeType.PDF).setName(docName + ".pdf");
-    
     if (isPreview) {
         let base64 = Utilities.base64Encode(pdfBlob.getBytes());
         DriveApp.getFileById(tempSS.getId()).setTrashed(true);
@@ -4367,5 +4380,84 @@ function generarCommercialInvoicePDF(idPedido, datosPedido, items, folder, isPre
         let editablesFolder = subfolders.hasNext() ? subfolders.next() : folder.createFolder("Editables");
         DriveApp.getFileById(tempSS.getId()).moveTo(editablesFolder);
         return true;
+    }
+}
+
+// ==========================================
+// MÓDULO: GENERADOR DE DOCUMENTOS LIBRES
+// ==========================================
+function generarDocumentosLibres(datosDoc, itemsCarrito) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    verificarAccesoServidor();
+    
+    let empresa = String(datosDoc.empresa || "").toUpperCase().trim();
+    let contacto = String(datosDoc.nombreCliente || "").toUpperCase().trim();
+    let nombreCompany = empresa ? empresa : contacto;
+    
+    let folderPadre;
+    try {
+      folderPadre = DriveApp.getFolderById(ID_CARPETA_PADRE_PEDIDOS);
+    } catch (e) {
+      throw new Error("No se encontró la carpeta principal en Drive.");
+    }
+    
+    let fechaStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd-MM-yyyy");
+    let clnEmpresa = nombreCompany.replace(/[^A-Z0-9]/g, "_").replace(/_+/g, "_");
+    let nombreCarpeta = `DOC_LIBRES_${clnEmpresa}_${fechaStr}`.toUpperCase();
+    
+    let folderDestino = folderPadre.createFolder(nombreCarpeta);
+    folderDestino.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    let folderUrl = folderDestino.getUrl(); // 🔥 Obtenemos el link
+    
+    // Generar Folio Único y anexar Link
+    let folioUnico = null;
+    if (datosDoc.generarProforma || datosDoc.generarCI) {
+        folioUnico = obtenerSiguienteFacturaProforma(nombreCompany, folderUrl);
+    } else if (datosDoc.generarPL) {
+        folioUnico = obtenerSiguienteFacturaProforma(nombreCompany + " (Solo PL)", folderUrl);
+    }
+    
+    if (datosDoc.generarPL) generarPackingListPDF("LIBRE", datosDoc, itemsCarrito, folderDestino);
+    if (datosDoc.generarProforma) generarAmbasProformas("LIBRE", datosDoc, itemsCarrito, folderDestino, folioUnico);
+    if (datosDoc.generarCI) generarCommercialInvoicePDF("LIBRE", datosDoc, itemsCarrito, folderDestino, false, folioUnico);
+    
+    return { success: true, folio: folioUnico || "Carpeta Creada" };
+  } catch(e) {
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function obtenerHistorialFacturas() {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(10000);
+        verificarAccesoServidor();
+
+        let sHistorial = obtenerHojaSegura("HISTORIAL_FACTURAS");
+        if (!sHistorial || sHistorial.getLastRow() < 2) return [];
+        
+        let data = sHistorial.getDataRange().getDisplayValues();
+        let historial = [];
+        
+        let limite = Math.max(1, data.length - 100);
+        for (let i = data.length - 1; i >= limite; i--) {
+            if(data[i][0]) {
+                historial.push({
+                    folio: data[i][0],
+                    fecha: data[i][1],
+                    empresa: data[i][2],
+                    link: data[i][3] || "" // 🔥 Extraemos el link de la nueva columna D
+                });
+            }
+        }
+        return historial;
+    } catch(e) {
+        throw new Error(e.message);
+    } finally {
+        lock.releaseLock();
     }
 }

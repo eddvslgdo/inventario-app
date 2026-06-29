@@ -126,6 +126,10 @@ function llenarSelects(data) {
   if (document.getElementById("selTransfNuevaPres"))
     setupPresentacion("selTransfNuevaPres", data.presentaciones, null);
 
+  // 4. Documentos Libres: Llenar Select de Presentaciones
+  if (document.getElementById("dl_presentacion"))
+      setupPresentacion("dl_presentacion", data.presentaciones, null);
+
   // Reactivar eventos
   const selProdSalida = document.getElementById("sal_producto");
   if (selProdSalida) {

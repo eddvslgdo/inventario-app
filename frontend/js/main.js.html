@@ -296,6 +296,7 @@ function configurarInterfazPorPermisos(info) {
           panelHist.style.flex = "1 1 100%"; // La tabla toma toda la pantalla
       }
   }
+  const btnDocs = document.getElementById('nav-documentos'); if (btnDocs) btnDocs.style.display = info.esAdmin ? 'inline-block' : 'none';
   document.getElementById('nav-salidas').style.display = info.permisos.salidas ? 'inline-block' : 'none';
   document.getElementById('nav-ubicaciones').style.display = info.permisos.ubicaciones ? 'inline-block' : 'none';
   document.getElementById('nav-productos').style.display = info.permisos.productos ? 'inline-block' : 'none';
