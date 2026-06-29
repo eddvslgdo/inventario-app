@@ -371,6 +371,10 @@ function cerrarSesion() {
    const email = localStorage.getItem("inventario_email");
    if(email) google.script.run.registrarCierreSesion(email);
    localStorage.clear();
+   
+   // 🔥 LA MAGIA: Apagamos todas las pantallas a la fuerza
+   document.querySelectorAll('.vista').forEach(v => v.style.display = 'none');
+   
    document.getElementById("app-principal").style.display = "none";
    document.getElementById("vista-login").style.display = "flex";
    reiniciarLogin();
