@@ -865,20 +865,28 @@ window.filtrarTipoCliente = function(tipo, btnEl) {
 };
 
 window.abrirModalClienteNuevo = function() {
-    document.getElementById("crm_id").value = "";
-    document.getElementById("crm_nombre").value = "";
-    document.getElementById("crm_empresa").value = "";
-    document.getElementById("crm_tipo").value = "Externo";
-    document.getElementById("crm_telefono").value = "";
-    document.getElementById("crm_email").value = "";
+    // 1. Limpiamos los campos (solo si existen)
+    var crmId = document.getElementById("crm_id"); if(crmId) crmId.value = "";
+    var crmNombre = document.getElementById("crm_nombre"); if(crmNombre) crmNombre.value = "";
+    var crmEmpresa = document.getElementById("crm_empresa"); if(crmEmpresa) crmEmpresa.value = "";
+    var crmTipo = document.getElementById("crm_tipo"); if(crmTipo) crmTipo.value = "Externo";
+    var crmTel = document.getElementById("crm_telefono"); if(crmTel) crmTel.value = "";
+    var crmEmail = document.getElementById("crm_email"); if(crmEmail) crmEmail.value = "";
     
-    document.getElementById("crm_tabla_historial").innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #94a3b8;">Guarda el cliente primero para ver su historial.</td></tr>';
-    document.getElementById("crm_total_envios").innerText = "0 Envíos";
+    // 2. Limpiamos secciones avanzadas
+    var tablaHistorial = document.getElementById("crm_tabla_historial");
+    if(tablaHistorial) tablaHistorial.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #94a3b8;">Sin envíos previos</td></tr>';
     
-    document.getElementById("crm_lista_direcciones").innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 10px;">Guarda el cliente primero para agregar direcciones.</div>';
-
+    var totalEnvios = document.getElementById("crm_total_envios");
+    if(totalEnvios) totalEnvios.innerText = "0 Envíos";
+    
+    var listaDir = document.getElementById("crm_lista_direcciones");
+    if(listaDir) listaDir.innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 10px;">Guarda el cliente primero para agregar direcciones.</div>';
+    
+    // 3. ABRIMOS DIRECTAMENTE TU DISEÑO AVANZADO
     abrirModalGenerico('modalPerfilCliente');
 };
+
 
 window.verDetalleCliente = function(id) {
     let cliente = window.CLIENTES_CACHE.find(c => String(c.id) === String(id));
