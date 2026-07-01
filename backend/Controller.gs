@@ -2651,16 +2651,20 @@ function obtenerEstadisticasDashboard() {
         if (f.getFullYear() === anioActual)
           stats.tendenciaAnual.gastos[f.getMonth()] += costo;
 
-        // 📦 PEDIDOS (Solo envíos de material reales)
+// 📦 PEDIDOS (Solo envíos de material reales)
         if (!isExterno) {
           idPedAceptados.add(idPed);
+          
+          // --- NUEVO: CONTEO HISTÓRICO DE ESTATUS (Fuera de la restricción del mes) ---
+          if (estatus.includes("ENTREGADO")) stats.kpi.enviosCompletados++;
+          else if (estatus.includes("CANCELADO")) stats.kpi.enviosCancelados++;
+          else stats.kpi.enviosEnProceso++;
+
+          // Mantenemos este solo para la tarjeta de "Envíos realizados este mes"
           if (mesStr === mesActualStr) {
             stats.kpi.pedidosMesActual++;
-            if (estatus.includes("ENTREGADO")) stats.kpi.enviosCompletados++;
-            else if (estatus.includes("CANCELADO"))
-              stats.kpi.enviosCancelados++;
-            else stats.kpi.enviosEnProceso++;
           }
+          
           if (f.getFullYear() === anioActual)
             stats.tendenciaAnual.pedidos[f.getMonth()]++;
 
