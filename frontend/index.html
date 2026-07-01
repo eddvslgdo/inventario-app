@@ -2760,6 +2760,215 @@
         </div>
       </div>
 
+      <div id="modalUbicacion" class="modal-overlay" style="display: none; z-index: 2005;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 16px; overflow: hidden; padding: 0;">
+          <div style="background: #f59e0b; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.2rem;">📍 Nueva Ubicación</h3>
+            <button onclick="cerrarModalGenerico('modalUbicacion')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </div>
+          <div style="padding: 20px; background: #f8fafc;">
+            <div class="form-group">
+              <label>Nombre del Estante o Caja *</label>
+              <input type="text" id="nuevaUbicNombre" class="input-modern" placeholder="Ej. CAJA 10 o ESTANTE A" autocomplete="off" />
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+              <button onclick="cerrarModalGenerico('modalUbicacion')" class="btn-field" style="flex: 1; background: #e2e8f0; color: #475569; border: none;">Cancelar</button>
+              <button onclick="guardarUbicacion()" class="btn-field" style="flex: 1; background: #f59e0b; color: white; border: none;">Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="modalPresentacion" class="modal-overlay" style="display: none; z-index: 2005;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 16px; overflow: hidden; padding: 0;">
+          <div style="background: #5856d6; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.2rem;">📦 Nueva Presentación</h3>
+            <button onclick="cerrarModalGenerico('modalPresentacion')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </div>
+          <div style="padding: 20px; background: #f8fafc;">
+            <div class="form-group">
+              <label>Descripción *</label>
+              <input type="text" id="nuevaPresDesc" class="input-modern" placeholder="Ej. 250 ML, 1 L, 5 KG" autocomplete="off" />
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+              <button onclick="cerrarModalGenerico('modalPresentacion')" class="btn-field" style="flex: 1; background: #e2e8f0; color: #475569; border: none;">Cancelar</button>
+              <button onclick="guardarPresentacion()" class="btn-field" style="flex: 1; background: #5856d6; color: white; border: none;">Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="modalProducto" class="modal-overlay" style="display: none; z-index: 3050;">
+        <div class="modal-content" style="max-width: 450px; border-radius: 16px; overflow: hidden; padding: 0;">
+          <div style="background: #007aff; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.2rem;">🆕 Nuevo Producto</h3>
+            <button onclick="cerrarModalGenerico('modalProducto')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </div>
+          <div style="padding: 20px; background: #f8fafc;">
+            <div class="form-group">
+              <label>Nombre del Producto *</label>
+              <input type="text" id="nuevoNombre" class="input-modern" placeholder="Ej. MASTIN DUO" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label>Tipo de Unidad (Líquido/Sólido/Pieza) *</label>
+              <select id="nuevaUnidad" class="input-modern">
+                <option value="L">Líquidos (Litros / L)</option>
+                <option value="Kg">Sólidos (Kilos / Kg)</option>
+                <option value="Unid">Piezas (Cajas / Kits / Unid)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Descripción / Comentarios</label>
+              <input type="text" id="nuevaDescripcion" class="input-modern" placeholder="Opcional..." autocomplete="off" />
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+              <button onclick="cerrarModalGenerico('modalProducto')" class="btn-field" style="flex: 1; background: #e2e8f0; color: #475569; border: none;">Cancelar</button>
+              <button onclick="guardarProducto()" class="btn-field" style="flex: 1; background: #007aff; color: white; border: none;">Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="modalTransformacion" class="modal-overlay" style="display: none; z-index: 2010;">
+        <div class="modal-content" style="max-width: 500px; padding: 0; border-radius: 16px; overflow: hidden;">
+          <div style="background: #8e44ad; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.2rem;">🛠️ Transformar Lote</h3>
+            <button onclick="cerrarModalGenerico('modalTransformacion')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </div>
+          <div style="padding: 20px; background: #f8fafc;">
+             <div style="background: #f3e5f5; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #8e44ad;">
+                <div style="font-size: 0.85rem; color: #666; font-weight: bold;">ORIGEN:</div>
+                <div id="lblTransfOrigen" style="font-weight: bold; color: #333; font-size: 1.1rem;">-</div>
+                <div style="font-family: monospace; color: #d63031; font-weight: bold; font-size: 0.9rem;" id="lblTransfLote">-</div>
+             </div>
+
+             <div class="form-group">
+                <label>Cantidad de PIEZAS a Transformar</label>
+                <div style="display: flex; gap: 10px;">
+                   <input type="number" id="cantTransfPiezas" class="input-modern" placeholder="Ej. 10" oninput="calcTransf()">
+                   <div id="lblTransfLitros" style="background: #eee; padding: 10px; border-radius: 8px; font-weight: bold; color: #8e44ad; display: flex; align-items: center; min-width: 80px; justify-content: center;">0 L</div>
+                </div>
+             </div>
+
+             <div style="text-align: center; margin: 15px 0; font-size: 1.5rem; color: #ccc;">⬇️</div>
+
+             <div class="form-group">
+                <label>Convertir al Producto:</label>
+                <input type="text" id="transf_producto_search" list="lista-transf-productos" class="input-modern" placeholder="Buscar producto destino..." onchange="seleccionarProductoTransf()" autocomplete="off">
+                <datalist id="lista-transf-productos"></datalist>
+                <input type="hidden" id="selTransfNuevoProd">
+             </div>
+
+             <div class="form-group">
+                <label>En la Presentación:</label>
+                <select id="selTransfNuevaPres" class="input-modern" onchange="calcTransf()"></select>
+             </div>
+
+             <div class="form-group">
+                <label>Lote Resultante (Opcional)</label>
+                <input type="text" id="inputTransfNuevoLote" class="input-modern" placeholder="Si se omite, se conserva el lote original">
+             </div>
+
+             <div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #27ae60; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.85rem; font-weight: bold; color: #27ae60;">Resultado Estimado:</span>
+                <span id="lblTransfResultado" style="font-weight: bold; font-size: 1.1rem; color: #2ecc71;">0 Piezas</span>
+             </div>
+
+             <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="cerrarModalGenerico('modalTransformacion')" class="btn-field" style="flex: 1; background: #e2e8f0; color: #333; border: none;">Cancelar</button>
+                <button onclick="confirmarTransformacion()" class="btn-field" style="flex: 1; background: #8e44ad; color: white; border: none;">Ejecutar 🛠️</button>
+             </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="modalDetalleUbicacion" class="modal-overlay" style="display: none; z-index: 2000;">
+        <div class="modal-content" style="max-width: 900px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+          <div style="background: #1e293b; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="tituloDetalle" style="margin: 0; color: white; font-size: 1.2rem;">📍 Contenido</h3>
+            <button onclick="cerrarModalGenerico('modalDetalleUbicacion')" style="background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer;">&times;</button>
+          </div>
+          <div style="background: #f1f5f9; padding: 10px 25px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer; color: #475569; font-size: 0.9rem;">
+               <input type="checkbox" id="chkAllUbic" onchange="toggleAllUbicItems(this)" style="transform: scale(1.2);"> Seleccionar todo
+            </label>
+            <button onclick="prepararTransferenciaMasiva()" class="btn-field" style="background: #3b82f6; color: white; border: none; padding: 6px 15px; font-size: 0.85rem; height: auto;">
+               📦 Transferir Lotes Seleccionados
+            </button>
+          </div>
+          <div style="flex: 1; overflow-y: auto; background: white;">
+            <table class="modern-table" style="width: 100%;">
+              <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 5;">
+                <tr>
+                  <th style="width: 40px; text-align: center;"></th>
+                  <th>Producto y Pres.</th>
+                  <th>Lote</th>
+                  <th>Caducidad</th>
+                  <th style="text-align: right;">Cantidad</th>
+                  <th style="text-align: center;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tablaDetalleBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <div id="modalTransferencia" class="modal-overlay" style="display: none; z-index: 2010;">
+        <div class="modal-content" style="max-width: 400px; padding: 0; border-radius: 16px; overflow: hidden;">
+          <div style="background: #3b82f6; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.2rem;">🔄 Transferir</h3>
+            <button onclick="cerrarModalGenerico('modalTransferencia')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </div>
+          <div style="padding: 20px; background: #f8fafc;">
+            <div style="margin-bottom: 15px; font-size: 0.95rem; color: #334155;">
+              <div id="txtProductoTransf" style="font-weight: bold; font-size: 1.1rem;">-</div>
+              <div id="txtLoteTransf" style="font-family: monospace; color: #d63031;">-</div>
+            </div>
+            <div class="form-group">
+              <label>Cantidad a transferir (Piezas)</label>
+              <input type="number" id="cantTransferir" class="input-modern" placeholder="Ej. 5" oninput="calcularSimulacionTransferencia()" />
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b; margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div>Equivale a: <br><strong id="lblEquivalencia" style="color: #3b82f6; font-size: 1rem;">0 L</strong></div>
+              <div style="text-align: right;">Restante en estante: <br><strong id="lblRestante" style="color: #10b981; font-size: 1rem;">- L</strong></div>
+            </div>
+            <div class="form-group">
+              <label>Caja o Estante Destino *</label>
+              <select id="selDestinoTransf" class="input-modern"></select>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+              <button onclick="cerrarModalGenerico('modalTransferencia')" class="btn-field" style="flex: 1; background: #e2e8f0; color: #333; border: none;">Cancelar</button>
+              <button onclick="confirmarTransferencia()" class="btn-field" style="flex: 1; background: #3b82f6; color: white; border: none;">Mover 🔄</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="modalTransferenciaMasiva" class="modal-overlay" style="display: none; z-index: 2010;">
+        <div class="modal-content" style="max-width: 400px; padding: 0; border-radius: 16px; overflow: hidden;">
+          <div style="background: #3b82f6; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.2rem;">📦 Movimiento Masivo</h3>
+            <button onclick="cerrarModalGenerico('modalTransferenciaMasiva')" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </div>
+          <div style="padding: 20px; background: #f8fafc;">
+            <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #bfdbfe; text-align: center;">
+              <div style="font-size: 2rem; margin-bottom: 5px;">📦</div>
+              <div style="color: #1e3a8a; font-weight: bold; font-size: 1.1rem;">Moviendo <span id="lblCantMasivaTransf">0</span> lote(s) enteros.</div>
+              <p style="font-size: 0.85rem; color: #3b82f6; margin: 5px 0 0 0;">Se transferirá todo el stock disponible de los lotes seleccionados.</p>
+            </div>
+            <div class="form-group">
+              <label>Caja o Estante Destino *</label>
+              <select id="selDestinoMasivo" class="input-modern"></select>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+              <button onclick="cerrarModalGenerico('modalTransferenciaMasiva')" class="btn-field" style="flex: 1; background: #e2e8f0; color: #333; border: none;">Cancelar</button>
+              <button onclick="confirmarTransferenciaMasiva()" class="btn-field" style="flex: 1; background: #3b82f6; color: white; border: none;">Ejecutar Movimiento</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       
       <?!= include('frontend/js.loader'); ?>
 
