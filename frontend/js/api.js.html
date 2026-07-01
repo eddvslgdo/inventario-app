@@ -180,6 +180,13 @@ guardarClienteCRM(datos, success, failure) {
       .withSuccessHandler(success)
       .withFailureHandler(failure || mostrarError)
       .obtenerHistorialFacturas();
+  },
+
+  generarDocumentosPendientes(idPedido, opciones, success, failure) {
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(failure || mostrarError)
+      .generarDocumentosPendientes(idPedido, opciones);
   }
 
 };

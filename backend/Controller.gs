@@ -4461,3 +4461,65 @@ function obtenerHistorialFacturas() {
         lock.releaseLock();
     }
 }
+
+
+// ==========================================
+// RESCATE DE DOCUMENTOS PENDIENTES
+// ==========================================
+function generarDocumentosPendientes(idPedido, opciones) {
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(30000);
+        verificarAccesoServidor();
+
+        // 1. Traemos la radiografía completa del pedido
+        let detalle = obtenerDetallePedidoCompleto(idPedido);
+        let cab = detalle.cabecera;
+        let items = detalle.items;
+
+        // 2. Guardamos la nueva guía en el historial de Pedidos
+        const sPed = obtenerHojaSegura("PEDIDOS");
+        const dPed = sPed.getDataRange().getValues();
+        for (let i = 1; i < dPed.length; i++) {
+            if (String(dPed[i][0]).trim() === String(idPedido).trim()) {
+                sPed.getRange(i + 1, 8).setValue(opciones.guia); // Columna H (Guía)
+                break;
+            }
+        }
+
+        // 3. Reconstruimos el objeto para engañar al generador de PDFs
+        let datosPedidoConstruidos = {
+            empresa: cab.empresa,
+            nombreCliente: cab.cliente,
+            telefono: cab.telefono,
+            email: cab.email,
+            direccion: cab.direccion,
+            pais: "NO ESPECIFICADO", // El motor extrae el país de la dirección inteligentemente
+            bultos: opciones.bultos || 1,
+            guia: opciones.guia,
+            rol: "Enviamos", 
+            generarProforma: opciones.proforma,
+            generarPL: opciones.pl,
+            generarCI: opciones.ci
+        };
+
+        // 4. Adaptamos los items al formato exacto
+        let itemsProcesar = items.map(i => ({
+            nombre_producto: i.producto,
+            nombre_presentacion: i.presentacion,
+            lote: i.lote,
+            volumen_L: i.volumen,
+            piezas: i.piezas,
+            unidad_medida: i.unidad
+        }));
+
+        // 5. ¡A imprimir!
+        generarDocumentosInternacionales(idPedido, datosPedidoConstruidos, itemsProcesar);
+
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: e.message };
+    } finally {
+        lock.releaseLock();
+    }
+}

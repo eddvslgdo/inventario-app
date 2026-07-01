@@ -380,18 +380,21 @@ function renderModalDetalle(data) {
           ${itemsHtml} 
        </div>
 
-       <div class="info-card" style="margin-bottom:20px; background:#f8fafc; border-color:#e2e8f0;">
+    <div class="info-card" style="margin-bottom:20px; background:#f8fafc; border-color:#e2e8f0;">
           <div class="card-label">📂 DOCUMENTOS DEL PEDIDO</div>
           
+          ${ (!cab.guia || cab.guia === '---' || cab.guia === '') && !esFinalizado ? `
+          <div style="background:#fff7ed; border:1px dashed #f59e0b; padding:15px; border-radius:8px; margin-bottom:15px; text-align:center;">
+             <p style="color:#b45309; font-size:0.85rem; margin:0 0 10px 0; font-weight:bold;">⚠️ Documentos Aduanales Pendientes</p>
+             <button onclick="rescatarDocumentosAduanales('${cab.id}')" style="background:#f59e0b; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow:0 2px 4px rgba(245,158,11,0.2); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                 📝 Ingresar Guía y Generar PDFs
+             </button>
+          </div>
+          ` : ''}
+
           <div id="contenedor-archivos-pedido" style="min-height: 40px; margin-bottom: 15px;">
              <div style="color:#94a3b8; font-size:0.85rem; text-align:center;">Cargando documentos...</div>
           </div>
-          
-          <div style="display:flex; gap:10px; align-items:center; background:white; padding:10px; border-radius:8px; border:1px dashed #cbd5e1;">
-             <input type="file" id="inputArchivoPedido" style="font-size:0.85rem; flex:1;" />
-             <button onclick="procesarSubidaArchivo('${cab.id}', this)" class="btn-manage" style="background:#2563eb; color:white; border:none; padding:8px 15px;">⬆️ Subir Archivo</button>
-          </div>
-       </div>
 
        <div class="info-card" style="background:${esFinalizado?'#f0fdf4':'#fff'}; border-color:${esFinalizado?'#bbf7d0':'#e2e8f0'}; margin-bottom:0;">
           <div class="card-label" style="color:${esFinalizado?'#15803d':'#0f172a'};">📅 ACTUALIZACIÓN</div>
@@ -570,6 +573,67 @@ window.borrarPedidoPermanente = function(idPedido) {
                     Swal.fire("Error de Conexión", err.message, "error");
                 })
                 .eliminarPedidoDefinitivo(idPedido);
+        }
+    });
+};
+
+// --- SISTEMA DE RESCATE DE GUÍAS (DOCUMENTOS PENDIENTES) ---
+window.rescatarDocumentosAduanales = function(idPedido) {
+    Swal.fire({
+        title: 'Generar Docs. Pendientes',
+        html: `
+            <div style="text-align:left; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <p style="font-size:0.85rem; color:#64748b; margin-top:0; margin-bottom:15px; line-height: 1.4;">Ingresa el número de guía que te entregó la paquetería para imprimirlo en los documentos oficiales y liberar el envío.</p>
+                
+                <label style="font-weight:bold; font-size:0.85rem; color:#334155; display:block; margin-bottom:5px;">Número de Guía / Tracking *</label>
+                <input type="text" id="swal-guia-rescue" class="input-modern" style="margin-bottom:15px; font-family:monospace; border-color:#3b82f6; font-size: 1.1rem; color: #1e40af; font-weight: bold;" placeholder="Ej. 770123456789" autocomplete="off">
+                
+                <label style="font-weight:bold; font-size:0.85rem; color:#334155; display:block; margin-bottom:5px;">Número de Bultos / Cajas</label>
+                <input type="number" id="swal-bultos-rescue" class="input-modern" style="margin-bottom:20px;" value="1" min="1">
+
+                <label style="font-weight:bold; font-size:0.85rem; color:#334155; display:block; margin-bottom:8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px;">Documentos a generar:</label>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="chk-rescue-prof" checked style="transform:scale(1.2);"> Proforma</label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="chk-rescue-pl" checked style="transform:scale(1.2);"> Packing List</label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#7e22ce; font-weight:bold;"><input type="checkbox" id="chk-rescue-ci" style="transform:scale(1.2);"> Commercial Invoice (FedEx)</label>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '🚀 Generar Documentos',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#2563eb',
+        preConfirm: () => {
+            const guia = document.getElementById('swal-guia-rescue').value.trim();
+            const bultos = document.getElementById('swal-bultos-rescue').value;
+            
+            if (!guia) {
+                Swal.showValidationMessage('El número de guía es obligatorio.');
+                return false;
+            }
+            return {
+                guia: guia,
+                bultos: bultos,
+                proforma: document.getElementById('chk-rescue-prof').checked,
+                pl: document.getElementById('chk-rescue-pl').checked,
+                ci: document.getElementById('chk-rescue-ci').checked
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mandamos llamar a nuestra nueva función backend
+            Swal.fire({ title: 'Imprimiendo PDFs...', html: 'Construyendo documentos y guardando en Drive.', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+            
+            api.generarDocumentosPendientes(idPedido, result.value, function(res) {
+                if (res.success) {
+                    Swal.fire("¡Documentos Listos!", "Se generaron y guardaron en la carpeta del pedido exitosamente.", "success");
+                    // Recargamos el modal para que desaparezca el cartel amarillo y aparezcan los nuevos PDFs en la lista
+                    verDetallePedido(idPedido); 
+                    cargarDashboardPedidos(); // Actualizamos la tabla de fondo
+                } else {
+                    Swal.fire("Error en Generación", res.error, "error");
+                }
+            });
         }
     });
 };
